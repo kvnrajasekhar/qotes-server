@@ -2,10 +2,21 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
-    _id: {type:Schema.Types.ObjectId, auto:true},
-    userName: {type:String, required:true, unique:true},
-    email: {type:String, required:true, unique:true},
-    passwordHash: {type:String, required:true},
+    username: { 
+        type: String, 
+        required: true, 
+        unique: true
+    },
+    email: {
+        type: String, 
+        required: true, 
+        unique: true
+    },
+    password: { 
+        type: String, 
+        required: true, 
+        select: false 
+    },
     firstName: {type:String},
     lastName: {type:String},
     bio: {type:String},
@@ -14,8 +25,9 @@ const UserSchema = new Schema({
         followingCount: {type:Number, default:0},
         quoteCount: {type:Number, default:0}
     },
-    isBanned: {type:Boolean, default:false},
-    createdAt: {type:Date, default:Date.now}
+    isBanned: {type:Boolean, default:false}
+}, {
+    timestamps: true //  Mongoose handles createdAt and updatedAt
 });
 
 const User = mongoose.model('User', UserSchema);

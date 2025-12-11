@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
+const {successResponse, errorResponse} = require('./utils/responseFormatter');
+
 const port = 3030;
 app.use(express.json());
 
@@ -34,7 +36,7 @@ connectToDatabase().catch(err => {
 });
 
 app.get('/',(req,res)=>{
-    res.send('Welcome to Quotely server!!');
+    return successResponse(res,200,'API is running');
 });
 
 const authRouter = require('./routes/auth');
