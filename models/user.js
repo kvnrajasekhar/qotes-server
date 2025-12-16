@@ -19,7 +19,8 @@ const UserSchema = new Schema({
     },
     firstName: {type:String},
     lastName: {type:String},
-    bio: {type:String},
+    bio: {type:String, default:''},
+    avatarUrl: {type:String, default:''},
     stats: {
         followerCount: {type:Number, default:0},
         followingCount: {type:Number, default:0},
