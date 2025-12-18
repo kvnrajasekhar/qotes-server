@@ -3,7 +3,7 @@ const nodemailer = require("../config/nodemailer");
 // sends mail to the user
 exports.forgotPasswordLink = async (userMail, link) => {
     console.log("inside forgot mailer", link);
-    const logoUrl = "https://drive.google.com/uc?export=view&id=1gGK8HO3o9gSBL9DWrApIlf3xV3w-CLJU"; 
+    const logoUrl = "https://lh3.googleusercontent.com/u/0/d/1UJxanHMEJRrR-9sSgoZHawGGPaRBfqu5=w1920-h1080-iv1"; 
 
     nodemailer.transporter.sendMail(
         {
@@ -24,9 +24,9 @@ exports.forgotPasswordLink = async (userMail, link) => {
                         box-shadow: 0 8px 20px rgba(0,0,0,0.08);
                         padding: 30px;
                         ">
-                                        <!-- Logo -->
+                    <!-- Logo -->
                     <div style="text-align: center; margin-bottom: 20px;">
-                      <img src="${logoUrl}" alt="qotes Logo" style="width: 140px; height: auto;">
+                      <img src="${logoUrl}" alt="qotes Logo" style="width: 60px; height: auto;">
                     </div>
 
                     <!-- Heading -->
@@ -55,7 +55,7 @@ exports.forgotPasswordLink = async (userMail, link) => {
                       <a href="${link}" style="
                         display: inline-block;
                         padding: 12px 26px;
-                        background-color: #e63946;
+                        background-color: #000000;
                         color: #ffffff;
                         text-decoration: none;
                         border-radius: 6px;

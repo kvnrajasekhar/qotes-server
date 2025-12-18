@@ -1,3 +1,4 @@
+require('dotenv').config();
 const User = require('../models/User');
 const Token = require('../models/token');
 const jwt = require('jsonwebtoken');
@@ -7,8 +8,6 @@ const fs = require('fs/promises');
 const cloudinaryService = require('./cloudinaryService');
 const authService = {
 
-    JWT_SECRET: process.env.JWT_SECRET,
-    LOCALHOST: process.env.LOCALHOST || 'http://localhost:3000',
 
     /**
      * @param {string} identifier
@@ -19,19 +18,18 @@ const authService = {
                 { username: identifier },
                 { email: identifier }
             ]
-        });
+        }).select('+password');
     },
 
     login: async (identifier, password) => {
         const user = await authService.findUserByUsernameOrEmail(identifier);
-        if (!user) {
-            throw { status: 401, message: 'Invalid credentials' };
-        }
+        if (!user) return null;
 
         const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-            throw { status: 401, message: 'Invalid credentials' };
-        }
+        if (!isValidPassword) return null;
+
+        const JWT_SECRET = process.env.JWT_SECRET;
+        const REFRESH_SECRET = process.env.REFRESH_SECRET;
 
         const payload = {
             userId: user._id,
@@ -40,13 +38,13 @@ const authService = {
 
         const accessToken = jwt.sign(
             payload,
-            authService.JWT_SECRET,
+            JWT_SECRET,
             { expiresIn: '15m' }
         );
 
         const refreshToken = jwt.sign(
             { userId: user._id },
-            authService.REFRESH_SECRET,
+            REFRESH_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -67,7 +65,7 @@ const authService = {
  * @param {string} bio
  * @param {object | null} avatarFile 
  */
-    saveUser: async (username, email, hashedPassword, firstName, lastName,bio, avatarFile) => {
+    saveUser: async (username, email, hashedPassword, firstName, lastName, bio, avatarFile) => {
         let avatarUrl = null;
         let filePath = avatarFile ? avatarFile.path : null;
 
@@ -174,7 +172,8 @@ const authService = {
             // Security Best Practice: Return success even if user not found to prevent enumeration
             return { success: true, message: "If account exists, email sent" };
         }
-
+        const JWT_SECRET = process.env.JWT_SECRET;
+        const LOCALHOST = process.env.LOCALHOST || 'http://localhost:3030'; // this is for the Client localhost UI url
         const secret = JWT_SECRET + user.password;
 
         const payload = {

@@ -17,19 +17,22 @@ const REFRESH_SECRET = process.env.REFRESH_SECRET;
 router.post('/login', asyncHandler(async (req, res) => {
     const { identifier, password } = req.body;
 
-    const { accessToken, refreshToken, userId } =
-        await authService.login(identifier, password);
+    const result = await authService.login(identifier, password);
 
-    res.cookie('refreshToken', refreshToken, {
+    if (!result) {
+
+        return errorResponse(res, 401, 'Invalid credentials');
+    }
+
+    res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     return successResponse(res, 200, 'Login successful', {
-        accessToken,
-
-        userId
+        accessToken: result.accessToken,
+        userId: result.userId
     });
 }));
 
@@ -103,8 +106,6 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     return successResponse(res, 200, result.message);
 }));
 
-
-
 const postResetPassword = asyncHandler(async (req, res) => {
     const id = req.params.userId;
     const token = req.params.token;
@@ -136,7 +137,7 @@ const postResetPassword = asyncHandler(async (req, res) => {
     }
 });
 
-router.post('/resetForgotPassword/:userId/:token', postResetPassword);
+router.post('/forgotpassword/:userId/:token', postResetPassword);
 
 router.post('/update-password', authMiddleware, asyncHandler(async (req, res) => {
     const userId = req.user.userId;
