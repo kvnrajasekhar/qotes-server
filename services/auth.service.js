@@ -1,11 +1,11 @@
 require('dotenv').config();
-const User = require('../models/User');
-const Token = require('../models/token');
+const User = require('../models/user.model');
+const Token = require('../models/token.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const passwordMailer = require('../mailer/forgotPasswordMailer');
 const fs = require('fs/promises');
-const cloudinaryService = require('./cloudinaryService');
+const cloudinaryService = require('./cloudinary.service');
 const authService = {
 
 

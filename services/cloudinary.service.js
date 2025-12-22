@@ -1,6 +1,6 @@
 // services/cloudinaryService.js
 
-const cloudinary = require('../config/cloudinary');
+const cloudinary = require('../config/cloudinary.config');
 const { promisify } = require('util'); // To promisify fs.unlink for reliable cleanup
 const fs = require('fs');
 const unlinkAsync = promisify(fs.unlink);

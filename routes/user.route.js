@@ -1,13 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../models/user.model');
 const asyncHandler = require('express-async-handler');
-const authMiddleware = require('../middlewares/authMiddleware');
-const userService = require('../services/userService');
-const upload = require('../middlewares/uploadMiddleware');
-const { errorResponse, successResponse } = require('../utils/responseFormatter');
+const authMiddleware = require('../middlewares/auth.middleware');
+const userService = require('../services/user.service');
+const upload = require('../middlewares/upload.middleware');
+const { errorResponse, successResponse } = require('../utils/responseFormatter.util');
 
-router.get('/:username', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/search', asyncHandler(async (req, res) => {
+    const query = req.query.q || '';
+    console.log("Search query:", query);
+    const users = await userService.searchUsers(query);
+    return successResponse(res, 200, 'User search completed successfully', users);
+}));
+
+router.get('/u/:username', authMiddleware, asyncHandler(async (req, res) => {
     const username = req.params.username;
     const user = await User.findOne({ username: username }).select('-password');
     if (!user) {
@@ -77,6 +84,21 @@ router.put('/avatar',
         }
     })
 );
+
+
+router.get('/suggested',  asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 10;
+    const suggestedUsers = await userService.getSuggestedUsers(req.user.id, limit);
+    return successResponse(res, 200, 'Suggested users retrieved successfully', suggestedUsers);
+}));
+
+router.post('/follow/:id', authMiddleware, asyncHandler(async (req, res) => {
+    const followerId = req.user.userId; // From JWT
+    const targetId = req.params.id;     // From URL
+
+    const result = await userService.toggleFollow(followerId, targetId);
+    return successResponse(res, 200, result.message, { followed: result.followed });
+}));
 
 
 module.exports = router;

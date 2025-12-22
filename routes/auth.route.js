@@ -4,10 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 
-const { successResponse, errorResponse } = require('../utils/responseFormatter');
-const authService = require('../services/authService');
-const authMiddleware = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
+const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
+const authService = require('../services/auth.service');
+const authMiddleware = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const fs = require('fs/promises');
 
 const JWT_SECRET = process.env.JWT_SECRET; // Move global secrets to the top
@@ -41,7 +41,7 @@ router.post('/signup',
     upload.single('avatar'),
     asyncHandler(async (req, res) => {
 
-        const { username, email, password, firstName, lastName,bio } = req.body;
+        const { username, email, password, firstName, lastName, bio } = req.body;
         const avatarFile = req.file || null;
         const existingUser = await authService.findUserByUsernameOrEmail(username);
         if (existingUser) {

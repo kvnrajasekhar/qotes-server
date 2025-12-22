@@ -1,4 +1,4 @@
-const nodemailer = require("../config/nodemailer");
+const nodemailer = require("../config/nodemailer.config");
 
 // sends mail to the user
 exports.forgotPasswordLink = async (userMail, link) => {

@@ -7,5 +7,6 @@ const FollowSchema = new Schema({
     following: {type:Schema.Types.ObjectId, ref:'User', required:true},
     createdAt: {type:Date, default:Date.now}
 });
+
 const Follow = mongoose.model('Follow', FollowSchema);
 module.exports = Follow;

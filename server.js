@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const {successResponse, errorResponse} = require('./utils/responseFormatter');
+const {successResponse, errorResponse} = require('./utils/responseFormatter.util');
 
 const port = 3030;
 app.use(express.json());
@@ -27,7 +27,7 @@ const connectToDatabase = async () => {
             throw err; // Re-throw the error to prevent the app from starting
         }
     }
-    return mongooseConnection; // Return the connection
+    return mongooseConnection; 
 };
 
 connectToDatabase().catch(err => {
@@ -39,9 +39,9 @@ app.get('/',(req,res)=>{
     return successResponse(res,200,'API is running');
 });
 
-const authRouter = require('./routes/auth');
-const userRouter = require('./routes/user');
-const quoteRouter = require('./routes/quote');
+const authRouter = require('./routes/auth.route');
+const userRouter = require('./routes/user.route');
+const quoteRouter = require('./routes/quote.route');
 
 app.use('/auth',authRouter);
 app.use('/user',userRouter);
