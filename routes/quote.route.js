@@ -1,5 +1,4 @@
 const express = require('express');
-const Quote = require('../models/quote.model');
 const router = express.Router();
 const asyncHandler = require('express-async-handler');
 const authMiddleware = require('../middlewares/auth.middleware');
@@ -54,6 +53,14 @@ router.delete('/:id', authMiddleware,asyncHandler(async(req,res)=>{
     return successResponse(res,200,'Quote deleted successfully',deletedQuote);
 }));
 
+router.get('/me',authMiddleware,asyncHandler(async(req,res)=> {
+    const userId = req.user.id;
+    const userQuotes = quoteService.getQuotesByUser(userId);
+    if(!userQuotes){
+        return errorResponse(res,404,'No quotes found for this user');
+    }
+    return successResponse(res,200,'User quotes retrieved successfully',userQuotes);
+}));
 
 
 
