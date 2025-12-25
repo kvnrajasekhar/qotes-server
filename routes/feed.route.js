@@ -17,7 +17,7 @@ router.get('/following', authMiddleware, asyncHandler(async (req, res) => {
     let { cursor, limit } = req.query;
     limit = parseInt(limit) || 10;
     const userId = req.user._id;
-    const result = await feedService.getFollowingQuotes({ userId, cursor, limit });
+    const result = await feedService.getFollowingFeed({ userId, cursor, limit });
     return successResponse(res, 200, 'Following quotes retrieved successfully', result);
 }));
 
@@ -25,7 +25,7 @@ router.get('/discover', authMiddleware, asyncHandler(async (req, res) => {
     let { page, limit } = req.query;
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
-    const result = await feedService.getDiscoverQuotes(page, limit);
+    const result = await feedService.getDiscoverFeed(page, limit);
     return successResponse(res, 200, 'Discover quotes retrieved successfully', result);
 }));
 

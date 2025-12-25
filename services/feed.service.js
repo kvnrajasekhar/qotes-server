@@ -16,7 +16,26 @@ const quoteService = {
             }
         };
     },
-    getFollowingQuotes: async ({ userId, cursor = null, limit = 10 }) => {
+
+    getUserQuotes: async (userId, page = 1, limit = 10) => {
+        const skip = (page - 1) * limit;
+        const quotes = await Quote.find({ author: userId })
+            .skip(skip)
+            .limit(limit);
+        const totalQuotes = await Quote.countDocuments({ author: userId });
+        const totalPages = Math.ceil(totalQuotes / limit);
+        return {
+            quotes,
+            pagination: {
+                totalQuotes,
+                totalPages,
+                currentPage: page,
+                pageSize: limit
+            }
+        };
+    },
+
+    getFollowingFeed: async ({ userId, cursor = null, limit = 10 }) => {
         // 1. Get followed user IDs (lightweight)
         const follows = await Follow.find({ follower: userId })
             .select('following')
@@ -66,25 +85,6 @@ const quoteService = {
         };
     },
 
-    getUserQuotes: async (userId, page = 1, limit = 10) => {
-        const skip = (page - 1) * limit;
-        const quotes = await Quote.find({ author: userId })
-            .skip(skip)
-            .limit(limit);
-        const totalQuotes = await Quote.countDocuments({ author: userId });
-        const totalPages = Math.ceil(totalQuotes / limit);
-        return {
-            quotes,
-            pagination: {
-                totalQuotes,
-                totalPages,
-                currentPage: page,
-                pageSize: limit
-            }
-        };
-    },
-    
-
     // Discovery feed = popular + recent quotes from outside the user’s network.
     getDiscoverFeed: async ({ userId, page = 1, limit = 20 }) => {
         const skip = (page - 1) * limit;
@@ -119,7 +119,7 @@ const quoteService = {
                 hasMore: skip + quotes.length < total
             }
         };
-    }
+    },
 
 
 };

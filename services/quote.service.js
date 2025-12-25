@@ -2,16 +2,36 @@ const Quote = require('../models/quote.model');
 const Reaction = require('../models/reaction.model');
 const quoteService = {
 
-    createQuote: async ({ quote, author, category, hashtags, taggedUsers }) => {
+    createQuote: async ({
+        text,
+        author,
+        category,
+        hashtags,
+        taggedUsers,
+        creator,
+        isRequote = false,
+        parentQuoteId = null
+    }) => {
         const quoteData = {
-            text: quote,
+            text,
             author: author || 'Anonymous',
-            category,
+            category : category || '',
             hashtags,
-            taggedUsers
+            taggedUsers,
+            creator,
+            isRequote,
+            parentQuoteId
         };
 
         const newQuote = new Quote(quoteData);
+
+        // if this is a requote, increment parent requote count
+        if (isRequote && parentQuoteId) {
+            await Quote.findByIdAndUpdate(parentQuoteId, {
+                $inc: { requotes: 1 }
+            });
+        }
+
         return await newQuote.save();
     },
     getQuoteById: async (id) => {
@@ -41,7 +61,6 @@ const quoteService = {
         // return the updated like count
         return { likeCount: quote.likes.length };
     },
-
 
 
 

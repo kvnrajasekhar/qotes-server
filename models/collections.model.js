@@ -7,8 +7,7 @@ const CollectionSchema = new Schema({
     name: {type:String, required:true},
     description: {type:String, default:''},
     isPrivate: {type:Boolean, default:false},
-    quotes: [{type:Schema.Types.ObjectId, ref:'Quote'}],
-    createdAt: {type:Date, default:Date.now}
+    isDefault: { type: Boolean, default: false },
 });
 
 const Collection = mongoose.model('Collection', CollectionSchema);
