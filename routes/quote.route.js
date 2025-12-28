@@ -64,7 +64,6 @@ router.get('/', authMiddleware, asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Quotes retrieved successfully', quotes);
 }));
 
-
 router.patch('/:id', authMiddleware, asyncHandler(async (req, res) => {
     const quoteId = req.params.id;
     const updateData = req.body;

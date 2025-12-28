@@ -4,33 +4,56 @@ const Quote = require('../models/quote.model');
 
 const collectionService = {
 
-    getUserCollections: async (userId) => {
-        return await Collection.find({ owner: userId })
+    getUserCollections: async ({ userId, cursor = null, limit = 20 }) => {
+        const query = { owner: userId };
+
+        if (cursor) {
+            query.createdAt = { $lt: new Date(cursor) };
+        }
+
+        const collections = await Collection.find(query)
             .select('name isPrivate isDefault createdAt')
-            .sort({ isDefault: -1, createdAt: -1 }) // Default folder first
+            .sort({ isDefault: -1, createdAt: -1 })
+            .limit(limit + 1)
             .lean();
+
+        const hasMore = collections.length > limit;
+        if (hasMore) collections.pop();
+
+        return {
+            collections,
+            pagination: {
+                nextCursor: hasMore ? collections[collections.length - 1].createdAt : null,
+                hasMore
+            }
+        };
     },
 
-    getCollectionDetails: async (collectionId, page = 1, limit = 20) => {
-        const skip = (page - 1) * limit;
+    getCollectionDetails: async ({ collectionId, cursor = null, limit = 20 }) => {
+        const query = { collectionId };
 
-        const items = await CollectionItem.find({ collectionId })
+        if (cursor) {
+            query.addedAt = { $lt: new Date(cursor) };
+        }
+
+        const items = await CollectionItem.find(query)
             .sort({ addedAt: -1 })
-            .skip(skip)
-            .limit(limit)
+            .limit(limit + 1)
             .populate({
                 path: 'quoteId',
-                select: 'text author category' // Fixed 'text' vs 'content' (matches your schema)
+                select: 'text author category reactions likes saves requotes createdAt'
             })
             .lean();
 
-        const totalItems = await CollectionItem.countDocuments({ collectionId });
+        const hasMore = items.length > limit;
+        if (hasMore) items.pop();
 
         return {
-            items: items.map(i => i.quoteId), // Flattens the array for the frontend
-            currentPage: page,
-            totalPages: Math.ceil(totalItems / limit),
-            totalItems
+            items: items.map(i => i.quoteId),
+            pagination: {
+                nextCursor: hasMore ? items[items.length - 1].addedAt : null,
+                hasMore
+            }
         };
     },
 
@@ -61,7 +84,6 @@ const collectionService = {
         let targetCollectionId = collectionId;
 
         if (!targetCollectionId) {
-            // Find or Create Default
             let defaultCollection = await Collection.findOne({ owner: userId, isDefault: true });
             if (!defaultCollection) {
                 defaultCollection = await Collection.create({
@@ -74,23 +96,21 @@ const collectionService = {
             targetCollectionId = defaultCollection._id;
         } else {
             const isOwner = await Collection.exists({ _id: targetCollectionId, owner: userId });
-            if (!isOwner) throw new Error("You do not own this collection");
+            if (!isOwner) throw new Error('Unauthorized');
         }
 
-        const existingItem = await CollectionItem.findOne({
-            collectionId: targetCollectionId,
-            quoteId
-        });
+        const existing = await CollectionItem.findOne({ collectionId: targetCollectionId, quoteId });
 
-        if (existingItem) {
-            await CollectionItem.deleteOne({ _id: existingItem._id });
+        if (existing) {
+            await CollectionItem.deleteOne({ _id: existing._id });
             await Quote.findByIdAndUpdate(quoteId, { $inc: { saves: -1 } });
-            return { saved: false, message: "Removed from collection" };
-        } else {
-            await CollectionItem.create({ collectionId: targetCollectionId, quoteId });
-            await Quote.findByIdAndUpdate(quoteId, { $inc: { saves: 1 } });
-            return { saved: true, message: "Saved to collection" };
+            return { saved: false };
         }
+
+        await CollectionItem.create({ collectionId: targetCollectionId, quoteId });
+        await Quote.findByIdAndUpdate(quoteId, { $inc: { saves: 1 } });
+
+        return { saved: true };
     },
 };
 

@@ -6,21 +6,29 @@ const { successResponse, errorResponse } = require('../utils/responseFormatter.u
 
 
 router.get('/', authMiddleware, asyncHandler(async (req, res) => {
-    try {
-        const collections = await collectionService.getUserCollections(req.user._id);
-        return successResponse(res, 200, "Collections fetched successfully", collections);
-    } catch (err) {
-        return errorResponse(res, 500, "Failed to fetch collections", err.message);
-    }
+    const { cursor, limit } = req.query;
+
+    const data = await collectionService.getUserCollections({
+        userId: req.user._id,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
+
+    return successResponse(res, 200, 'Collections fetched successfully', data);
 }));
+
 
 router.get('/:collectionId/items', authMiddleware, asyncHandler(async (req, res) => {
     const { collectionId } = req.params;
-    const page = parseInt(req.query.page) || 1;
+    const { cursor, limit } = req.query;
 
-    const data = await collectionService.getCollectionDetails(collectionId, page);
+    const data = await collectionService.getCollectionDetails({
+        collectionId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
 
-    return successResponse(res, 200, "Collection items retrieved", data);
+    return successResponse(res, 200, 'Collection items retrieved', data);
 }));
 
 router.get('/q/:quoteId', authMiddleware, asyncHandler(async (req, res) => {
