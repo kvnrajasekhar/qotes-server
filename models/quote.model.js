@@ -14,6 +14,7 @@ const QuoteSchema = new Schema({
     reactions: { type: Map, of: Number, default: {} },
     isRequote: { type: Boolean, default: false },
     parentQuoteId: { type: Schema.Types.ObjectId, ref: 'Quote', index: true },
+    isHiddenBySystem: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 

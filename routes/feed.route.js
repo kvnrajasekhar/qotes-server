@@ -34,12 +34,17 @@ router.get('/discover', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 
-router.get('/q/:userId', authMiddleware, asyncHandler(async (req, res) => {
-    const { userId } = req.params;
+router.get('/q/:targetuserId', authMiddleware, asyncHandler(async (req, res) => {
+    const { targetuserId } = req.params;
     let { cursor, limit } = req.query;
     cursor = parseInt(cursor) || 1;
     limit = parseInt(limit) || 10;
-    const result = await feedService.getUserQuotes(userId, cursor, limit);
+    const result = await feedService.getUserQuotes({
+        targetUserId: targetuserId,
+        viewerId: req.user._id,
+        cursor,
+        limit
+    });
     return successResponse(res, 200, 'User quotes retrieved successfully', result);
 }));
 
