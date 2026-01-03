@@ -1,6 +1,7 @@
 const { get } = require('http');
 const User = require('../models/user.model');
 const Follow = require('../models/follow.model');
+const Quote = require('../models/quote.model');
 const cloudinaryService = require('./cloudinary.service');
 const fs = require('fs/promises');
 
@@ -70,53 +71,71 @@ const userService = {
         }
     },
 
-    searchUsers: async (query) => {
-        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Regex patterns for different match types
-        const exactRegex = new RegExp(`^${escaped}$`, 'i');       // exact match
-        const prefixRegex = new RegExp(`^${escaped}`, 'i');       // starts with
-        const containsRegex = new RegExp(escaped, 'i');           // contains anywhere
+    searchUsers: async ({ query, cursor = null, limit = 20 }) => {
 
-        return await User.aggregate([
+        const escaped = query.replace(/[*+?^${}()|[\]\\]/g, '\\$&');
+
+        const exactRegex = new RegExp(`^${escaped}$`, 'i');
+        const prefixRegex = new RegExp(`^${escaped}`, 'i');
+        const containsRegex = new RegExp(escaped, 'i');
+
+        const pipeline = [
             {
-                // 1️ Add a 'score' field based on relevance
                 $addFields: {
                     score: {
                         $add: [
-                            // Exact username match → highest priority
                             { $cond: [{ $regexMatch: { input: "$username", regex: exactRegex } }, 100, 0] },
-
-                            // Username starts with query → high priority
                             { $cond: [{ $regexMatch: { input: "$username", regex: prefixRegex } }, 60, 0] },
-
-                            // Name starts with query → medium priority
                             { $cond: [{ $regexMatch: { input: "$firstName", regex: prefixRegex } }, 40, 0] },
                             { $cond: [{ $regexMatch: { input: "$lastName", regex: prefixRegex } }, 40, 0] },
-
-                            // Contains anywhere → lower priority
                             { $cond: [{ $regexMatch: { input: "$username", regex: containsRegex } }, 20, 0] },
                             { $cond: [{ $regexMatch: { input: "$firstName", regex: containsRegex } }, 10, 0] },
                             { $cond: [{ $regexMatch: { input: "$lastName", regex: containsRegex } }, 10, 0] },
-
-                            // Optional popularity boost: more followers → slightly higher score
                             { $cond: [{ $gt: ["$followersCount", 1000] }, 15, 0] }
                         ]
                     }
                 }
             },
 
-            // 2 Only keep users with score > 0
-            { $match: { score: { $gt: 0 } } },
+            { $match: { score: { $gt: 0 } } }
+        ];
 
-            // 3️ Remove sensitive fields
-            { $project: { password: 0, __v: 0 } },
+        // Cursor filter (keyset pagination)
+        if (cursor) {
+            const { score, id } = cursor;
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { score: { $lt: score } },
+                        { score: score, _id: { $gt: new mongoose.Types.ObjectId(id) } }
+                    ]
+                }
+            });
+        }
 
-            // 4️ Sort by score descending, then followers descending
-            { $sort: { score: -1, followersCount: -1 } },
+        pipeline.push(
+            { $sort: { score: -1, _id: 1 } },
+            { $limit: limit + 1 },
+            { $project: { password: 0, __v: 0 } }
+        );
 
-            // 5️ Limit results for UX / performance
-            { $limit: 20 }
-        ]);
+        const users = await User.aggregate(pipeline);
+
+        const hasMore = users.length > limit;
+        if (hasMore) users.pop();
+
+        return {
+            users,
+            pagination: {
+                nextCursor: hasMore
+                    ? {
+                        score: users[users.length - 1].score,
+                        id: users[users.length - 1]._id
+                    }
+                    : null,
+                hasMore
+            }
+        };
     },
 
     /**
@@ -124,24 +143,70 @@ const userService = {
      * @param {string} userId - 
      * @param {number} limit - 
      */
-    getSuggestedUsers: async (userId, limit = 5) => {
-        // 1. Find all 'following' IDs for the current user from the Follow collection
-        const followedRelations = await Follow.find({ follower: userId }).select('following');
+    getSuggestedUsers: async ({ userId = null, limit = 8 }) => {
 
-        // 2. Extract just the IDs into a simple array
-        const followedIds = followedRelations.map(rel => rel.following);
+        // PUBLIC USERS (not logged in)
+        if (!userId) {
+            return await User.find({})
+                .sort({ followersCount: -1, lastActiveAt: -1 })
+                .limit(limit)
+                .select('username firstName lastName avatarUrl bio stats isBanned');
+        }
 
-        // 3. Add the current user's own ID to the exclusion list (don't suggest yourself)
-        followedIds.push(userId);
+        // Get users current user follows
+        const followed = await Follow.find({ follower: userId })
+            .select('following')
+            .lean();
 
-        // 4. Find users who are NOT in the followedIds list
-        const suggestedUsers = await User.find({
-            _id: { $nin: followedIds }
-        })
-            .limit(limit)
-            .select('username firstName lastName bio avatar stats'); // Select only needed fields
+        const followedIds = followed.map(f => f.following);
 
-        return suggestedUsers;
+        // Aggregate suggestion candidates
+        const suggestions = await Follow.aggregate([
+            // Find users followed by people I follow
+            {
+                $match: {
+                    follower: { $in: followedIds }
+                }
+            },
+            // Count mutual connections
+            {
+                $group: {
+                    _id: '$following',
+                    mutualCount: { $sum: 1 }
+                }
+            },
+            // Exclude already-followed & self
+            {
+                $match: {
+                    _id: { $nin: [...followedIds, userId] }
+                }
+            },
+            // Rank by mutual followers
+            { $sort: { mutualCount: -1 } },
+            { $limit: limit },
+            // Join user data
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            {
+                $project: {
+                    _id: '$user._id',
+                    username: '$user.username',
+                    firstName: '$user.firstName',
+                    lastName: '$user.lastName',
+                    avatar: '$user.avatar',
+                    mutualCount: 1
+                }
+            }
+        ]);
+
+        return suggestions;
     },
 
     /**
@@ -183,6 +248,37 @@ const userService = {
 
             return { followed: true, message: "Followed successfully" };
         }
+    },
+
+    getUserRequotes: async ({ userId, cursor = null, limit = 20 }) => {
+        const query = {
+            creator: userId,
+            isRequote: true,
+            isHiddenBySystem: false,
+        };
+
+        // Cursor-based pagination using _id
+        if (cursor) {
+            query._id = { $lt: cursor };
+        }
+
+        // Fetch one extra to determine "hasMore"
+        const quotes = await Quote.find(query)
+            .sort({ _id: -1 }) // newest first
+            .limit(limit + 1)
+            .lean();
+
+        const hasMore = quotes.length > limit;
+        if (hasMore) quotes.pop();
+
+        return {
+            quotes,
+            pagination: {
+                nextCursor: hasMore ? quotes[quotes.length - 1]._id : null,
+                hasMore,
+                pageSize: limit,
+            },
+        };
     },
 };
 

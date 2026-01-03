@@ -9,9 +9,23 @@ const { errorResponse, successResponse } = require('../utils/responseFormatter.u
 
 router.get('/search', asyncHandler(async (req, res) => {
     const query = req.query.q || '';
+    const {cursor, limit} = req.query;
     console.log("Search query:", query);
-    const users = await userService.searchUsers(query);
+    const users = await userService.searchUsers({query, cursor, limit});
     return successResponse(res, 200, 'User search completed successfully', users);
+}));
+
+router.get('/suggested', authMiddleware, asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 8;
+    const userId = req.user ? req.user.id : null;
+    const suggestedUsers = await userService.getSuggestedUsers({userId, limit});
+    return successResponse(res, 200, 'Suggested users retrieved successfully', suggestedUsers);
+}));
+
+router.get('/suggested/public', asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 8;
+    const suggestedUsers = await userService.getSuggestedUsers({userId: null, limit});
+    return successResponse(res, 200, 'Public suggested users retrieved successfully', suggestedUsers);
 }));
 
 router.get('/u/:username', authMiddleware, asyncHandler(async (req, res) => {
@@ -86,11 +100,7 @@ router.put('/avatar',
 );
 
 
-router.get('/suggested',  asyncHandler(async (req, res) => {
-    const limit = parseInt(req.query.limit) || 10;
-    const suggestedUsers = await userService.getSuggestedUsers(req.user.id, limit);
-    return successResponse(res, 200, 'Suggested users retrieved successfully', suggestedUsers);
-}));
+
 
 router.post('/follow/:id', authMiddleware, asyncHandler(async (req, res) => {
     const followerId = req.user.userId; // From JWT
@@ -99,6 +109,23 @@ router.post('/follow/:id', authMiddleware, asyncHandler(async (req, res) => {
     const result = await userService.toggleFollow(followerId, targetId);
     return successResponse(res, 200, result.message, { followed: result.followed });
 }));
+
+router.get('/:userId/requotes', authMiddleware, asyncHandler(async (req, res) => {
+        const { userId } = req.params;
+        const { cursor, limit } = req.query;
+
+        const targetUserId =
+            userId === 'me' ? req.user.id : userId;
+
+        const data = await userService.getRequotes({
+            userId: targetUserId,
+            cursor,
+            limit: parseInt(limit) || 20
+        });
+
+        return successResponse(res, 200, 'Requotes fetched', data);
+    })
+);
 
 
 module.exports = router;

@@ -18,10 +18,15 @@ const QuoteSchema = new Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-QuoteSchema.index({ creator: 1, createdAt: -1 });
-QuoteSchema.index({ createdAt: -1 });
-QuoteSchema.index({ category: 1, createdAt: -1 });
-QuoteSchema.index({ isRequote: 1 });
+QuoteSchema.index({ creator: 1, createdAt: -1 });   // User feeds
+QuoteSchema.index({ createdAt: -1 });               // Global feeds
+QuoteSchema.index({ category: 1, createdAt: -1 });  // Category feeds
+QuoteSchema.index({ isRequote: 1 });                 // Filtering requotes
+// Enforces 1 requote per user per quote
+QuoteSchema.index(
+    { creator: 1, parentQuoteId: 1 },
+    { unique: true, partialFilterExpression: { isRequote: true } }
+);
 
 const Quote = mongoose.model('Quote', QuoteSchema);
 module.exports = Quote;

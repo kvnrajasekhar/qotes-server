@@ -1,39 +1,81 @@
+const { get } = require('mongoose');
 const Quote = require('../models/quote.model');
-const Reaction = require('../models/reaction.model');
+const Reaction = require('../models/reactions.model');
 const quoteService = {
 
     createQuote: async ({
         text,
         author,
         category,
-        hashtags,
-        taggedUsers,
+        hashtags = [],
+        taggedUsers = [],
         creator,
         isRequote = false,
-        parentQuoteId = null
+        parentQuoteId = null,
+        isHiddenBySystem = false
     }) => {
-        const quoteData = {
-            text,
-            author: author || 'Anonymous',
-            category : category || '',
-            hashtags,
-            taggedUsers,
-            creator,
-            isRequote,
-            parentQuoteId
-        };
+        const session = await Quote.startSession();
+        session.startTransaction();
 
-        const newQuote = new Quote(quoteData);
+        try {
+            // Validate parent quote if requote
+            if (isRequote) {
+                if (!parentQuoteId) {
+                    throw new Error('parentQuoteId is required for requote');
+                }
 
-        // if this is a requote, increment parent requote count
-        if (isRequote && parentQuoteId) {
-            await Quote.findByIdAndUpdate(parentQuoteId, {
-                $inc: { requotes: 1 }
-            });
+                const parentQuote = await Quote.findOne({
+                    _id: parentQuoteId,
+                    isHiddenBySystem: false
+                }).session(session);
+
+                if (!parentQuote) {
+                    throw new Error('Parent quote not found or hidden');
+                }
+
+                // Prevent duplicate requote by same user
+                const alreadyRequoted = await Quote.exists({
+                    creator,
+                    parentQuoteId
+                }).session(session);
+
+                if (alreadyRequoted) {
+                    throw new Error('Already requoted');
+                }
+            }
+
+            const newQuote = await Quote.create([{
+                text,
+                author: author || 'Anonymous',
+                category: category || '',
+                hashtags,
+                taggedUsers,
+                creator,
+                isRequote,
+                parentQuoteId,
+                isHiddenBySystem
+            }], { session });
+
+            if (isRequote) {
+                await Quote.updateOne(
+                    { _id: parentQuoteId },
+                    { $inc: { requotes: 1 } },
+                    { session }
+                );
+            }
+
+            await session.commitTransaction();
+            session.endSession();
+
+            return newQuote[0];
+
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
-
-        return await newQuote.save();
     },
+
     getQuoteById: async (id) => {
         return await Quote.findById(id);
     },
@@ -46,9 +88,30 @@ const quoteService = {
     deleteQuote: async (id) => {
         return await Quote.findByIdAndDelete(id);
     },
-    getQuotesByUser: async (userId) => {
-        return await Quote.find({ creator: userId });
+    getQuotesByUser: async ({ userId, cursor = null, limit = 20 }) => {
+        const query = { creator: userId };
+
+        if (cursor) {
+            query.createdAt = { $lt: new Date(cursor) };
+        }
+
+        const quotes = await Quote.find(query)
+            .sort({ createdAt: -1 })
+            .limit(limit + 1)
+            .lean();
+
+        const hasMore = quotes.length > limit;
+        if (hasMore) quotes.pop();
+
+        return {
+            quotes,
+            pagination: {
+                nextCursor: hasMore ? quotes[quotes.length - 1].createdAt : null,
+                hasMore
+            }
+        };
     },
+
     likeQuote: async (quoteId, userId) => {
         const quote = await Quote.findById(quoteId);
         if (!quote) {
@@ -61,7 +124,6 @@ const quoteService = {
         // return the updated like count
         return { likeCount: quote.likes.length };
     },
-
 
 
 };

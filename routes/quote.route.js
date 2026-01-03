@@ -13,7 +13,8 @@ router.post('/', authMiddleware, asyncHandler(async (req, res) => {
         hashtags,
         taggedUsers,
         isRequote = false,
-        parentQuoteId = null
+        parentQuoteId = null,
+        isHiddenBySystem = false,
     } = req.body;
 
     // Normal quote must have text
@@ -34,7 +35,8 @@ router.post('/', authMiddleware, asyncHandler(async (req, res) => {
         taggedUsers,
         creator: req.user._id,
         isRequote,
-        parentQuoteId
+        parentQuoteId,
+        isHiddenBySystem,
     });
 
     if (!newQuote) {
@@ -85,12 +87,18 @@ router.delete('/:id', authMiddleware, asyncHandler(async (req, res) => {
 
 router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const userQuotes = quoteService.getQuotesByUser(userId);
+    const { cursor, limit } = req.query;
+    const userQuotes = quoteService.getQuotesByUser(userId, cursor, limit);
     if (!userQuotes) {
         return errorResponse(res, 404, 'No quotes found for this user');
     }
     return successResponse(res, 200, 'User quotes retrieved successfully', userQuotes);
 }));
+
+
+
+
+
 
 
 module.exports = router;
