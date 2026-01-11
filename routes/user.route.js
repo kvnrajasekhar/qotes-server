@@ -8,28 +8,28 @@ const { errorResponse, successResponse } = require('../utils/responseFormatter.u
 
 router.get('/search', asyncHandler(async (req, res) => {
     const query = req.query.q || '';
-    const {cursor, limit} = req.query;
+    const { cursor, limit } = req.query;
     console.log("Search query:", query);
-    const users = await userService.searchUsers({query, cursor, limit});
+    const users = await userService.searchUsers({ query, cursor, limit });
     return successResponse(res, 200, 'User search completed successfully', users);
 }));
 
 router.get('/suggested', authMiddleware, asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;
     const userId = req.user ? req.user.id : null;
-    const suggestedUsers = await userService.getSuggestedUsers({userId, limit});
+    const suggestedUsers = await userService.getSuggestedUsers({ userId, limit });
     return successResponse(res, 200, 'Suggested users retrieved successfully', suggestedUsers);
 }));
 
 router.get('/suggested/public', asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;
-    const suggestedUsers = await userService.getSuggestedUsers({userId: null, limit});
+    const suggestedUsers = await userService.getSuggestedUsers({ userId: null, limit });
     return successResponse(res, 200, 'Public suggested users retrieved successfully', suggestedUsers);
 }));
 
-router.get('/u/:username', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/u/:username', asyncHandler(async (req, res) => {
     const username = req.params.username;
-    const user = await User.findOne({ username: username }).select('-password');
+    const user = await userService.getUserByUsername(username, req.user ? req.user.id : null);
     if (!user) {
         return errorResponse(res, 404, 'User not found');
     }
@@ -98,9 +98,6 @@ router.put('/avatar',
     })
 );
 
-
-
-
 router.post('/follow/:id', authMiddleware, asyncHandler(async (req, res) => {
     const followerId = req.user.userId; // From JWT
     const targetId = req.params.id;     // From URL
@@ -110,21 +107,73 @@ router.post('/follow/:id', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 router.get('/:userId/requotes', authMiddleware, asyncHandler(async (req, res) => {
-        const { userId } = req.params;
-        const { cursor, limit } = req.query;
+    const { userId } = req.params;
+    const { cursor, limit } = req.query;
 
-        const targetUserId =
-            userId === 'me' ? req.user.id : userId;
+    const targetUserId =
+        userId === 'me' ? req.user.id : userId;
 
-        const data = await userService.getRequotes({
-            userId: targetUserId,
-            cursor,
-            limit: parseInt(limit) || 20
-        });
+    const data = await userService.getRequotes({
+        userId: targetUserId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
 
-        return successResponse(res, 200, 'Requotes fetched', data);
-    })
+    return successResponse(res, 200, 'Requotes fetched', data);
+})
 );
+
+router.get('/me/following', authMiddleware, asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const currentUserId = req.user.id;
+    const { cursor, limit } = req.query;
+    const data = await userService.getFollowing({
+        userId,
+        currentUserId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
+    return successResponse(res, 200, 'Following fetched', data);
+}));
+
+router.get('/me/followers', authMiddleware, asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const currentUserId = req.user.id;
+    const { cursor, limit } = req.query;
+    const data = await userService.getFollowers({
+        userId,
+        currentUserId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
+    return successResponse(res, 200, 'Followers fetched', data);
+}));
+
+router.get('/:userId/followers', authMiddleware, asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const { cursor, limit } = req.query;
+    const currentUserId = req.user.id;
+    const data = await userService.getFollowers({
+        userId,
+        currentUserId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
+    return successResponse(res, 200, 'Followers fetched', data);
+}));
+router.get('/:userId/following', authMiddleware, asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const { cursor, limit } = req.query;
+    const currentUserId = req.user.id;
+    const data = await userService.getFollowing({
+        userId,
+        currentUserId,
+        cursor,
+        limit: parseInt(limit) || 20
+    });
+    return successResponse(res, 200, 'Following fetched', data);
+}));
+
 
 
 module.exports = router;

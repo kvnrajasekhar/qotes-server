@@ -8,5 +8,14 @@ const FollowSchema = new Schema({
     createdAt: {type:Date, default:Date.now}
 });
 
+// For getFollowers
+FollowSchema.index({ following: 1, _id: -1 });
+
+// For getFollowing
+FollowSchema.index({ follower: 1, _id: -1 });
+
+// For preventing duplicate follows (Critical)
+FollowSchema.index({ follower: 1, following: 1 }, { unique: true });
+
 const Follow = mongoose.model('Follow', FollowSchema);
 module.exports = Follow;

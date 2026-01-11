@@ -6,17 +6,58 @@ const cloudinaryService = require('./cloudinary.service');
 const fs = require('fs/promises');
 
 const userService = {
+    getUserByUsername: async (username, requesterId = null) => {
+        const user = await User.findOne({ username: username }).select('-password');
+        return user;
+    },
+
     /**
      * @param {String} userId - The ID of the user to update
      * @param {Object} updateData - An object containing the fields to update
      * @returns {Object|null} - The updated user object or null if not found
      */
     updateUserProfile: async (userId, updateData) => {
+        // 1. Define strictly which fields a user is allowed to change
+        const allowedUpdates = [
+            'firstName',
+            'lastName',
+            'bio',
+            'avatarUrl'
+        ];
+
+        // 2. Filter the incoming data (Sanitization)
+        const filteredData = {};
+        Object.keys(updateData).forEach((key) => {
+            if (allowedUpdates.includes(key)) {
+                filteredData[key] = updateData[key];
+            }
+        });
+
+        // 3. Optional: Handle nested or complex logic 
+        // Example: If username can be changed, you might need a uniqueness check first
+        if (updateData.username) {
+            const existing = await User.findOne({ username: updateData.username });
+            if (existing && existing._id.toString() !== userId) {
+                throw new Error("Username already taken");
+            }
+            filteredData.username = updateData.username;
+        }
+
+        // 4. Perform the update
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { $set: updateData },
-            { new: true, runValidators: true }
-        ).select('-password');
+            { $set: filteredData },
+            {
+                new: true,           // Return the modified document rather than the original
+                runValidators: true, // Ensure the new data matches Schema requirements
+                select: '-password'  // Double security: never return the hashed password
+            }
+        ).lean();
+
+        if (!updatedUser) {
+            throw new Error("User not found");
+        }
+
         return updatedUser;
     },
 
@@ -277,6 +318,89 @@ const userService = {
                 nextCursor: hasMore ? quotes[quotes.length - 1]._id : null,
                 hasMore,
                 pageSize: limit,
+            },
+        };
+    },
+
+    getFollowers: async ({ userId, currentUserId, cursor = null, limit = 20 }) => {
+        const query = { following: userId };
+        if (cursor) query._id = { $lt: cursor };
+
+        // 1. Fetch Follow documents
+        const follows = await Follow.find(query)
+            .sort({ _id: -1 })
+            .limit(limit + 1)
+            .populate('follower', 'username firstName lastName avatarUrl bio stats')
+            .lean();
+
+        const hasMore = follows.length > limit;
+        if (hasMore) follows.pop();
+
+        const followerList = follows.map(f => f.follower);
+        const followerIds = followerList.map(f => f._id);
+
+        // 2. SOCIAL GRAPH CHECK (Scale optimization)
+        // Check if the LOGGED-IN user follows these people (to show 'Following' vs 'Follow' button)
+        let followingStatus = [];
+        if (currentUserId) {
+            followingStatus = await Follow.find({
+                follower: currentUserId,
+                following: { $in: followerIds }
+            }).select('following').lean();
+        }
+
+        const followingSet = new Set(followingStatus.map(f => f.following.toString()));
+
+        return {
+            users: followerList.map(user => ({
+                ...user,
+                isFollowing: followingSet.has(user._id.toString()) // Critical for UI
+            })),
+            pagination: {
+                nextCursor: hasMore ? follows[follows.length - 1]._id : null,
+                hasMore
+            }
+        };
+    },
+
+    getFollowing: async ({ userId, currentUserId, cursor = null, limit = 20 }) => {
+        const query = { follower: userId };
+        if (cursor) query._id = { $lt: cursor };
+
+        // 1. Fetch Follow documents with indexed sorting
+        const follows = await Follow.find(query)
+            .sort({ _id: -1 })
+            .limit(limit + 1)
+            .populate('following', 'username firstName lastName avatarUrl bio stats')
+            .lean();
+
+        const hasMore = follows.length > limit;
+        if (hasMore) follows.pop();
+
+        const followingList = follows.map(f => f.following);
+        const followingIds = followingList.map(f => f._id);
+
+        // 2. SOCIAL GRAPH CHECK: "Do they follow me back?"
+        // On Twitter/Insta, this displays the "Follows You" badge
+        let followedByStatus = [];
+        if (currentUserId) {
+            followedByStatus = await Follow.find({
+                follower: { $in: followingIds },
+                following: currentUserId
+            }).select('follower').lean();
+        }
+
+        const followedBySet = new Set(followedByStatus.map(f => f.follower.toString()));
+
+        return {
+            following: followingList.map(user => ({
+                ...user,
+                followsYou: followedBySet.has(user._id.toString()) // The "Follows You" badge logic
+            })),
+            pagination: {
+                nextCursor: hasMore ? follows[follows.length - 1]._id : null,
+                hasMore,
+                pageSize: limit
             },
         };
     },

@@ -1,4 +1,5 @@
 const Comment = require('../models/comment.model');
+const Quote = require('../models/quote.model');
 const commentService = {
 
     addComment: async ({ quoteId, userId, text, parentCommentId = null }) => {
@@ -24,8 +25,32 @@ const commentService = {
 
         return comment;
     },
-    getReplies: async ({ parentCommentId, cursor = null, limit = 10 }) => {
-        const query = { parentComment: parentCommentId };
+    editComment: async ({ commentId, userId, text }) => {
+        if (!text || !text.trim()) {
+            throw new Error('Comment text cannot be empty');
+        }
+
+        const comment = await Comment.findOneAndUpdate(
+            { _id: commentId, author: userId },
+            {
+                text,
+                isEdited: true,
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!comment) {
+            throw new Error('Comment not found or unauthorized');
+        }
+
+        return comment;
+    },
+    getComments: async ({ quoteId, parentCommentId, cursor = null, limit = 10 }) => {
+        const query = {
+            quote: quoteId,
+            parentComment: parentCommentId
+        };
 
         if (cursor) {
             query.createdAt = { $lt: new Date(cursor) };
@@ -49,6 +74,23 @@ const commentService = {
                 hasMore
             }
         };
+    },
+    deleteComment: async ({ commentId, userId }) => {
+        const comment = await Comment.findOneAndUpdate(
+            { _id: commentId, author: userId },
+            {
+                isDeleted: true,
+                text: '[deleted]',
+                deletedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!comment) {
+            throw new Error('Comment not found or unauthorized');
+        }
+
+        return comment;
     },
     toggleLike: async ({ commentId, userId }) => {
         const comment = await Comment.findById(commentId).select('likes');
