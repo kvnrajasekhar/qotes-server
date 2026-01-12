@@ -6,13 +6,6 @@ const userService = require('../services/user.service');
 const upload = require('../middlewares/upload.middleware');
 const { errorResponse, successResponse } = require('../utils/responseFormatter.util');
 
-router.get('/search', asyncHandler(async (req, res) => {
-    const query = req.query.q || '';
-    const { cursor, limit } = req.query;
-    console.log("Search query:", query);
-    const users = await userService.searchUsers({ query, cursor, limit });
-    return successResponse(res, 200, 'User search completed successfully', users);
-}));
 
 router.get('/suggested', authMiddleware, asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;
