@@ -3,7 +3,6 @@ const app = express();
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
-
 const {successResponse, errorResponse} = require('./utils/responseFormatter.util');
 
 const port = 3030;
@@ -42,10 +41,23 @@ app.get('/',(req,res)=>{
 const authRouter = require('./routes/auth.route');
 const userRouter = require('./routes/user.route');
 const quoteRouter = require('./routes/quote.route');
+const commentRouter = require('./routes/comment.route');
+const feedRouter = require('./routes/feed.route');
+const preferenceRouter = require('./routes/preference.route');
+const reactionRouter = require('./routes/reaction.route');
+const safetyRouter = require('./routes/safety.route');
+const searchRouter = require('./routes/search.route');
+
 
 app.use('/auth',authRouter);
 app.use('/user',userRouter);
 app.use('/quote',quoteRouter);
+app.use('/comment',commentRouter);
+app.use('/feed',feedRouter);
+app.use('/preference',preferenceRouter);
+app.use('/reaction',reactionRouter);
+app.use('/safety',safetyRouter);
+app.use('/search',searchRouter);
 
 app.use(cors({
     origin: '*',
