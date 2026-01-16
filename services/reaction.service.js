@@ -1,85 +1,121 @@
 const Reaction = require('../models/reaction.model');
+const Quote = require('../models/quote.model');
+const { Kafka } = require('kafkajs');
+const { redis, RATE_LIMIT_LUA } = require('../utils/redis.utils');
+const { atomicUpdateCache, getReactionBreakdown } = require('../cache/reaction.cache');
+const kafka = new Kafka({ brokers: ['localhost:9092'] });
+const producer = kafka.producer();
+
 const reactionService = {
 
     toggleReaction: async ({ userId, quoteId, type }) => {
-        const existing = await Reaction.findOne({ userId, quoteId });
+        // 1. RATE LIMITING (e.g., 5 reactions per 10s)
+        const allowed = await redis.eval(RATE_LIMIT_LUA, 1, `limit:${userId}`, Date.now(), 10000, 5);
+        if (!allowed) throw new Error("Too many requests");
 
-        // 1. Same reaction → remove
-        if (existing && existing.type === type) {
-            await existing.deleteOne();
+        // 2. Determine Action (Check existing in DB/Local Cache)
+        const existing = await Reaction.findOne({ userId, quoteId }).lean();
+        let action = 'added', delta = 1, oldType = 'none';
 
-            await Quote.findByIdAndUpdate(quoteId, {
-                $inc: { reactionsCount: -1 }
-            });
-
-            return { action: 'removed', type };
+        if (existing) {
+            if (existing.type === type) { action = 'removed'; delta = -1; }
+            else { action = 'updated'; oldType = existing.type; }
         }
 
-        // 2. Different reaction → update
-        if (existing && existing.type !== type) {
-            await Reaction.updateOne(
-                { userId, quoteId },
-                { type }
-            );
+        // 3. UPDATE REDIS (Fast Path)
+        await atomicUpdateCache(quoteId, type, delta, oldType);
 
-            return { action: 'updated', type };
+        // 4. KAFKA PRODUCER (Persistent Path)
+        await producer.send({
+            topic: 'reaction-events',
+            messages: [{
+                key: quoteId, // PARTITION KEY: Critical for ordering!
+                value: JSON.stringify({ userId, quoteId, type, action, oldType })
+            }]
+        });
+
+        return { action, type };
+    },
+    getQuoteReactions: async ({ quoteId, viewerId, type, cursor, limit = 10 }) => {
+        // 1. GET COUNTS (Handles Read-Repair internally)
+        // This is the caching part for the counters.
+        const { breakdown, total } = await getReactionBreakdown(quoteId);
+
+        // 2. FIRST-PAGE CACHING
+        // If it's the first page and no specific type, check Redis to save a DB hit
+        const firstPageCacheKey = `cache:reactions:p1:${quoteId}:${viewerId || 'guest'}`;
+        if (!cursor && !type) {
+            const cached = await redis.get(firstPageCacheKey);
+            if (cached) return JSON.parse(cached);
         }
 
-        // 3. New reaction
-        await Reaction.create({ userId, quoteId, type });
+        // 3. SOCIAL PRIORITY QUERY (The Instagram Logic)
+        // We need to find who the user follows to put them at the top
+        let followingIds = [];
+        if (viewerId) {
+            // Optimization: Get following from Redis Set instead of DB
+            followingIds = await redis.smembers(`following:${viewerId}`);
+        }
 
-        await Quote.findByIdAndUpdate(quoteId, {
-            $inc: { reactionsCount: 1 }
-        });
-
-        return { action: 'added', type };
-    },
-
-    getReactionsForQuote: async (quoteId) => {
-        return await Reaction.find({ quoteId }).lean();
-    },
-
-    getQuoteReactions: async ({ quoteId, type, cursor, limit }) => {
-        // 1. Breakdown counts (server-side aggregation)
-        const breakdownAgg = await Reaction.aggregate([
-            { $match: { quoteId: new mongoose.Types.ObjectId(quoteId) } },
-            { $group: { _id: '$type', count: { $sum: 1 } } }
-        ]);
-
-        const breakdown = {};
-        let total = 0;
-        breakdownAgg.forEach(r => {
-            breakdown[r._id] = r.count;
-            total += r.count;
-        });
-
-        // 2. Fetch users for selected reaction tab
         const query = { quoteId };
         if (type) query.type = type;
         if (cursor) query.createdAt = { $lt: new Date(cursor) };
 
-        const reactions = await Reaction.find(query)
-            .sort({ createdAt: -1 })
-            .limit(limit + 1)
-            .populate('userId', 'name username avatar')
-            .lean();
+        // 4. THE MONGO AGGREGATION
+        // This handles: Sorting by (Is a Friend) then by (Recent)
+        const reactions = await Reaction.aggregate([
+            { $match: query },
+            {
+                $addFields: {
+                    isFriend: { $in: ["$userId", followingIds.map(id => new mongoose.Types.ObjectId(id))] }
+                }
+            },
+            {
+                $sort: {
+                    isFriend: -1,  // Priority 1: Friends
+                    createdAt: -1  // Priority 2: Recency
+                }
+            },
+            { $limit: limit + 1 },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            { $unwind: '$user' },
+            {
+                $project: {
+                    type: 1,
+                    createdAt: 1,
+                    isFriend: 1,
+                    user: { _id: 1, name: 1, username: 1, avatar: 1 }
+                }
+            }
+        ]);
 
+        // 5. PAGINATION & CACHE FILL
         const hasMore = reactions.length > limit;
         if (hasMore) reactions.pop();
 
-        const nextCursor = hasMore
-            ? reactions[reactions.length - 1].createdAt
-            : null;
-
-        return {
+        const result = {
             total,
             breakdown,
             users: reactions,
             pagination: {
-                nextCursor,
-                hasMore
+                hasMore,
+                nextCursor: hasMore ? reactions[reactions.length - 1].createdAt : null
             }
         };
+
+        // Cache the first page for 30 seconds for high-traffic quotes
+        if (!cursor && !type) {
+            await redis.setex(firstPageCacheKey, 30, JSON.stringify(result));
+        }
+
+        return result;
     },
 
 };

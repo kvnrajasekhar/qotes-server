@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const reportSchema = new Schema({
-    reporterId: { type: ObjectId, ref: 'User', required: true },
-    targetId: { type: ObjectId, required: true },
+    reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    targetId: { type: Schema.Types.ObjectId, required: true },
     targetType: { type: String, enum: ['QUOTE', 'USER', 'COMMENT'] },
     reason: { type: String },
 }, { timestamps: true });

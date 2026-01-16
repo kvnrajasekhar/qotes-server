@@ -2,8 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const safetyService = require('../services/safety.service');
-const {successResponse, errorResponse} = require('../utils/response.util');
-const asyncHandler = require('../middlewares/async.middleware');
+const {successResponse, errorResponse} = require('../utils/responseFormatter.util');
+const asyncHandler = require('express-async-handler');
 const authMiddleware = require('../middlewares/auth.middleware');
 
 // Block a user

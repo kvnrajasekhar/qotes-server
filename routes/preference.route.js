@@ -2,8 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
-const { successResponse, errorResponse } = require('../utils/response.util');
-const asyncHandler = require('../utils/asyncHandler.util');
+const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
+const asyncHandler = require('express-async-handler');
 const preferenceService = require('../services/preference.service');
 
 router.post('/not-interested', authMiddleware, asyncHandler(async (req, res) => {

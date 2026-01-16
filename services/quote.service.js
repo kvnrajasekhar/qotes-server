@@ -1,6 +1,6 @@
 const { get } = require('mongoose');
 const Quote = require('../models/quote.model');
-const Reaction = require('../models/reactions.model');
+const Reaction = require('../models/reaction.model');
 const quoteService = {
 
     createQuote: async ({
@@ -48,7 +48,7 @@ const quoteService = {
                 text,
                 author: author || 'Anonymous',
                 category: category || '',
-                hashtags,
+                hashtags: hashtags || [],
                 taggedUsers,
                 creator,
                 isRequote,
@@ -67,7 +67,8 @@ const quoteService = {
             await session.commitTransaction();
             session.endSession();
 
-            return newQuote[0];
+            const savedQuote = newQuote[0];
+            return savedQuote;
 
         } catch (error) {
             await session.abortTransaction();

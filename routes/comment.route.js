@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const asyncHandler = require('express-async-handler');
 const authMiddleware = require('../middlewares/auth.middleware');
-const { successResponse, errorResponse } = require('../utils/response.util');
+const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
 const commentService = require('../services/comment.service');
 
 router.post('/:quoteId', authMiddleware, asyncHandler(async (req, res) => {

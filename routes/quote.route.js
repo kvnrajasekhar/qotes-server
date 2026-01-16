@@ -6,6 +6,9 @@ const quoteService = require('../services/quote.service');
 const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
 
 router.post('/', authMiddleware, asyncHandler(async (req, res) => {
+    console.log("DEBUG: Keys in req.user:", Object.keys(req.user));
+    console.log("DEBUG: Value of req.user.id:", req.user.id);
+    console.log("DEBUG: Value of req.user._id:", req.user._id);
     const {
         text,
         author,
@@ -30,10 +33,10 @@ router.post('/', authMiddleware, asyncHandler(async (req, res) => {
     const newQuote = await quoteService.createQuote({
         text: text || '',
         author,
-        category,
-        hashtags,
-        taggedUsers,
-        creator: req.user._id,
+        category: category || '',
+        hashtags: hashtags || [],
+        taggedUsers: taggedUsers || [],
+        creator: req.user.userId,
         isRequote,
         parentQuoteId,
         isHiddenBySystem,

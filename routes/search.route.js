@@ -21,3 +21,4 @@ router.get('/global', asyncHandler(async (req, res) => {
     const results = await searchService.searchGlobal({ query, type, limit, cursor });
     return successResponse(res, 200, 'Global search completed successfully', results);
 }));
+module.exports = router;
