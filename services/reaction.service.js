@@ -1,10 +1,8 @@
 const Reaction = require('../models/reaction.model');
 const Quote = require('../models/quote.model');
-const { Kafka } = require('kafkajs');
 const { redis, RATE_LIMIT_LUA } = require('../utils/redis.utils');
 const { atomicUpdateCache, getReactionBreakdown } = require('../cache/reaction.cache');
-const kafka = new Kafka({ brokers: ['localhost:9092'] });
-const producer = kafka.producer();
+const { producer } = require('../config/kafka.config');
 
 const reactionService = {
 
@@ -14,27 +12,47 @@ const reactionService = {
         if (!allowed) throw new Error("Too many requests");
 
         // 2. Determine Action (Check existing in DB/Local Cache)
-        const existing = await Reaction.findOne({ userId, quoteId }).lean();
-        let action = 'added', delta = 1, oldType = 'none';
+        const existing = await Reaction.findOne({ user: userId, quote: quoteId }).lean();
+        let action, oldType = null;
 
-        if (existing) {
-            if (existing.type === type) { action = 'removed'; delta = -1; }
-            else { action = 'updated'; oldType = existing.type; }
+        if (!existing) {
+            action = 'added';          // First reaction
+        } else if (existing.type === type) {
+            action = 'removed';        // Clicking same reaction → remove
+        } else {
+            action = 'updated';        // Clicking a different reaction → update
+            oldType = existing.type;
         }
 
         // 3. UPDATE REDIS (Fast Path)
+        const delta = (action === 'added') ? 1 : (action === 'removed') ? -1 : 0;
         await atomicUpdateCache(quoteId, type, delta, oldType);
 
         // 4. KAFKA PRODUCER (Persistent Path)
         await producer.send({
             topic: 'reaction-events',
-            messages: [{
-                key: quoteId, // PARTITION KEY: Critical for ordering!
-                value: JSON.stringify({ userId, quoteId, type, action, oldType })
-            }]
+            messages: [
+                {
+                    key: quoteId, // partition ordering
+                    value: JSON.stringify({
+                        eventId: `${userId}:${quoteId}`, // idempotency key
+                        userId,
+                        quoteId,
+                        type,
+                        action,
+                        oldType,
+                        timestamp: Date.now()
+                    })
+                }
+            ]
         });
 
-        return { action, type };
+        // 5️⃣ IMMEDIATE RESPONSE
+        return {
+            success: true,
+            action,
+            type
+        };
     },
     getQuoteReactions: async ({ quoteId, viewerId, type, cursor, limit = 10 }) => {
         // 1. GET COUNTS (Handles Read-Repair internally)

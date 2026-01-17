@@ -39,9 +39,9 @@ const authService = {
         const accessToken = jwt.sign(
             payload,
             JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '25m' }
         );
-
+        
         const refreshToken = jwt.sign(
             { userId: user._id },
             REFRESH_SECRET,

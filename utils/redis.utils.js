@@ -19,7 +19,8 @@ redis.on('error', (err) => {
 
 
 // LUA Script for Atomic Reaction Updates
-const REACTION_LUA = `
+const 
+REACTION_LUA = `
   local breakdownKey = KEYS[1]
   local totalKey = KEYS[2]
   local type = ARGV[1]
