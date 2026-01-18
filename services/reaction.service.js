@@ -7,21 +7,32 @@ const { producer } = require('../config/kafka.config');
 const reactionService = {
 
     toggleReaction: async ({ userId, quoteId, type }) => {
-        // 1. RATE LIMITING (e.g., 5 reactions per 10s)
-        const allowed = await redis.eval(RATE_LIMIT_LUA, 1, `limit:${userId}`, Date.now(), 10000, 5);
+        // 1. RATE LIMITING
+        const allowed = await redis.eval(
+            RATE_LIMIT_LUA,
+            2,
+            `rate:reaction:burst:${userId}`,
+            `rate:reaction:sustained:${userId}`,
+            Date.now(),
+            10000,   // burst window
+            5,        // burst limit
+            60 * 60 * 1000, // sustained window
+            20        // sustained limit
+        );
         if (!allowed) throw new Error("Too many requests");
 
-        // 2. Determine Action (Check existing in DB/Local Cache)
-        const existing = await Reaction.findOne({ user: userId, quote: quoteId }).lean();
+        // 2. Determine Action (Check existing in Local Cache)
+        const stateKey = `reaction:state:${userId}:${quoteId}`;
+        const existingType = await redis.get(stateKey);
         let action, oldType = null;
 
-        if (!existing) {
-            action = 'added';          // First reaction
-        } else if (existing.type === type) {
-            action = 'removed';        // Clicking same reaction → remove
+        if (!existingType) {
+            action = 'added';      
+        } else if (existingType === type) {
+            action = 'removed';
         } else {
-            action = 'updated';        // Clicking a different reaction → update
-            oldType = existing.type;
+            action = 'updated';        
+            oldType = existingType;
         }
 
         // 3. UPDATE REDIS (Fast Path)
@@ -73,6 +84,16 @@ const reactionService = {
         if (viewerId) {
             // Optimization: Get following from Redis Set instead of DB
             followingIds = await redis.smembers(`following:${viewerId}`);
+            if (followingIds.length === 0) {
+                // 1. Fallback: Fetch from DB because Redis is empty
+                followingIds = await Follow.find({ followerId: viewerId }).distinct('followingId');
+
+                // 2. Repair: Save it back to Redis for the next 24 hours
+                if (followingIds.length > 0) {
+                    await redis.sadd(`following:${viewerId}`, ...followingIds);
+                    await redis.expire(`following:${viewerId}`, 86400); // 24h TTL
+                }
+            }
         }
 
         const query = { quoteId };

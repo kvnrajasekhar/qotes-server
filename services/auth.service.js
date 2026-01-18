@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const passwordMailer = require('../mailer/forgotPasswordMailer');
 const fs = require('fs/promises');
 const cloudinaryService = require('./cloudinary.service');
+const { producer } = require('../config/kafka.config');
 const authService = {
 
 
@@ -41,7 +42,7 @@ const authService = {
             JWT_SECRET,
             { expiresIn: '25m' }
         );
-        
+
         const refreshToken = jwt.sign(
             { userId: user._id },
             REFRESH_SECRET,
@@ -49,6 +50,19 @@ const authService = {
         );
 
         await authService.saveRefreshToken(user._id, refreshToken);
+        try {
+            await producer.send({
+                topic: 'auth-events',
+                messages: [{
+                    key: user._id.toString(),
+                    value: JSON.stringify({ userId: user._id, action: 'login_warmup' })
+                }]
+            });
+        } catch (kafkaErr) {
+            // We log but don't stop the login. If Kafka fails, 
+            // the "Read-Repair" in the Reaction Service will catch it later.
+            console.error("Cache warm-up trigger failed:", kafkaErr);
+        }
 
         return {
             accessToken,

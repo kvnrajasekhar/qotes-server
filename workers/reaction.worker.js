@@ -1,50 +1,76 @@
+const mongoose = require('mongoose');
+const { kafka } = require('../config/kafka.config');
 const Reaction = require('../models/reaction.model');
 const Quote = require('../models/quote.model');
-const consumer = kafka.consumer({ groupId: 'reaction-group' });
-const producer = kafka.producer();
-const DLQ_TOPIC = 'reaction-events-dlq';
 
-const run = async () => {
-    await producer.connect(); 
+const DLQ_TOPIC = 'reaction-events-dlq';
+const consumer = kafka.consumer({ groupId: 'reaction-persistence-group' });
+const producer = kafka.producer();
+
+const runReactionWorker = async () => {
     await consumer.connect();
-    console.log("Consumer and Producer (for DLQ) connected successfully");
-    
-    await consumer.subscribe({ topic: 'reaction-events' });
+    await producer.connect();
+    await consumer.subscribe({ topic: 'reaction-events', fromBeginning: false });
 
     await consumer.run({
         eachMessage: async ({ message }) => {
             try {
-                const { userId, quoteId, type, action } = JSON.parse(message.value.toString());
+                const payload = JSON.parse(message.value.toString());
+                const { userId, quoteId, type, action, oldType } = payload;
+                if (message.headers && message.headers.replayedAt) {
+                    console.log(`🔄 Processing replayed message from: ${message.headers.replayedAt}`);
+                }
+
+                const userObjId = new mongoose.Types.ObjectId(userId);
+                const quoteObjId = new mongoose.Types.ObjectId(quoteId);
 
                 if (action === 'added') {
-                    // 1. Use findOneAndUpdate to check if it already existed
-                    // This prevents the "Double Increment" bug
                     const existing = await Reaction.findOneAndUpdate(
-                        { user: userId, quote: quoteId },
+                        { user: userObjId, quote: quoteObjId },
                         { type },
-                        { upsert: true, new: false } // new: false returns the doc BEFORE update
+                        { upsert: true, new: false }
                     );
 
-                    // Only increment Quote count if this is a NEW reaction
                     if (!existing) {
-                        await Quote.findByIdAndUpdate(quoteId, { $inc: { reactionsCount: 1 } });
-                    }
-                }
-                else if (action === 'removed') {
-                    const deleted = await Reaction.findOneAndDelete({ user: userId, quote: quoteId });
+                        // Increment specific type in the Map and the general likes if applicable
+                        const update = { [`reactions.${type}`]: 1 };
+                        if (type === 'like') update.likes = 1;
 
-                    // Only decrement if a document actually existed to be deleted
-                    if (deleted) {
-                        await Quote.findByIdAndUpdate(quoteId, { $inc: { reactionsCount: -1 } });
+                        await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
                     }
                 }
+
                 else if (action === 'updated') {
-                    // Quote.reactionsCount remains exactly the same.
-                    await Reaction.updateOne({ user: userId, quote: quoteId }, { type });
+                    // Decrement old type, Increment new type in the Map
+                    const update = {
+                        [`reactions.${oldType}`]: -1,
+                        [`reactions.${type}`]: 1
+                    };
+
+                    // Handle the top-level likes field if swapping to/from 'like'
+                    if (oldType === 'like') update.likes = -1;
+                    if (type === 'like') update.likes = 1;
+
+                    await Promise.all([
+                        Reaction.updateOne({ user: userObjId, quote: quoteObjId }, { type }),
+                        Quote.findByIdAndUpdate(quoteObjId, { $inc: update })
+                    ]);
+                }
+
+                else if (action === 'removed') {
+                    const deleted = await Reaction.findOneAndDelete({ user: userObjId, quote: quoteObjId });
+
+                    if (deleted) {
+                        const update = { [`reactions.${type}`]: -1 };
+                        if (type === 'like') update.likes = -1;
+
+                        await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
+                    }
                 }
 
             } catch (err) {
-                // MOVE TO DEAD LETTER QUEUE (DLQ)
+                // Log the error and send to DLQ
+                console.error('❌ Consumer Error:', err.message);
                 await producer.send({
                     topic: DLQ_TOPIC,
                     messages: [{
@@ -52,7 +78,8 @@ const run = async () => {
                         value: message.value,
                         headers: {
                             error: err.message,
-                            timestamp: Date.now().toString()
+                            timestamp: Date.now().toString(),
+                            isRetry: 'true',
                         }
                     }]
                 });
@@ -60,6 +87,5 @@ const run = async () => {
         },
     });
 };
-run().catch(console.error);
 
-module.exports = {};
+runReactionWorker();
