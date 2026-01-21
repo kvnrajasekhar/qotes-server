@@ -13,7 +13,8 @@ const runCacheWorker = async () => {
 
         // 2. Subscribe to the topic
         // fromBeginning: false ensures we only process new logins
-        await consumer.subscribe({ topic: 'auth-events', fromBeginning: true });
+        await consumer.subscribe({ topic: 'auth-events', fromBeginning: true }); // for a fresh start, set to false in production
+        console.log("Cache Worker subscribed to auth-events topic");
 
         // 3. Run the consumer logic
         await consumer.run({
