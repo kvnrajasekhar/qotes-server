@@ -50,15 +50,15 @@ const safetyRouter = require('./routes/safety.route');
 const searchRouter = require('./routes/search.route');
 
 
-app.use('/auth', authRouter);
-app.use('/user', userRouter);
-app.use('/quote', quoteRouter);
-app.use('/comment', commentRouter);
-app.use('/feed', feedRouter);
-app.use('/preference', preferenceRouter);
-app.use('/reaction', reactionRouter);
-app.use('/safety', safetyRouter);
-app.use('/search', searchRouter);
+app.use('/v1/auth', authRouter);
+app.use('/v1/user', userRouter);
+app.use('/v1/quote', quoteRouter);
+app.use('/v1/comment', commentRouter);
+app.use('/v1/feed', feedRouter);
+app.use('/v1/preference', preferenceRouter);
+app.use('/v1/reaction', reactionRouter);
+app.use('/v1/safety', safetyRouter);
+app.use('/v1/search', searchRouter);
 
 app.use(cors({
     origin: '*',
