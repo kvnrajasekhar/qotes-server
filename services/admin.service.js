@@ -53,7 +53,7 @@ const adminService = {
         const quotes = await Quote.find(query)
             .sort({ createdAt: -1, _id: 1 })
             .limit(limit + 1)
-            .populate('creator', 'username email')
+            .populate('creator', 'username email createdAt')
             .lean();
 
         const hasMore = quotes.length > limit;
