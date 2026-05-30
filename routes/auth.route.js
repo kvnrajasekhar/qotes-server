@@ -3,24 +3,80 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
-
-const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
-const authService = require('../services/auth.service');
-const authMiddleware = require('../middlewares/auth.middleware');
-const upload = require('../middlewares/upload.middleware');
 const fs = require('fs/promises');
 
-const JWT_SECRET = process.env.JWT_SECRET; // Move global secrets to the top
+// Middlewares & Utils
+const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
+const authMiddleware = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
+const { createRateLimiter } = require('../middlewares/rateLimiter.middleware');
+
+// Services
+const authService = require('../services/auth.service');
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_SECRET = process.env.REFRESH_SECRET;
 
+// ==========================================
+// RATE LIMITERS CONFIGURATION
+// ==========================================
 
-router.post('/login', asyncHandler(async (req, res) => {
+const loginLimiter = createRateLimiter({
+    actionName: 'login',
+    burstWindowMs: 60 * 1000,      // 1 minute
+    burstLimit: 5,                 // 5 attempts per minute
+    sustainedWindowMs: 3600 * 1000, // 1 hour
+    sustainedLimit: 20,            // Max 20 attempts per hour
+    identifier: 'ip'
+});
+
+const signupLimiter = createRateLimiter({
+    actionName: 'signup',
+    burstWindowMs: 60 * 1000,      // 1 minute
+    burstLimit: 3,                 // 3 accounts per minute
+    sustainedWindowMs: 3600 * 1000, // 1 hour
+    sustainedLimit: 10,            // Max 10 accounts per hour
+    identifier: 'ip'
+});
+
+const passwordResetLimiter = createRateLimiter({
+    actionName: 'password_reset',
+    burstWindowMs: 60 * 1000,      // 1 minute
+    burstLimit: 3,                 // 3 requests per min
+    sustainedWindowMs: 3600 * 1000, // 1 hour
+    sustainedLimit: 5,             // Max 5 reset requests per hour
+    identifier: 'ip'
+});
+
+const tokenRefreshLimiter = createRateLimiter({
+    actionName: 'token_refresh',
+    burstWindowMs: 60 * 1000,      // 1 minute
+    burstLimit: 10,                // 10 refreshes per min
+    sustainedWindowMs: 3600 * 1000, // 1 hour
+    sustainedLimit: 50,            // Max 50 per hour
+    identifier: 'ip'
+});
+
+const updatePasswordLimiter = createRateLimiter({
+    actionName: 'update_password',
+    burstWindowMs: 60 * 1000,      // 1 minute
+    burstLimit: 3,                 // 3 attempts per minute
+    sustainedWindowMs: 3600 * 1000, // 1 hour
+    sustainedLimit: 10,            // Max 10 per hour
+    identifier: 'userId'           // Target authenticated user ID
+});
+
+
+// ==========================================
+// ROUTES
+// ==========================================
+
+router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
     const { identifier, password } = req.body;
 
     const result = await authService.login(identifier, password);
 
     if (!result) {
-
         return errorResponse(res, 401, 'Invalid credentials');
     }
 
@@ -36,19 +92,21 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
 }));
 
-
 router.post('/signup',
+    signupLimiter, // CRITICAL: Limiter goes BEFORE file upload to prevent disk/memory spam
     upload.single('avatar'),
     asyncHandler(async (req, res) => {
-
         const { username, email, password, firstName, lastName, bio } = req.body;
         const avatarFile = req.file || null;
+        
         const existingUser = await authService.findUserByUsernameOrEmail(username);
+        
         if (existingUser) {
             // If the user already exists, we must manually clean up the file here
             if (avatarFile) await fs.unlink(avatarFile.path);
             return errorResponse(res, 409, 'Username already exists');
         }
+        
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // 3. Delegate ALL saving, uploading, and cleanup to the service
@@ -68,7 +126,6 @@ router.post('/signup',
     })
 );
 
-
 router.post('/logout', asyncHandler(async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
 
@@ -80,23 +137,21 @@ router.post('/logout', asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Logged out successfully');
 }));
 
-
-router.post('/refresh', asyncHandler(async (req, res) => {
+router.post('/refresh', tokenRefreshLimiter, asyncHandler(async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
         return errorResponse(res, 401, 'Refresh token not found');
     }
 
-    const { accessToken } =
-        await authService.refreshAccessToken(refreshToken);
+    const { accessToken } = await authService.refreshAccessToken(refreshToken);
 
     return successResponse(res, 200, 'Token refreshed successfully', {
         accessToken
     });
 }));
 
-router.post('/forgot-password', asyncHandler(async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, asyncHandler(async (req, res) => {
     const { email } = req.body;
 
     // The service handles the user existence check internally for security.
@@ -137,35 +192,39 @@ const postResetPassword = asyncHandler(async (req, res) => {
     }
 });
 
-router.post('/forgotpassword/:userId/:token', postResetPassword);
+router.post('/forgotpassword/:userId/:token', passwordResetLimiter, postResetPassword);
 
-router.post('/update-password', authMiddleware, asyncHandler(async (req, res) => {
-    const userId = req.user.userId;
-    const { oldPassword, newPassword, confirmPassword } = req.body;
+router.post('/update-password', 
+    authMiddleware, 
+    updatePasswordLimiter, 
+    asyncHandler(async (req, res) => {
+        const userId = req.user.userId;
+        const { oldPassword, newPassword, confirmPassword } = req.body;
 
-    try {
-        const result = await authService.updateUserPassword(
-            userId,
-            oldPassword,
-            newPassword,
-            confirmPassword
-        );
+        try {
+            const result = await authService.updateUserPassword(
+                userId,
+                oldPassword,
+                newPassword,
+                confirmPassword
+            );
 
-        // Security: Clear the client-side refresh token cookie after a successful password change
-        res.clearCookie('refreshToken');
+            // Security: Clear the client-side refresh token cookie after a successful password change
+            res.clearCookie('refreshToken');
 
-        return successResponse(res, 200, result.message);
+            return successResponse(res, 200, result.message);
 
-    } catch (err) {
-        const message = err.message;
+        } catch (err) {
+            const message = err.message;
 
-        if (message.includes("not match") || message.includes("Current password incorrect")) {
-            return errorResponse(res, 400, message); // Bad Request
+            if (message.includes("not match") || message.includes("Current password incorrect")) {
+                return errorResponse(res, 400, message); // Bad Request
+            }
+
+            console.error("Password update failed:", err);
+            return errorResponse(res, 500, "Internal Server Error");
         }
-
-        console.error("Password update failed:", err);
-        return errorResponse(res, 500, "Internal Server Error");
-    }
-}));
+    })
+);
 
 module.exports = router;

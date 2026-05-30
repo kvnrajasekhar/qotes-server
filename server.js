@@ -10,6 +10,7 @@ const port = 3030;
 app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI;
+console.log(process.env.MONGO_URI);
 
 let mongooseConnection;
 
@@ -17,14 +18,11 @@ const connectToDatabase = async () => {
     if (!mongooseConnection) {
         try {
             mongoose.set('strictQuery', false);
-            mongooseConnection = await mongoose.connect(MONGO_URI, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-            });
+            mongooseConnection = await mongoose.connect(MONGO_URI);
             console.log('MongoDB connected');
         } catch (err) {
             console.error('MongoDB connection error:', err);
-            throw err; // Re-throw the error to prevent the app from starting
+            process.exit(1);
         }
     }
     return mongooseConnection;
@@ -69,24 +67,24 @@ app.use(cors({
 const startReactionConsumer = require('./kafka/reaction.consumer');
 
 const startServer = async () => {
-  // 1️⃣ Connect Kafka producer ONCE
-  await connectKafka();
-  await startReactionConsumer();
+    // 1️⃣ Connect Kafka producer ONCE
+    await connectKafka();
+    await startReactionConsumer();
 
-  // 2️⃣ Optional: Kafka health check (admin)
-  const admin = kafka.admin();
-  await admin.connect();
-  console.log('✅ Kafka connected');
+    // 2️⃣ Optional: Kafka health check (admin)
+    const admin = kafka.admin();
+    await admin.connect();
+    console.log('✅ Kafka connected');
 
-  // ⚠️ Do NOT disconnect admin if you keep producer running
+    // ⚠️ Do NOT disconnect admin if you keep producer running
 
-  // 3️⃣ Start HTTP server
-  app.listen(port, () => {
-    console.log('🚀 Server running on ' + port);
-  });
+    // 3️⃣ Start HTTP server
+    app.listen(port, () => {
+        console.log('🚀 Server running on ' + port);
+    });
 };
 
 startServer().catch(err => {
-  console.error('❌ Failed to start server', err);
-  process.exit(1);
+    console.error('❌ Failed to start server', err);
+    process.exit(1);
 });

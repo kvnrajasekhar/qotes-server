@@ -1,29 +1,29 @@
+const mongoose = require('mongoose');
 const Reaction = require('../models/reaction.model');
 const Quote = require('../models/quote.model');
-const { redis, RATE_LIMIT_LUA } = require('../utils/redis.utils');
+const Follow = require('../models/follow.model'); // Added missing import
+const { redis, RedisKeys } = require('../utils/redis.utils');
 const { atomicUpdateCache, getReactionBreakdown } = require('../cache/reaction.cache');
 const { producer } = require('../config/kafka.config');
 
 const reactionService = {
-
     toggleReaction: async ({ userId, quoteId, type }) => {
-        // 1. RATE LIMITING
-        const allowed = await redis.eval(
-            RATE_LIMIT_LUA,
-            2,
-            `rate:reaction:burst:${userId}`,
-            `rate:reaction:sustained:${userId}`,
+        // 1. RATE LIMITING (Using our new custom command)
+        const allowed = await redis.slidingWindowRateLimit(
+            RedisKeys.rateLimitBurst(userId),
+            RedisKeys.rateLimitSustain(userId),
             Date.now(),
-            10000,   // burst window
-            5,        // burst limit
-            60 * 60 * 1000, // sustained window
-            20        // sustained limit
+            10000,   // burst window (10s)
+            5,       // burst limit
+            3600000, // sustained window (1hr)
+            20       // sustained limit
         );
         if (!allowed) throw new Error("Too many requests");
 
-        // 2. Determine Action (Check existing in Local Cache)
-        const stateKey = `reaction:state:${userId}:${quoteId}`;
+        // 2. Determine Action
+        const stateKey = RedisKeys.reactionState(userId, quoteId);
         const existingType = await redis.get(stateKey);
+        
         let action, oldType = null;
 
         if (!existingType) {
@@ -37,84 +37,101 @@ const reactionService = {
 
         // 3. UPDATE REDIS (Fast Path)
         const delta = (action === 'added') ? 1 : (action === 'removed') ? -1 : 0;
-        await atomicUpdateCache(quoteId, type, delta, oldType);
+        
+        // Execute state update and count update concurrently
+        const updatePromises = [atomicUpdateCache(quoteId, type, delta, oldType)];
+        
+        // CRITICAL FIX: Ensure the user's individual state is eagerly updated in Redis
+        if (action === 'removed') {
+            updatePromises.push(redis.del(stateKey));
+        } else {
+            // Set state with a TTL (e.g., 30 days) to prevent infinite memory growth
+            updatePromises.push(redis.setex(stateKey, 2592000, type));
+        }
+        await Promise.all(updatePromises);
 
         // 4. KAFKA PRODUCER (Persistent Path)
-        await producer.send({
+        // Fire and forget, or handle errors so Kafka downtime doesn't break the UI
+        producer.send({
             topic: 'reaction-events',
-            messages: [
-                {
-                    key: quoteId, // partition ordering
-                    value: JSON.stringify({
-                        eventId: `${userId}:${quoteId}`, // idempotency key
-                        userId,
-                        quoteId,
-                        type,
-                        action,
-                        oldType,
-                        timestamp: Date.now()
-                    })
-                }
-            ]
+            messages: [{
+                key: quoteId, 
+                value: JSON.stringify({
+                    eventId: `${userId}:${quoteId}`, 
+                    userId,
+                    quoteId,
+                    type,
+                    action,
+                    oldType,
+                    timestamp: Date.now()
+                })
+            }]
+        }).catch(err => {
+            console.error('Failed to publish reaction to Kafka:', err);
+            // Optional: Push to a dead-letter queue or local retry mechanism here
         });
 
-        // 5️⃣ IMMEDIATE RESPONSE
-        return {
-            success: true,
-            action,
-            type
-        };
+        // 5. IMMEDIATE RESPONSE
+        return { success: true, action, type };
     },
+
     getQuoteReactions: async ({ quoteId, viewerId, type, cursor, limit = 10 }) => {
-        // 1. GET COUNTS (Handles Read-Repair internally)
-        // This is the caching part for the counters.
+        // 1. GET COUNTS 
         const { breakdown, total } = await getReactionBreakdown(quoteId);
 
         // 2. FIRST-PAGE CACHING
-        // If it's the first page and no specific type, check Redis to save a DB hit
-        const firstPageCacheKey = `cache:reactions:p1:${quoteId}:${viewerId || 'guest'}`;
+        const firstPageKey = RedisKeys.firstPageReactions(quoteId, viewerId || 'guest');
         if (!cursor && !type) {
-            const cached = await redis.get(firstPageCacheKey);
-            if (cached) return JSON.parse(cached);
+            try {
+                const cached = await redis.get(firstPageKey);
+                if (cached) return JSON.parse(cached);
+            } catch (err) {
+                console.warn('Failed to fetch first-page cache:', err.message);
+            }
         }
 
-        // 3. SOCIAL PRIORITY QUERY (The Instagram Logic)
-        // We need to find who the user follows to put them at the top
+        // 3. SOCIAL PRIORITY QUERY
         let followingIds = [];
         if (viewerId) {
-            // Optimization: Get following from Redis Set instead of DB
-            followingIds = await redis.smembers(`following:${viewerId}`);
+            const followingKey = RedisKeys.userFollowing(viewerId);
+            try {
+                followingIds = await redis.smembers(followingKey);
+            } catch (err) {
+                console.warn('Redis smembers failed, falling back to DB:', err.message);
+            }
+
             if (followingIds.length === 0) {
-                // 1. Fallback: Fetch from DB because Redis is empty
                 followingIds = await Follow.find({ followerId: viewerId }).distinct('followingId');
 
-                // 2. Repair: Save it back to Redis for the next 24 hours
                 if (followingIds.length > 0) {
-                    await redis.sadd(`following:${viewerId}`, ...followingIds);
-                    await redis.expire(`following:${viewerId}`, 86400); // 24h TTL
+                    try {
+                        // Fire and forget the read-repair
+                        redis.pipeline()
+                            .sadd(followingKey, ...followingIds.map(id => id.toString()))
+                            .expire(followingKey, 86400) 
+                            .exec();
+                    } catch (err) {
+                        console.error('Failed to repair following cache:', err.message);
+                    }
                 }
             }
         }
 
-        const query = { quoteId };
+        const query = { quoteId: new mongoose.Types.ObjectId(quoteId) };
         if (type) query.type = type;
         if (cursor) query.createdAt = { $lt: new Date(cursor) };
 
         // 4. THE MONGO AGGREGATION
-        // This handles: Sorting by (Is a Friend) then by (Recent)
         const reactions = await Reaction.aggregate([
             { $match: query },
             {
                 $addFields: {
-                    isFriend: { $in: ["$userId", followingIds.map(id => new mongoose.Types.ObjectId(id))] }
+                    isFriend: { 
+                        $in: ["$userId", followingIds.map(id => new mongoose.Types.ObjectId(id))] 
+                    }
                 }
             },
-            {
-                $sort: {
-                    isFriend: -1,  // Priority 1: Friends
-                    createdAt: -1  // Priority 2: Recency
-                }
-            },
+            { $sort: { isFriend: -1, createdAt: -1 } },
             { $limit: limit + 1 },
             {
                 $lookup: {
@@ -149,13 +166,14 @@ const reactionService = {
             }
         };
 
-        // Cache the first page for 30 seconds for high-traffic quotes
         if (!cursor && !type) {
-            await redis.setex(firstPageCacheKey, 30, JSON.stringify(result));
+            redis.setex(firstPageKey, 30, JSON.stringify(result)).catch(err => {
+                console.warn('Failed to set first-page cache:', err.message);
+            });
         }
 
         return result;
-    },
-
+    }
 };
+
 module.exports = reactionService;
