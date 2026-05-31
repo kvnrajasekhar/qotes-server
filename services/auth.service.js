@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const passwordMailer = require('../mailer/forgotPasswordMailer');
 const fs = require('fs/promises');
 const cloudinaryService = require('./cloudinary.service');
-const { producer } = require('../config/kafka.config');
+const { producer } = require('../kafka/config/kafka.config');
 const authService = {
 
 

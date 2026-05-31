@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { kafka } = require('../config/kafka.config');
-const Reaction = require('../models/reaction.model');
+const Reaction = require('../../models/reaction.model');
 
 const startReactionConsumer = async () => {
   const consumer = kafka.consumer({ groupId: 'reaction-group' });

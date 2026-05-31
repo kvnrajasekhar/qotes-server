@@ -4,7 +4,7 @@ const Quote = require('../models/quote.model');
 const Follow = require('../models/follow.model'); // Added missing import
 const { redis, RedisKeys } = require('../utils/redis.utils');
 const { atomicUpdateCache, getReactionBreakdown } = require('../cache/reaction.cache');
-const { producer } = require('../config/kafka.config');
+const { producer } = require('../kafka/config/kafka.config');
 
 const reactionService = {
     toggleReaction: async ({ userId, quoteId, type }) => {
