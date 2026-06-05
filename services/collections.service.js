@@ -1,4 +1,4 @@
-const Collection = require('../models/collection.model');
+const Collection = require('../models/collections.model');
 const CollectionItem = require('../models/collectionItem.model');
 const Quote = require('../models/quote.model');
 

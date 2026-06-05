@@ -6,6 +6,7 @@ const userService = require('../services/user.service');
 const upload = require('../middlewares/upload.middleware');
 const { errorResponse, successResponse } = require('../utils/responseFormatter.util');
 
+const User = require('../models/user.model');
 
 router.get('/suggested', authMiddleware, asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;

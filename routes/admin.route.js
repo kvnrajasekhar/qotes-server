@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { successResponse, errorResponse } = require('../utils/response.utils');
+const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
 const adminService = require('../services/admin.service');
 
 router.get('/allusers', async (req, res) => {

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const asyncHandler = require('express-async-handler');
 const collectionService = require('../services/collections.service');
 const authMiddleware = require('../middlewares/auth.middleware');
 const { successResponse, errorResponse } = require('../utils/responseFormatter.util');
