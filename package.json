@@ -13,7 +13,17 @@
     "worker:cache": "node src/workers/loginFollowerCache.worker.js",
     "dlq:replay": "node src/infrastructure/kafka/dlq/universal.dlq.js",
     "kafka:init": "node src/infrastructure/kafka/initTopics.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "prettier --write",
+      "eslint --fix --ignore-pattern dist --ignore-pattern build"
+    ],
+    "*.{json,md,css,html}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -34,6 +44,12 @@
     "redis": "^5.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.8.4"
   }
 }
