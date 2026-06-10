@@ -14,12 +14,12 @@
     "dlq:replay": "node src/infrastructure/kafka/dlq/universal.dlq.js",
     "kafka:init": "node src/infrastructure/kafka/initTopics.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky install"
+    "prepare": "husky "
   },
   "lint-staged": {
     "*.{js,jsx}": [
       "prettier --write",
-      "eslint --fix --ignore-pattern dist --ignore-pattern build"
+      "eslint --fix"
     ],
     "*.{json,md,css,html}": [
       "prettier --write"
