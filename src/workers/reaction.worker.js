@@ -1,98 +1,142 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const mongoose = require('mongoose');
-const { connectToDatabase } = require('../config/database');
-const { kafka } = require('../infrastructure/kafka/config/kafka.config');
-const Reaction = require('../models/reaction.model');
-const Quote = require('../models/quote.model');
+const mongoose = require("mongoose");
+const logger = require("../shared/utils/logger.util");
+const { connectToDatabase } = require("../config/database");
+const { kafka } = require("../infrastructure/kafka/config/kafka.config");
+const Reaction = require("../models/reaction.model");
+const Quote = require("../models/quote.model");
 
-const DLQ_TOPIC = 'reaction-events-dlq';
-const consumer = kafka.consumer({ groupId: 'reaction-persistence-group' });
+const DLQ_TOPIC = "reaction-events-dlq";
+const consumer = kafka.consumer({ groupId: "reaction-persistence-group" });
 const producer = kafka.producer();
 
+const buildMessageMeta = (topic, partition, message, payload) => ({
+  topic,
+  partition,
+  offset: message.offset,
+  key: message.key?.toString() || null,
+  replayedAt: message.headers?.replayedAt?.toString() || null,
+  traceId: message.headers?.traceId?.toString() || null,
+  userId: payload?.userId || null,
+  quoteId: payload?.quoteId || null,
+  action: payload?.action || null,
+});
+
 const runReactionWorker = async () => {
-    await connectToDatabase();
-    await consumer.connect();
-    await producer.connect();
-    await consumer.subscribe({ topic: 'reaction-events', fromBeginning: false });
+  await connectToDatabase();
+  await consumer.connect();
+  await producer.connect();
+  await consumer.subscribe({ topic: "reaction-events", fromBeginning: false });
 
-    await consumer.run({
-        eachMessage: async ({ message }) => {
-            try {
-                const payload = JSON.parse(message.value.toString());
-                const { userId, quoteId, type, action, oldType } = payload;
-                if (message.headers && message.headers.replayedAt) {
-                    console.log(`🔄 Processing replayed message from: ${message.headers.replayedAt}`);
-                }
+  logger.info("Reaction consumer worker started", {
+    service: "reaction-worker",
+    groupId: "reaction-persistence-group",
+    topic: "reaction-events",
+  });
 
-                const userObjId = new mongoose.Types.ObjectId(userId);
-                const quoteObjId = new mongoose.Types.ObjectId(quoteId);
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      const payload = JSON.parse(message.value.toString());
+      const meta = buildMessageMeta(topic, partition, message, payload);
 
-                if (action === 'added') {
-                    const existing = await Reaction.findOneAndUpdate(
-                        { user: userObjId, quote: quoteObjId },
-                        { type },
-                        { upsert: true, new: false }
-                    );
+      logger.info("Kafka reaction event received", meta);
 
-                    if (!existing) {
-                        // Increment specific type in the Map and the general likes if applicable
-                        const update = { [`reactions.${type}`]: 1 };
-                        if (type === 'like') update.likes = 1;
+      if (meta.replayedAt) {
+        logger.debug("Processing replayed Kafka message", meta);
+      }
 
-                        await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
-                    }
-                }
+      try {
+        const userObjId = new mongoose.Types.ObjectId(payload.userId);
+        const quoteObjId = new mongoose.Types.ObjectId(payload.quoteId);
 
-                else if (action === 'updated') {
-                    // Decrement old type, Increment new type in the Map
-                    const update = {
-                        [`reactions.${oldType}`]: -1,
-                        [`reactions.${type}`]: 1
-                    };
+        if (payload.action === "added") {
+          const existing = await Reaction.findOneAndUpdate(
+            { user: userObjId, quote: quoteObjId },
+            { type: payload.type },
+            { upsert: true, new: false },
+          );
 
-                    // Handle the top-level likes field if swapping to/from 'like'
-                    if (oldType === 'like') update.likes = -1;
-                    if (type === 'like') update.likes = 1;
+          if (!existing) {
+            const update = { [`reactions.${payload.type}`]: 1 };
+            if (payload.type === "like") update.likes = 1;
 
-                    await Promise.all([
-                        Reaction.updateOne({ user: userObjId, quote: quoteObjId }, { type }),
-                        Quote.findByIdAndUpdate(quoteObjId, { $inc: update })
-                    ]);
-                }
+            await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
+            logger.info("Processed reaction added event", {
+              ...meta,
+              result: "added",
+              type: payload.type,
+            });
+          }
+        } else if (payload.action === "updated") {
+          const update = {
+            [`reactions.${payload.oldType}`]: -1,
+            [`reactions.${payload.type}`]: 1,
+          };
 
-                else if (action === 'removed') {
-                    const deleted = await Reaction.findOneAndDelete({ user: userObjId, quote: quoteObjId });
+          if (payload.oldType === "like") update.likes = -1;
+          if (payload.type === "like") update.likes = 1;
 
-                    if (deleted) {
-                        const update = { [`reactions.${type}`]: -1 };
-                        if (type === 'like') update.likes = -1;
+          await Promise.all([
+            Reaction.updateOne(
+              { user: userObjId, quote: quoteObjId },
+              { type: payload.type },
+            ),
+            Quote.findByIdAndUpdate(quoteObjId, { $inc: update }),
+          ]);
 
-                        await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
-                    }
-                }
+          logger.info("Processed reaction updated event", {
+            ...meta,
+            result: "updated",
+            oldType: payload.oldType,
+            type: payload.type,
+          });
+        } else if (payload.action === "removed") {
+          const deleted = await Reaction.findOneAndDelete({
+            user: userObjId,
+            quote: quoteObjId,
+          });
 
-            } catch (err) {
-                // Log the error and send to DLQ
-                console.error('❌ Consumer Error:', err.message);
-                await producer.send({
-                    topic: DLQ_TOPIC,
-                    messages: [{
-                        key: message.key,
-                        value: message.value,
-                        headers: {
-                            error: err.message,
-                            timestamp: Date.now().toString(),
-                            isRetry: 'true',
-                        }
-                    }]
-                });
-            }
-        },
-    });
+          if (deleted) {
+            const update = { [`reactions.${payload.type}`]: -1 };
+            if (payload.type === "like") update.likes = -1;
+
+            await Quote.findByIdAndUpdate(quoteObjId, { $inc: update });
+            logger.info("Processed reaction removed event", {
+              ...meta,
+              result: "removed",
+            });
+          }
+        } else {
+          logger.warn("Received unsupported reaction action", meta);
+        }
+      } catch (err) {
+        logger.error("Kafka reaction processing failed, sending to DLQ", {
+          ...meta,
+          error: err,
+        });
+
+        await producer.send({
+          topic: DLQ_TOPIC,
+          messages: [
+            {
+              key: message.key?.toString() || null,
+              value: message.value,
+              headers: {
+                error: err.message,
+                stack: err.stack || "",
+                timestamp: Date.now().toString(),
+                isRetry: "true",
+              },
+            },
+          ],
+        });
+      }
+    },
+  });
 };
 
-runReactionWorker().catch(err => {
-    console.error('Reaction worker failed to start:', err);
-    process.exit(1);
+runReactionWorker().catch((err) => {
+  logger.error("Reaction worker failed to start", { error: err });
+  process.exit(1);
 });

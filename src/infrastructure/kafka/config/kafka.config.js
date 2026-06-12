@@ -1,12 +1,15 @@
-const { Kafka } = require('kafkajs');
+const { Kafka } = require("kafkajs");
+const logger = require("../../../shared/utils/logger.util");
+
+const kafkaBrokers = [process.env.KAFKA_BROKER || "localhost:9092"];
 
 const kafka = new Kafka({
-  clientId: 'quotely-server',
-  brokers: ['localhost:9092'],
+  clientId: "quotely-server",
+  brokers: kafkaBrokers,
   retry: {
-    retries: 10
+    retries: 10,
   },
-  metadataMaxAge: 10000
+  metadataMaxAge: 10000,
 });
 
 const producer = kafka.producer();
@@ -17,7 +20,10 @@ const connectKafka = async () => {
   if (!isProducerConnected) {
     await producer.connect();
     isProducerConnected = true;
-    console.log('✅ Kafka Producer connected globally');
+    logger.info("Kafka producer connected globally", {
+      service: "kafka",
+      brokers: kafkaBrokers,
+    });
   }
 };
 

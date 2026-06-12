@@ -8,19 +8,32 @@ const initTopics = require("./infrastructure/kafka/initTopics");
 
 const port = process.env.PORT || 3030;
 
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection", { reason });
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception", { error });
+  process.exit(1);
+});
+
 const startOptionalMessaging = async () => {
   try {
+    logger.info("Starting optional Kafka messaging", { service: "kafka" });
     await connectKafka();
     await initTopics();
     app.locals.kafkaReady = true;
     app.locals.kafkaStatus = "ready";
-    logger.info("Kafka messaging is ready");
+    logger.info("Kafka messaging is ready", { service: "kafka" });
   } catch (err) {
     app.locals.kafkaReady = false;
     app.locals.kafkaStatus = "unavailable";
     logger.error(
-      "Kafka is unavailable; API will continue without async messaging: %s",
-      err.message,
+      "Kafka is unavailable; API will continue without async messaging",
+      {
+        service: "kafka",
+        error: err,
+      },
     );
   }
 };
@@ -29,13 +42,16 @@ const startServer = async () => {
   await connectToDatabase();
 
   app.listen(port, () => {
-    logger.info(`Server running on ${port}`);
+    logger.info("HTTP server started", {
+      port,
+      env: process.env.NODE_ENV || "development",
+    });
   });
 
-  startOptionalMessaging();
+  await startOptionalMessaging();
 };
 
 startServer().catch((err) => {
-  logger.error("Failed to start API server: %o", err);
+  logger.error("Failed to start API server", { error: err });
   process.exit(1);
 });

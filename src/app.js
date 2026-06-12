@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-const logger = require("./shared/utils/logger.util");
 const {
   successResponse,
   errorResponse,
@@ -13,6 +12,11 @@ const {
   getMetricsSnapshot,
   toPrometheus,
 } = require("./shared/observability/metrics");
+const {
+  requestLogger,
+  notFoundHandler,
+  errorHandler,
+} = require("./shared/middlewares/logger.middleware");
 
 const adminRouter = require("./modules/admin/admin.route");
 const authRouter = require("./modules/auth/auth.route");
@@ -35,6 +39,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(requestLogger);
 app.use(observeRequest);
 
 app.get("/", (req, res) => {
@@ -100,17 +105,7 @@ app.use("/v1/safety", safetyRouter);
 app.use("/v1/search", searchRouter);
 app.use("/v1/user", userRouter);
 
-app.use((req, res) => {
-  return errorResponse(res, 404, "Route not found");
-});
-
-app.use((err, req, res, next) => {
-  logger.error("Unhandled request error: %o", err);
-  return errorResponse(
-    res,
-    err.status || 500,
-    err.message || "Internal server error",
-  );
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;

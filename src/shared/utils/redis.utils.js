@@ -1,6 +1,7 @@
 const Redis = require("ioredis");
 const dotenv = require("dotenv");
 const logger = require("./logger.util");
+
 dotenv.config();
 
 const redis = new Redis({
@@ -8,18 +9,149 @@ const redis = new Redis({
   port: process.env.REDIS_PORT || 6379,
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
-  // Add resilience: exponential backoff for reconnects
   retryStrategy(times) {
     return Math.min(times * 50, 2000);
   },
 });
 
-redis.on("connect", () => logger.info("Redis connected"));
-redis.on("error", (err) =>
-  logger.error("Redis connection error: %s", err.message),
-);
+redis.on("connect", () => {
+  logger.info("Redis connected", {
+    service: "redis",
+    host: process.env.REDIS_HOST || "127.0.0.1",
+    port: process.env.REDIS_PORT || 6379,
+  });
+});
 
-// 1. CENTRALIZED KEY REGISTRY
+redis.on("ready", () => {
+  logger.info("Redis ready to accept commands", {
+    service: "redis",
+  });
+});
+
+redis.on("error", (error) => {
+  logger.error("Redis connection error", {
+    service: "redis",
+    error,
+  });
+});
+
+redis.on("reconnecting", (delay) => {
+  logger.warn("Redis reconnecting", {
+    service: "redis",
+    delay,
+  });
+});
+
+const cacheGet = async (key) => {
+  try {
+    const value = await redis.get(key);
+    logger.debug("Redis cache lookup", {
+      service: "redis",
+      operation: "get",
+      key,
+      hit: value !== null,
+    });
+    return value;
+  } catch (error) {
+    logger.error("Redis cache get failed", {
+      service: "redis",
+      operation: "get",
+      key,
+      error,
+    });
+    return null;
+  }
+};
+
+const cacheSet = async (key, value, ttlSeconds) => {
+  try {
+    const result = ttlSeconds
+      ? await redis.set(key, value, "EX", ttlSeconds)
+      : await redis.set(key, value);
+    logger.debug("Redis cache write", {
+      service: "redis",
+      operation: "set",
+      key,
+      ttlSeconds,
+      result,
+    });
+    return result;
+  } catch (error) {
+    logger.error("Redis cache set failed", {
+      service: "redis",
+      operation: "set",
+      key,
+      ttlSeconds,
+      error,
+    });
+    return null;
+  }
+};
+
+const cacheHGetAll = async (key) => {
+  try {
+    const value = await redis.hgetall(key);
+    const hit = Object.keys(value || {}).length > 0;
+    logger.debug("Redis cache lookup", {
+      service: "redis",
+      operation: "hgetall",
+      key,
+      hit,
+    });
+    return value;
+  } catch (error) {
+    logger.error("Redis cache hgetall failed", {
+      service: "redis",
+      operation: "hgetall",
+      key,
+      error,
+    });
+    return {};
+  }
+};
+
+const cacheDel = async (key) => {
+  try {
+    const result = await redis.del(key);
+    logger.debug("Redis cache delete", {
+      service: "redis",
+      operation: "del",
+      key,
+      result,
+    });
+    return result;
+  } catch (error) {
+    logger.error("Redis cache delete failed", {
+      service: "redis",
+      operation: "del",
+      key,
+      error,
+    });
+    return null;
+  }
+};
+
+const cacheExists = async (key) => {
+  try {
+    const result = await redis.exists(key);
+    logger.debug("Redis cache exists check", {
+      service: "redis",
+      operation: "exists",
+      key,
+      exists: Boolean(result),
+    });
+    return result;
+  } catch (error) {
+    logger.error("Redis cache exists check failed", {
+      service: "redis",
+      operation: "exists",
+      key,
+      error,
+    });
+    return 0;
+  }
+};
+
 const RedisKeys = {
   reactionBreakdown: (id) => `qotes:reaction:breakdown:${id}`,
   reactionTotal: (id) => `qotes:reaction:total:${id}`,
@@ -32,7 +164,6 @@ const RedisKeys = {
     `qotes:cache:reactions:p1:${quoteId}:${viewerId}`,
 };
 
-// 2. DEFINE NATIVE COMMANDS
 redis.defineCommand("updateReaction", {
   numberOfKeys: 2,
   lua: `
@@ -76,5 +207,12 @@ redis.defineCommand("slidingWindowRateLimit", {
   `,
 });
 
-// 3. EXPORT THE INSTANCE AND REGISTRY
-module.exports = { redis, RedisKeys };
+module.exports = {
+  redis,
+  RedisKeys,
+  cacheGet,
+  cacheSet,
+  cacheHGetAll,
+  cacheDel,
+  cacheExists,
+};

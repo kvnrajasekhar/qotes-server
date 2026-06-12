@@ -1,7 +1,7 @@
 {
-  "name": "quotely-server",
+  "name": "qotes-server",
   "version": "1.0.0",
-  "description": "quotelyfire-server",
+  "description": "qotes-server",
   "license": "ISC",
   "author": "rajasekhar",
   "type": "commonjs",
