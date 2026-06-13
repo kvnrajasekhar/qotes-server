@@ -113,17 +113,17 @@ end
     %% CLICKABLE MODULES
     %% =========================
 
-    click AuthModule "https://github.com/your-org/qotes-server/tree/main/src/modules/auth" "_blank"
-    click UserModule "https://github.com/your-org/qotes-server/tree/main/src/modules/users" "_blank"
-    click QuoteModule "https://github.com/your-org/qotes-server/tree/main/src/modules/quotes" "_blank"
-    click ReactionModule "https://github.com/your-org/qotes-server/tree/main/src/modules/reactions" "_blank"
-    click FeedModule "https://github.com/your-org/qotes-server/tree/main/src/modules/feeds" "_blank"
-    click CommentModule "https://github.com/your-org/qotes-server/tree/main/src/modules/comments" "_blank"
-    click CollectionModule "https://github.com/your-org/qotes-server/tree/main/src/modules/collections" "_blank"
-    click PreferenceModule "https://github.com/your-org/qotes-server/tree/main/src/modules/preferences" "_blank"
-    click SafetyModule "https://github.com/your-org/qotes-server/tree/main/src/modules/safety" "_blank"
-    click SearchModule "https://github.com/your-org/qotes-server/tree/main/src/modules/search" "_blank"
-    click AdminModule "https://github.com/your-org/qotes-server/tree/main/src/modules/admin" "_blank"
+    click AuthModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/auth" "_blank"
+    click UserModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/users" "_blank"
+    click QuoteModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/quotes" "_blank"
+    click ReactionModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/reactions" "_blank"
+    click FeedModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/feeds" "_blank"
+    click CommentModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/comments" "_blank"
+    click CollectionModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/collections" "_blank"
+    click PreferenceModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/preferences" "_blank"
+    click SafetyModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/safety" "_blank"
+    click SearchModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/search" "_blank"
+    click AdminModule "https://github.com/kvnrajasekhar/qotes-server/tree/main/src/modules/admin" "_blank"
 
     %% =========================
     %% NODE COLOR CLASSES
