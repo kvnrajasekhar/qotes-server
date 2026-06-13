@@ -1,13 +1,12 @@
 # System Architecture
 
 flowchart LR
-
-    %% =========================
-    %% CLIENT
-    %% =========================
-    subgraph Client["Client"]
-        Browser["User Client<br/>Web / Mobile"]
-    end
+%% =========================
+%% CLIENT
+%% =========================
+subgraph Client["Client"]
+Browser["User Client<br/>Web / Mobile"]
+end
 
     %% =========================
     %% API
