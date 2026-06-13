@@ -1,5 +1,6 @@
 # System Architecture
 
+```mermaid
 flowchart LR
 %% =========================
 %% CLIENT
@@ -194,3 +195,4 @@ end
 
     linkStyle 35 stroke:#2563EB,stroke-width:4px
     linkStyle 36 stroke:#2563EB,stroke-width:4px
+```
