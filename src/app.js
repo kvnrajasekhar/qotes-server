@@ -29,6 +29,7 @@ const reactionRouter = require("./modules/reactions/reaction.route");
 const safetyRouter = require("./modules/safety/safety.route");
 const searchRouter = require("./modules/search/search.route");
 const userRouter = require("./modules/users/user.route");
+const systemRouter = require("./modules/system/system.route");
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.use("/v1/reaction", reactionRouter);
 app.use("/v1/safety", safetyRouter);
 app.use("/v1/search", searchRouter);
 app.use("/v1/user", userRouter);
+app.use("/v1/system", systemRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
