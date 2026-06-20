@@ -7,6 +7,8 @@ const {
 const cloudinaryService = require("../../infrastructure/media/cloudinary.service");
 const fs = require("fs/promises");
 
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+
 const userService = {
   getUserByUsername: async (username) => {
     const user = await User.findOne({ username: username }).select("-password");
@@ -225,16 +227,18 @@ const userService = {
         $inc: { "stats.followerCount": 1 },
       });
 
-      process.nextTick(() => {
-        enqueueNotificationJob({
-          type: "user-follow",
-          recipientId: targetId,
-          actorId: followerId,
-          subject: "New follower on Qotes",
-        }).catch((err) => {
-          console.error("Failed to enqueue follow notification job:", err);
+      if (NOTIFICATIONS_ENABLED) {
+        process.nextTick(() => {
+          enqueueNotificationJob({
+            type: "user-follow",
+            recipientId: targetId,
+            actorId: followerId,
+            subject: "New follower on Qotes",
+          }).catch((err) => {
+            console.error("Failed to enqueue follow notification job:", err);
+          });
         });
-      });
+      }
 
       return { followed: true, message: "Followed successfully" };
     }

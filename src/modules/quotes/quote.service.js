@@ -2,6 +2,9 @@ const Quote = require("../../models/quote.model");
 const {
   addImageGenerationJob,
 } = require("../../shared/queues/imageGeneration.queue");
+
+const IMAGE_GENERATION_ENABLED =
+  process.env.IMAGE_GENERATION_ENABLED === "true";
 const quoteService = {
   createQuote: async ({
     text,
@@ -73,13 +76,15 @@ const quoteService = {
       session.endSession();
 
       const savedQuote = newQuote[0];
-      process.nextTick(() => {
-        addImageGenerationJob({ quoteId: savedQuote._id.toString() }).catch(
-          (err) => {
-            console.error("Failed to enqueue image generation job:", err);
-          },
-        );
-      });
+      if (IMAGE_GENERATION_ENABLED) {
+        process.nextTick(() => {
+          addImageGenerationJob({ quoteId: savedQuote._id.toString() }).catch(
+            (err) => {
+              console.error("Failed to enqueue image generation job:", err);
+            },
+          );
+        });
+      }
       return savedQuote;
     } catch (error) {
       await session.abortTransaction();

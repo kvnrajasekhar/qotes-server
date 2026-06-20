@@ -12,6 +12,8 @@ const {
   enqueueNotificationJob,
 } = require("../../shared/queues/quoteNotifications.queue");
 
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+
 const reactionService = {
   toggleReaction: async ({ userId, quoteId, type }) => {
     // 1. RATE LIMITING (Using our new custom command)
@@ -88,7 +90,7 @@ const reactionService = {
         try {
           const quote = await Quote.findById(quoteId).select("creator").lean();
           const recipientId = quote?.creator?.toString();
-          if (recipientId && recipientId !== userId) {
+          if (recipientId && recipientId !== userId && NOTIFICATIONS_ENABLED) {
             enqueueNotificationJob({
               type: "quote-like",
               recipientId,
