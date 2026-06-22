@@ -1,8 +1,3 @@
-/**
- * System routes - private admin endpoints
- * Protected by API key authentication
- */
-
 const express = require("express");
 const router = express.Router();
 const apiKeyMiddleware = require("../../shared/middlewares/apiKey.middleware");
