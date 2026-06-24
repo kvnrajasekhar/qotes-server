@@ -1,10 +1,17 @@
 const Quote = require("../../models/quote.model");
+const User = require("../../models/user.model");
 const {
   addImageGenerationJob,
 } = require("../../shared/queues/imageGeneration.queue");
+const notificationService = require("../notifications/notification.service");
+const {
+  NOTIFICATION_TYPES,
+  REFERENCE_TYPES,
+} = require("../notifications/notification.constants");
 
 const IMAGE_GENERATION_ENABLED =
   process.env.IMAGE_GENERATION_ENABLED === "true";
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
 const quoteService = {
   createQuote: async ({
     text,
@@ -70,6 +77,41 @@ const quoteService = {
           { $inc: { requotes: 1 } },
           { session },
         );
+
+        // Notify original quote creator about requote
+        if (NOTIFICATIONS_ENABLED) {
+          process.nextTick(async () => {
+            try {
+              const parentQuote = await Quote.findById(parentQuoteId)
+                .select("creator text author")
+                .lean();
+              const requoter = await User.findById(creator).lean();
+
+              if (
+                parentQuote &&
+                requoter &&
+                parentQuote.creator.toString() !== creator
+              ) {
+                await notificationService.createNotification({
+                  recipient: parentQuote.creator,
+                  sender: creator,
+                  type: NOTIFICATION_TYPES.REQUOTE_QUOTE,
+                  message: `${requoter.username || "Someone"} requoted your quote`,
+                  referenceId: savedQuote._id,
+                  referenceType: REFERENCE_TYPES.QUOTE,
+                  metadata: {
+                    originalQuoteId: parentQuoteId,
+                    originalQuoteText: parentQuote.text,
+                    originalQuoteAuthor: parentQuote.author,
+                    senderName: requoter.username,
+                  },
+                });
+              }
+            } catch (error) {
+              console.error("Failed to create requote notification:", error);
+            }
+          });
+        }
       }
 
       await session.commitTransaction();

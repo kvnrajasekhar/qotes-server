@@ -5,6 +5,11 @@ const logger = require("../shared/utils/logger.util");
 const emailService = require("../infrastructure/mailer/email.service");
 const User = require("../models/user.model");
 const Quote = require("../models/quote.model");
+const notificationService = require("../modules/notifications/notification.service");
+const {
+  NOTIFICATION_TYPES,
+  REFERENCE_TYPES,
+} = require("../modules/notifications/notification.constants");
 
 const queueName = "quote-notifications-queue";
 
@@ -60,6 +65,28 @@ const worker = new Worker(
           );
         }
 
+        // Create in-app notification
+        try {
+          await notificationService.createNotification({
+            recipient: recipientId,
+            sender: actorId,
+            type: NOTIFICATION_TYPES.LIKE_QUOTE,
+            message: `${actor.username || actor.email || "Someone"} liked your quote`,
+            referenceId: quoteId,
+            referenceType: REFERENCE_TYPES.QUOTE,
+            metadata: {
+              quoteText: quote.text,
+              quoteAuthor: quote.author,
+              senderName: actor.username,
+            },
+          });
+        } catch (notifError) {
+          logger.error("Failed to create in-app notification for quote-like", {
+            error: notifError.message,
+          });
+        }
+
+        // Send email notification
         const notificationBody = `Your quote was liked by ${actor.username || actor.email || "someone"}.`;
         const emailBody = `<p>Hi ${recipient.username || ""},</p><p>${notificationBody}</p><p>Quote: ${quote.text}</p>`;
 
@@ -79,7 +106,7 @@ const worker = new Worker(
             quoteId,
           },
         );
-        return { skipped: true };
+        return { skipped: true, emailSkipped: true };
       }
       case "user-follow": {
         if (!recipientId || !actorId) {
@@ -95,6 +122,27 @@ const worker = new Worker(
           );
         }
 
+        // Create in-app notification
+        try {
+          await notificationService.createNotification({
+            recipient: recipientId,
+            sender: actorId,
+            type: NOTIFICATION_TYPES.FOLLOW_USER,
+            message: `${actor.username || actor.email || "Someone"} started following you`,
+            referenceId: actorId,
+            referenceType: REFERENCE_TYPES.USER,
+            metadata: {
+              senderName: actor.username,
+              senderUsername: actor.username,
+            },
+          });
+        } catch (notifError) {
+          logger.error("Failed to create in-app notification for user-follow", {
+            error: notifError.message,
+          });
+        }
+
+        // Send email notification
         const notificationBody = `${actor.username || actor.email || "Someone"} started following you.`;
         const emailBody = `<p>Hi ${recipient.username || ""},</p><p>${notificationBody}</p>`;
 
@@ -113,7 +161,7 @@ const worker = new Worker(
             recipientId,
           },
         );
-        return { skipped: true };
+        return { skipped: true, emailSkipped: true };
       }
       case "generic-email": {
         const recipient = recipientId

@@ -5,6 +5,9 @@ const app = require("./app");
 const { connectToDatabase } = require("./config/database");
 const { connectKafka } = require("./infrastructure/kafka/config/kafka.config");
 const initTopics = require("./infrastructure/kafka/initTopics");
+const {
+  initializeSocket,
+} = require("./modules/notifications/notification.socket");
 
 const port = process.env.PORT || 3030;
 
@@ -41,12 +44,15 @@ const startOptionalMessaging = async () => {
 const startServer = async () => {
   await connectToDatabase();
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     logger.info("HTTP server started", {
       port,
       env: process.env.NODE_ENV || "development",
     });
   });
+
+  // Initialize Socket.IO
+  initializeSocket(server);
 
   await startOptionalMessaging();
 };
