@@ -7,22 +7,23 @@
   "type": "commonjs",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "SET NODE_ENV=development&&SET ENABLE_FILE_LOGGING=true&&nodemon src/server.js",
-    "prod": "SET NODE_ENV=production&&nodemon src/server.js",
-    "worker:reaction": "node src/workers/reaction.worker.js",
-    "worker:cache": "node src/workers/loginFollowerCache.worker.js",
-    "worker:image": "node src/workers/imageGeneration.worker.js",
-    "worker:notification": "node src/workers/notification.worker.js",
-    "worker:cron": "node src/workers/cron.worker.js",
-    "worker:content-sync": "node src/workers/contentSync.worker.js",
-    "dlq:replay": "node src/infrastructure/kafka/dlq/universal.dlq.js",
-    "kafka:init": "node src/infrastructure/kafka/initTopics.js",
+    "start": "node dist/server.js",
+    "dev": "SET NODE_ENV=development&&SET ENABLE_FILE_LOGGING=true&&nodemon --exec ts-node src/server.ts",
+    "prod": "SET NODE_ENV=production&&nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "worker:reaction": "ts-node src/workers/reaction.worker.ts",
+    "worker:cache": "ts-node src/workers/loginFollowerCache.worker.ts",
+    "worker:image": "ts-node src/workers/imageGeneration.worker.ts",
+    "worker:notification": "ts-node src/workers/notification.worker.ts",
+    "worker:cron": "ts-node src/workers/cron.worker.ts",
+    "worker:content-sync": "ts-node src/workers/contentSync.worker.ts",
+    "dlq:replay": "ts-node src/infrastructure/kafka/dlq/universal.dlq.ts",
+    "kafka:init": "ts-node src/infrastructure/kafka/initTopics.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky "
   },
   "lint-staged": {
-    "*.{js,jsx}": [
+    "*.{js,jsx,ts,tsx}": [
       "prettier --write",
       "eslint --fix"
     ],
@@ -58,11 +59,25 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^26.0.1",
+    "@types/node-fetch": "^2.6.13",
+    "@types/nodemailer": "^8.0.1",
+    "@types/uuid": "^10.0.0",
+    "@types/winston": "^2.4.4",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "nodemon": "^3.1.11",
-    "prettier": "^3.8.4"
+    "prettier": "^3.8.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
   }
 }
