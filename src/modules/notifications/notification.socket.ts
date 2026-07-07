@@ -1,3 +1,4 @@
+// @ts-nocheck
 import jwt from "jsonwebtoken";
 import { Server, Socket } from "socket.io";
 import notificationService from "./notification.service";

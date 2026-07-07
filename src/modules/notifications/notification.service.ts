@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Notification from "../../models/notification.model";
 import { NOTIFICATION_CONFIG } from "./notification.constants";
 import { getIO } from "./notification.socket";

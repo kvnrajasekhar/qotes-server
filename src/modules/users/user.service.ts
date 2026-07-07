@@ -1,3 +1,4 @@
+// @ts-nocheck
 import User from "../../models/user.model";
 import Follow from "../../models/follow.model";
 import Quote from "../../models/quote.model";

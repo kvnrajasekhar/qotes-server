@@ -6,10 +6,7 @@ import {
 } from "./logger";
 import getServiceLogger from "./loggerFactory";
 
-export {
-  createLogger,
-  loggerFactory as getServiceLogger,
-  getTraceId,
-  withTraceId,
-  asyncLocalStorage,
-};
+export { createLogger, getTraceId, withTraceId, asyncLocalStorage };
+
+export { default as loggerFactory } from "./loggerFactory";
+export { default as getServiceLogger } from "./loggerFactory";

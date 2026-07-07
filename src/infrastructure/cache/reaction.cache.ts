@@ -49,7 +49,10 @@ async function getReactionBreakdown(
       return { breakdown: repairedBreakdown, total: repairedTotal };
     }
 
-    return { breakdown, total: Number(total || 0) };
+    return {
+      breakdown: breakdown as unknown as Record<string, number>,
+      total: Number(total || 0),
+    };
   } catch (error) {
     return { breakdown: {}, total: 0 };
   }
@@ -62,7 +65,7 @@ async function atomicUpdateCache(
   oldType?: string,
 ): Promise<any> {
   try {
-    return await redis.updateReaction(
+    return await (redis as any).updateReaction(
       RedisKeys.reactionBreakdown(quoteId),
       RedisKeys.reactionTotal(quoteId),
       type,

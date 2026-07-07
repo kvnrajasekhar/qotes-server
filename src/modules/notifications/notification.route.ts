@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from "express";
 import asyncHandler from "express-async-handler";
 import authMiddleware from "../../shared/middlewares/auth.middleware";

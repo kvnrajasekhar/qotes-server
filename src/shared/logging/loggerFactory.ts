@@ -1,3 +1,4 @@
+import winston from "winston";
 import { createLogger } from "./logger";
 
 const getServiceLogger = (serviceName: string): winston.Logger => {

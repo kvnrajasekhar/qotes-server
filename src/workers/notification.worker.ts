@@ -5,7 +5,7 @@ import logger from "../shared/utils/logger.util";
 import { sendEmail } from "../infrastructure/mailer/email.service";
 import User from "../models/user.model";
 import Quote from "../models/quote.model";
-import { createNotification } from "../modules/notifications/notification.service";
+import notificationService from "../modules/notifications/notification.service";
 import {
   NOTIFICATION_TYPES,
   REFERENCE_TYPES,
@@ -68,7 +68,7 @@ const worker = new Worker(
         }
 
         try {
-          await createNotification({
+          await notificationService.createNotification({
             recipient: recipientId,
             sender: actorId,
             type: NOTIFICATION_TYPES.LIKE_QUOTE,
@@ -123,7 +123,7 @@ const worker = new Worker(
         }
 
         try {
-          await createNotification({
+          await notificationService.createNotification({
             recipient: recipientId,
             sender: actorId,
             type: NOTIFICATION_TYPES.FOLLOW_USER,

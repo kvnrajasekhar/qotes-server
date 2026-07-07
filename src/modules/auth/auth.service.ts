@@ -37,7 +37,7 @@ const login = async (identifier: string, password: string) => {
     expiresIn: "7d",
   });
 
-  await saveRefreshToken(user._id, refreshToken);
+  await saveRefreshToken(user._id.toString(), refreshToken);
   try {
     await producer.send({
       topic: "auth-events",
