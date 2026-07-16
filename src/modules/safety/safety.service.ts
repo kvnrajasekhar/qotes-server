@@ -1,35 +1,55 @@
-// @ts-nocheck
-import Block from "../../models/block.model";
-import Report from "../../models/report.model";
-import User from "../../models/user.model";
-import Quote from "../../models/quote.model";
-import Follow from "../../models/follow.model";
-import ReportStats from "../../models/reportStats.model";
-const safetyService = {
-  toggleBlockUser: async (blockerId, blockedId) => {
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, ClientSession } from "mongoose";
+
+import Block, { IUserBlock } from "../../models/block.model";
+import Report, { IReport } from "../../models/report.model";
+import User, { IUser } from "../../models/user.model";
+import Quote, { IQuote } from "../../models/quote.model";
+import Follow, { IFollow } from "../../models/follow.model";
+import ReportStats, { IReportStats } from "../../models/reportStats.model";
+
+@Injectable()
+export class SafetyService {
+  constructor(
+    @InjectModel(Block.name) private blockModel: Model<IUserBlock>,
+    @InjectModel(Report.name) private reportModel: Model<IReport>,
+    @InjectModel(User.name) private userModel: Model<IUser>,
+    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
+    @InjectModel(Follow.name) private followModel: Model<IFollow>,
+    @InjectModel(ReportStats.name)
+    private reportStatsModel: Model<IReportStats>,
+  ) {}
+
+  async toggleBlockUser(blockerId: string, blockedId: string) {
     if (blockerId.toString() === blockedId.toString()) {
-      throw new Error("Users cannot block themselves");
+      throw new BadRequestException("Users cannot block themselves");
     }
 
-    const existingBlock = await Block.findOne({
+    const existingBlock = await this.blockModel.findOne({
       blocker: blockerId,
       blocked: blockedId,
     });
 
     if (existingBlock) {
-      await Block.deleteOne({ _id: existingBlock._id });
+      await this.blockModel.deleteOne({ _id: existingBlock._id });
       return { blocked: false };
     } else {
-      // LARGE SCALE ADDITION: Use a Transaction for data consistency
-      const session = await Block.startSession();
+      const session = await this.blockModel.startSession();
       session.startTransaction();
       try {
-        await Block.create([{ blocker: blockerId, blocked: blockedId }], {
-          session,
-        });
+        await this.blockModel.create(
+          [{ blocker: blockerId, blocked: blockedId }],
+          {
+            session,
+          },
+        );
 
-        // Force Unfollow both ways (Assuming you have a Follow model)
-        await Follow.deleteMany(
+        await this.followModel.deleteMany(
           {
             $or: [
               { follower: blockerId, following: blockedId },
@@ -48,16 +68,23 @@ const safetyService = {
         session.endSession();
       }
     }
-  },
+  }
 
-  // Report a user, quote, or comment
-  report: async (reporterId, targetType, targetId, reason) => {
-    // 1. Create the individual report (Deduplication handled by Unique Index)
+  async report(
+    reporterId: string,
+    targetType: string,
+    targetId: string,
+    reason: string,
+  ) {
     try {
-      await Report.create({ reporterId, targetType, targetId, reason });
+      await this.reportModel.create({
+        reporterId,
+        targetType,
+        targetId,
+        reason,
+      });
 
-      // 2. Update the Stats (Upsert ensures the doc exists)
-      const stats = await ReportStats.findOneAndUpdate(
+      const stats = await this.reportStatsModel.findOneAndUpdate(
         { targetId },
         {
           targetType,
@@ -68,17 +95,16 @@ const safetyService = {
         { upsert: true, new: true },
       );
 
-      // 3. Simple threshold check using the Stats object
       if (stats.totalReports >= 10) {
-        await Quote.findByIdAndUpdate(targetId, { isHiddenBySystem: true });
+        await this.quoteModel.findByIdAndUpdate(targetId, {
+          isHiddenBySystem: true,
+        });
       }
 
       return stats;
-    } catch (err) {
-      if (err.code === 11000) throw new Error("Already reported.");
+    } catch (err: any) {
+      if (err.code === 11000) throw new ConflictException("Already reported.");
       throw err;
     }
-  },
-};
-
-export default safetyService;
+  }
+}

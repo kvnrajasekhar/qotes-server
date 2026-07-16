@@ -44,3 +44,4 @@ QuoteSchema.index(
 
 const Quote = mongoose.model<IQuote>("Quote", QuoteSchema);
 export default Quote;
+export { QuoteSchema, IQuote };

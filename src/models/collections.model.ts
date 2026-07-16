@@ -6,6 +6,7 @@ interface ICollection extends Document {
   description: string;
   isPrivate: boolean;
   isDefault: boolean;
+  createdAt: Date;
 }
 
 const CollectionSchema = new Schema<ICollection>({
@@ -15,7 +16,9 @@ const CollectionSchema = new Schema<ICollection>({
   description: { type: String, default: "" },
   isPrivate: { type: Boolean, default: false },
   isDefault: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const Collection = mongoose.model<ICollection>("Collection", CollectionSchema);
 export default Collection;
+export { CollectionSchema, ICollection };

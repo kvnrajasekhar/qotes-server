@@ -27,3 +27,4 @@ const ReportStats = mongoose.model<IReportStats>(
   reportStatsSchema,
 );
 export default ReportStats;
+export { reportStatsSchema, IReportStats, ReportStatus };

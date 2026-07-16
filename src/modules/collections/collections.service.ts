@@ -1,17 +1,43 @@
-// @ts-nocheck
-import Collection from "../../models/collections.model";
-import CollectionItem from "../../models/collectionItem.model";
-import Quote from "../../models/quote.model";
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 
-const collectionService = {
-  getUserCollections: async ({ userId, cursor = null, limit = 20 }) => {
-    const query = { owner: userId };
+import Collection, { ICollection } from "../../models/collections.model";
+import CollectionItem, {
+  ICollectionItem,
+} from "../../models/collectionItem.model";
+import Quote, { IQuote } from "../../models/quote.model";
+
+@Injectable()
+export class CollectionsService {
+  constructor(
+    @InjectModel(Collection.name) private collectionModel: Model<ICollection>,
+    @InjectModel(CollectionItem.name)
+    private collectionItemModel: Model<ICollectionItem>,
+    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
+  ) {}
+
+  async getUserCollections({
+    userId,
+    cursor = null,
+    limit = 20,
+  }: {
+    userId: string;
+    cursor?: string | null;
+    limit?: number;
+  }) {
+    const query: any = { owner: userId };
 
     if (cursor) {
       query.createdAt = { $lt: new Date(cursor) };
     }
 
-    const collections = await Collection.find(query)
+    const collections = await this.collectionModel
+      .find(query)
       .select("name isPrivate isDefault createdAt")
       .sort({ isDefault: -1, createdAt: -1 })
       .limit(limit + 1)
@@ -29,16 +55,25 @@ const collectionService = {
         hasMore,
       },
     };
-  },
+  }
 
-  getCollectionDetails: async ({ collectionId, cursor = null, limit = 20 }) => {
-    const query = { collectionId };
+  async getCollectionDetails({
+    collectionId,
+    cursor = null,
+    limit = 20,
+  }: {
+    collectionId: string;
+    cursor?: string | null;
+    limit?: number;
+  }) {
+    const query: any = { collectionId };
 
     if (cursor) {
       query.addedAt = { $lt: new Date(cursor) };
     }
 
-    const items = await CollectionItem.find(query)
+    const items = await this.collectionItemModel
+      .find(query)
       .sort({ addedAt: -1 })
       .limit(limit + 1)
       .populate({
@@ -51,82 +86,60 @@ const collectionService = {
     if (hasMore) items.pop();
 
     return {
-      items: items.map((i) => i.quoteId),
+      items: items.map((i: any) => i.quoteId),
       pagination: {
         nextCursor: hasMore ? items[items.length - 1].addedAt : null,
         hasMore,
       },
     };
-  },
+  }
 
-  getQuoteDetails: async (quoteId, userId) => {
-    const quote = await Quote.findById(quoteId)
-      .populate("creator", "username avatar")
-      .lean();
-
-    if (!quote) throw new Error("Quote not found");
-
-    const userReaction = await Reaction.findOne({ quoteId, userId }).select(
-      "type",
-    );
-
-    // Improved isSaved check: Checks if the quote exists in ANY of the user's collections
-    const userCollections = await Collection.find({ owner: userId }).distinct(
-      "_id",
-    );
-    const isSaved = await CollectionItem.exists({
-      quoteId,
-      collectionId: { $in: userCollections },
-    });
-
-    return {
-      ...quote,
-      currentUserReaction: userReaction ? userReaction.type : null,
-      isSaved: !!isSaved,
-    };
-  },
-
-  toggleSave: async (userId, quoteId, collectionId = null) => {
+  async toggleSave(
+    userId: string,
+    quoteId: string,
+    collectionId: string | null = null,
+  ) {
     let targetCollectionId = collectionId;
 
     if (!targetCollectionId) {
-      let defaultCollection = await Collection.findOne({
+      let defaultCollection = await this.collectionModel.findOne({
         owner: userId,
         isDefault: true,
       });
       if (!defaultCollection) {
-        defaultCollection = await Collection.create({
+        defaultCollection = await this.collectionModel.create({
           owner: userId,
           name: "Saved",
           isPrivate: true,
           isDefault: true,
         });
       }
-      targetCollectionId = defaultCollection._id;
+      targetCollectionId = defaultCollection._id.toString();
     } else {
-      const isOwner = await Collection.exists({
+      const isOwner = await this.collectionModel.exists({
         _id: targetCollectionId,
         owner: userId,
       });
-      if (!isOwner) throw new Error("Unauthorized");
+      if (!isOwner) throw new UnauthorizedException("Unauthorized");
     }
 
-    const existing = await CollectionItem.findOne({
+    const existing = await this.collectionItemModel.findOne({
       collectionId: targetCollectionId,
       quoteId,
     });
 
     if (existing) {
-      await CollectionItem.deleteOne({ _id: existing._id });
-      await Quote.findByIdAndUpdate(quoteId, { $inc: { saves: -1 } });
+      await this.collectionItemModel.deleteOne({ _id: existing._id });
+      await this.quoteModel.findByIdAndUpdate(quoteId, { $inc: { saves: -1 } });
       return { saved: false };
     }
 
-    await CollectionItem.create({ collectionId: targetCollectionId, quoteId });
-    await Quote.findByIdAndUpdate(quoteId, { $inc: { saves: 1 } });
+    await this.collectionItemModel.create({
+      collectionId: targetCollectionId,
+      quoteId,
+    });
+    await this.quoteModel.findByIdAndUpdate(quoteId, { $inc: { saves: 1 } });
 
     return { saved: true };
-  },
-};
-
-export default collectionService;
+  }
+}

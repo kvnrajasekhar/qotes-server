@@ -26,3 +26,4 @@ reportSchema.index({ targetId: 1 });
 
 const Report = mongoose.model<IReport>("Report", reportSchema);
 export default Report;
+export { reportSchema, IReport, TargetType };

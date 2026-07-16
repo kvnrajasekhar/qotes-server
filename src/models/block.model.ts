@@ -22,3 +22,4 @@ UserBlockSchema.index({ blocked: 1 });
 
 const UserBlock = mongoose.model<IUserBlock>("UserBlock", UserBlockSchema);
 export default UserBlock;
+export { UserBlockSchema, IUserBlock };

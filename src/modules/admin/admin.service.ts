@@ -1,16 +1,25 @@
-// @ts-nocheck
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import mongoose from "mongoose";
-import User from "../../models/user.model";
-import Quote from "../../models/quote.model";
 
-const adminService = {
-  getAllUsers: async ({
+import User, { IUser } from "../../models/user.model";
+import Quote, { IQuote } from "../../models/quote.model";
+
+@Injectable()
+export class AdminService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<IUser>,
+    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
+  ) {}
+
+  async getAllUsers({
     cursor = null,
     limit = 20,
   }: {
     cursor?: any;
     limit?: number;
-  }) => {
+  }) {
     const query: any = {};
 
     if (cursor) {
@@ -23,7 +32,8 @@ const adminService = {
       ];
     }
 
-    const users = await User.find(query)
+    const users = await this.userModel
+      .find(query)
       .sort({ createdAt: -1, _id: 1 })
       .limit(limit + 1)
       .select("-password -__v")
@@ -44,14 +54,15 @@ const adminService = {
         hasMore,
       },
     };
-  },
-  getHiddenQuotes: async ({
+  }
+
+  async getHiddenQuotes({
     cursor = null,
     limit = 20,
   }: {
     cursor?: any;
     limit?: number;
-  }) => {
+  }) {
     const query: any = { isHiddenBySystem: true };
 
     if (cursor) {
@@ -64,7 +75,8 @@ const adminService = {
       ];
     }
 
-    const quotes = await Quote.find(query)
+    const quotes = await this.quoteModel
+      .find(query)
       .sort({ createdAt: -1, _id: 1 })
       .limit(limit + 1)
       .populate("creator", "username email createdAt")
@@ -85,7 +97,5 @@ const adminService = {
         hasMore,
       },
     };
-  },
-};
-
-export default adminService;
+  }
+}

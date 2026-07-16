@@ -18,8 +18,8 @@ import {
   errorHandler,
 } from "./shared/middlewares/logger.middleware";
 
+// Express routes - will be replaced by NestJS controllers
 import adminRouter from "./modules/admin/admin.route";
-import authRouter from "./modules/auth/auth.route";
 import collectionRouter from "./modules/collections/collections.route";
 import commentRouter from "./modules/comments/comment.route";
 import feedRouter from "./modules/feeds/feed.route";
@@ -96,7 +96,7 @@ app.get("/metrics", (req: Request, res: Response) => {
 });
 
 app.use("/v1/admin", adminRouter);
-app.use("/v1/auth", authRouter);
+// app.use("/v1/auth", authRouter); // Migrated to NestJS
 app.use("/v1/collections", collectionRouter);
 app.use("/v1/comment", commentRouter);
 app.use("/v1/feed", feedRouter);

@@ -32,3 +32,4 @@ ReactionSchema.index({ quote: 1, createdAt: -1 });
 
 const Reaction = mongoose.model<IReaction>("Reaction", ReactionSchema);
 export default Reaction;
+export { ReactionSchema, IReaction, ReactionType };

@@ -1,10 +1,19 @@
-// @ts-nocheck
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import mongoose from "mongoose";
-import User from "../../models/user.model";
-import Quote from "../../models/quote.model";
 
-const searchService = {
-  searchUsers: async ({
+import User, { IUser } from "../../models/user.model";
+import Quote, { IQuote } from "../../models/quote.model";
+
+@Injectable()
+export class SearchService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<IUser>,
+    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
+  ) {}
+
+  async searchUsers({
     query,
     cursor = null,
     limit = 20,
@@ -12,7 +21,7 @@ const searchService = {
     query: string;
     cursor?: any;
     limit?: number;
-  }) => {
+  }) {
     if (!query || !query.trim()) {
       return {
         users: [],
@@ -90,7 +99,7 @@ const searchService = {
                   0,
                 ],
               },
-              { $cond: [{ $gt: ["$followersCount", 1000] }, 15, 0] },
+              { $cond: [{ $gt: ["$stats.followerCount", 1000] }, 15, 0] },
             ],
           },
         },
@@ -118,7 +127,7 @@ const searchService = {
       { $project: { password: 0, __v: 0 } },
     );
 
-    const users = await User.aggregate(pipeline);
+    const users = await this.userModel.aggregate(pipeline);
     const hasMore = users.length > limit;
     if (hasMore) users.pop();
 
@@ -134,14 +143,9 @@ const searchService = {
         hasMore,
       },
     };
-  },
+  }
 
-  searchGlobal: async ({
-    query,
-    type = "all",
-    limit = 20,
-    cursor = {} as any,
-  }) => {
+  async searchGlobal({ query, type = "all", limit = 20, cursor = {} as any }) {
     if (!query || !query.trim()) {
       return {
         results: { users: [], quotes: [], hashtags: [] },
@@ -162,7 +166,7 @@ const searchService = {
     const nextCursor: any = {};
 
     if (type === "all" || type === "users") {
-      const userResult = await searchService.searchUsers({
+      const userResult = await this.searchUsers({
         query,
         cursor: cursor.users || null,
         limit,
@@ -182,10 +186,11 @@ const searchService = {
         quoteQuery.createdAt = { $lt: new Date(cursor.quotes) };
       }
 
-      const quotes = await Quote.find(quoteQuery)
+      const quotes = await this.quoteModel
+        .find(quoteQuery)
         .sort({ createdAt: -1 })
         .limit(limit + 1)
-        .populate("creator", "username avatar")
+        .populate("creator", "username avatarUrl")
         .lean();
 
       const hasMore = quotes.length > limit;
@@ -196,7 +201,7 @@ const searchService = {
     }
 
     if (type === "all" || type === "hashtags") {
-      const hashtags = await Quote.aggregate([
+      const hashtags = await this.quoteModel.aggregate([
         { $match: { hashtags: prefixRegex } },
         { $unwind: "$hashtags" },
         { $match: { hashtags: prefixRegex } },
@@ -218,7 +223,5 @@ const searchService = {
         hasMore: Object.values(nextCursor).some(Boolean),
       },
     };
-  },
-};
-
-export default searchService;
+  }
+}

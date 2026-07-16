@@ -18,3 +18,4 @@ const CollectionItem = mongoose.model<ICollectionItem>(
   CollectionItemSchema,
 );
 export default CollectionItem;
+export { CollectionItemSchema, ICollectionItem };
