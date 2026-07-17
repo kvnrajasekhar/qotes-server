@@ -19,6 +19,10 @@ const CollectionSchema = new Schema<ICollection>({
   createdAt: { type: Date, default: Date.now },
 });
 
+CollectionSchema.index({ owner: 1, createdAt: -1 });
+CollectionSchema.index({ owner: 1, isPrivate: 1, createdAt: -1 });
+CollectionSchema.index({ owner: 1, isDefault: 1 });
+
 const Collection = mongoose.model<ICollection>("Collection", CollectionSchema);
 export default Collection;
 export { CollectionSchema, ICollection };

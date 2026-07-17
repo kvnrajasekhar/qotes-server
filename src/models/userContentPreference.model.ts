@@ -54,6 +54,8 @@ userContentPreferenceSchema.index(
 );
 
 userContentPreferenceSchema.index({ userId: 1 });
+userContentPreferenceSchema.index({ userId: 1, type: 1, createdAt: -1 });
+userContentPreferenceSchema.index({ type: 1, targetId: 1 });
 
 export default mongoose.model<IUserContentPreference>(
   "UserContentPreference",

@@ -53,6 +53,12 @@ const UserSchema = new Schema<IUser>(
   },
 );
 
+UserSchema.index({ username: 1, email: 1 });
+UserSchema.index({ createdAt: -1 });
+UserSchema.index({ isBanned: 1, createdAt: -1 });
+UserSchema.index({ "stats.followerCount": -1, createdAt: -1 });
+UserSchema.index({ "stats.quoteCount": -1, createdAt: -1 });
+
 const User = mongoose.model<IUser>("User", UserSchema);
 export default User;
 export { UserSchema, IUser, IUserStats };

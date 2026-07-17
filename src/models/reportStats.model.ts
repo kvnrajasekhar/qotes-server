@@ -21,6 +21,7 @@ const reportStatsSchema = new Schema<IReportStats>({
 reportStatsSchema.index({ targetId: 1 }, { unique: true });
 reportStatsSchema.index({ status: 1, totalReports: -1 });
 reportStatsSchema.index({ lastReportedAt: -1 });
+reportStatsSchema.index({ targetType: 1, status: 1, totalReports: -1 });
 
 const ReportStats = mongoose.model<IReportStats>(
   "ReportStats",

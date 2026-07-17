@@ -23,6 +23,8 @@ const reportSchema = new Schema<IReport>(
 
 reportSchema.index({ reporterId: 1, targetId: 1 }, { unique: true });
 reportSchema.index({ targetId: 1 });
+reportSchema.index({ targetId: 1, targetType: 1, createdAt: -1 });
+reportSchema.index({ reporterId: 1, createdAt: -1 });
 
 const Report = mongoose.model<IReport>("Report", reportSchema);
 export default Report;

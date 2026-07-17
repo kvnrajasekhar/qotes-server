@@ -16,6 +16,11 @@ const tokenSchema = new Schema<IToken>({
   createdAt: { type: Date, default: Date.now, expires: "7d" },
 });
 
+tokenSchema.index({ userId: 1, refreshToken: 1 }, { unique: true });
+tokenSchema.index({ userId: 1 });
+tokenSchema.index({ passwordResetToken: 1 });
+tokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 const Token = mongoose.model<IToken>("Token", tokenSchema);
 export default Token;
 export { tokenSchema, IToken };

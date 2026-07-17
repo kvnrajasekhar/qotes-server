@@ -13,6 +13,9 @@ const CollectionItemSchema = new Schema<ICollectionItem>({
 });
 
 CollectionItemSchema.index({ collectionId: 1, quoteId: 1 }, { unique: true });
+CollectionItemSchema.index({ collectionId: 1, addedAt: -1 });
+CollectionItemSchema.index({ quoteId: 1 });
+
 const CollectionItem = mongoose.model<ICollectionItem>(
   "CollectionItem",
   CollectionItemSchema,

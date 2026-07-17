@@ -37,6 +37,7 @@ QuoteSchema.index({ creator: 1, createdAt: -1 });
 QuoteSchema.index({ createdAt: -1 });
 QuoteSchema.index({ category: 1, createdAt: -1 });
 QuoteSchema.index({ isRequote: 1 });
+QuoteSchema.index({ hashtags: 1, createdAt: -1 });
 QuoteSchema.index(
   { creator: 1, parentQuoteId: 1 },
   { unique: true, partialFilterExpression: { isRequote: true } },
