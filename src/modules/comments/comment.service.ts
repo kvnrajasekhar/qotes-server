@@ -7,6 +7,10 @@ import {
   NOTIFICATION_TYPES,
   REFERENCE_TYPES,
 } from "../notifications/notification.constants";
+import {
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
 
@@ -132,7 +136,7 @@ const commentService = {
     };
 
     if (cursor) {
-      query.createdAt = { $lt: new Date(cursor) };
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const replies = await Comment.find(query)
@@ -141,15 +145,11 @@ const commentService = {
       .populate("author", "username avatar")
       .lean();
 
-    const hasMore = replies.length > limit;
-    if (hasMore) replies.pop();
+    const { data, pagination } = processPaginatedResults(replies, limit, ['createdAt']);
 
     return {
-      replies,
-      pagination: {
-        nextCursor: hasMore ? replies[replies.length - 1].createdAt : null,
-        hasMore,
-      },
+      replies: data,
+      pagination,
     };
   },
   deleteComment: async ({ commentId, userId }) => {

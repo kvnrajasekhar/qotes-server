@@ -5,6 +5,10 @@ import mongoose from "mongoose";
 
 import User, { IUser } from "../../models/user.model";
 import Quote, { IQuote } from "../../models/quote.model";
+import {
+  buildCompoundCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 @Injectable()
 export class AdminService {
@@ -23,13 +27,7 @@ export class AdminService {
     const query: any = {};
 
     if (cursor) {
-      query.$or = [
-        { createdAt: { $lt: new Date(cursor.createdAt) } },
-        {
-          createdAt: new Date(cursor.createdAt),
-          _id: { $gt: new mongoose.Types.ObjectId(cursor.id) },
-        },
-      ];
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, 1]));
     }
 
     const users = await this.userModel
@@ -39,20 +37,11 @@ export class AdminService {
       .select("-password -__v")
       .lean();
 
-    const hasMore = users.length > limit;
-    if (hasMore) users.pop();
+    const { data, pagination } = processPaginatedResults(users, limit, ['createdAt', '_id']);
 
     return {
-      users,
-      pagination: {
-        nextCursor: hasMore
-          ? {
-              createdAt: users[users.length - 1].createdAt,
-              id: users[users.length - 1]._id,
-            }
-          : null,
-        hasMore,
-      },
+      users: data,
+      pagination,
     };
   }
 
@@ -66,13 +55,7 @@ export class AdminService {
     const query: any = { isHiddenBySystem: true };
 
     if (cursor) {
-      query.$or = [
-        { createdAt: { $lt: new Date(cursor.createdAt) } },
-        {
-          createdAt: new Date(cursor.createdAt),
-          _id: { $gt: new mongoose.Types.ObjectId(cursor.id) },
-        },
-      ];
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, 1]));
     }
 
     const quotes = await this.quoteModel
@@ -82,20 +65,11 @@ export class AdminService {
       .populate("creator", "username email createdAt")
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore
-          ? {
-              createdAt: quotes[quotes.length - 1].createdAt,
-              id: quotes[quotes.length - 1]._id,
-            }
-          : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   }
 }

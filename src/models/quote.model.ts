@@ -35,6 +35,8 @@ const QuoteSchema = new Schema<IQuote>({
 
 QuoteSchema.index({ creator: 1, createdAt: -1 });
 QuoteSchema.index({ createdAt: -1 });
+QuoteSchema.index({ createdAt: -1, _id: -1 });
+QuoteSchema.index({ _id: -1 });
 QuoteSchema.index({ category: 1, createdAt: -1 });
 QuoteSchema.index({ isRequote: 1 });
 QuoteSchema.index({ hashtags: 1, createdAt: -1 });

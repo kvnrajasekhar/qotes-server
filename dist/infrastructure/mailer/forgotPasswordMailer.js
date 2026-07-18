@@ -3,15 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resetPasswordLink = exports.forgotPasswordLink = void 0;
 const nodemailer_config_1 = require("../../config/nodemailer.config");
 const forgotPasswordLink = async (userMail, link) => {
-  console.log("inside forgot mailer", link);
-  const logoUrl =
-    "https://lh3.googleusercontent.com/u/0/d/1UJxanHMEJRrR-9sSgoZHawGGPaRBfqu5=w1920-h1080-iv1";
-  await nodemailer_config_1.transporter.sendMail(
-    {
-      from: "'Attention!' <securityteam@qotes.com>",
-      to: userMail,
-      subject: "Forgot Password - reset link",
-      html: `
+    console.log("inside forgot mailer", link);
+    const logoUrl = "https://lh3.googleusercontent.com/u/0/d/1UJxanHMEJRrR-9sSgoZHawGGPaRBfqu5=w1920-h1080-iv1";
+    await nodemailer_config_1.transporter.sendMail({
+        from: "'Attention!' <securityteam@qotes.com>",
+        to: userMail,
+        subject: "Forgot Password - reset link",
+        html: `
                     <div style="
                       background-color: #f4f4f4;
                       padding: 40px 20px;
@@ -111,28 +109,24 @@ const forgotPasswordLink = async (userMail, link) => {
                 </div>
             </div>
         `,
-    },
-    (err, info) => {
-      if (err) {
-        console.log("Error in sending mail", err);
+    }, (err, info) => {
+        if (err) {
+            console.log("Error in sending mail", err);
+            return;
+        }
+        console.log("Message sent", info);
         return;
-      }
-      console.log("Message sent", info);
-      return;
-    },
-  );
+    });
 };
 exports.forgotPasswordLink = forgotPasswordLink;
 const resetPasswordLink = async (userMail, link) => {
-  console.log("inside reset mailer", link);
-  const logoUrl =
-    "https://drive.google.com/uc?export=view&id=1gGK8HO3o9gSBL9DWrApIlf3xV3w-CLJU";
-  await nodemailer_config_1.transporter.sendMail(
-    {
-      from: "'Attention!' <securityteam@qotes.com>",
-      to: userMail,
-      subject: "Reset Password - reset link",
-      html: `
+    console.log("inside reset mailer", link);
+    const logoUrl = "https://drive.google.com/uc?export=view&id=1gGK8HO3o9gSBL9DWrApIlf3xV3w-CLJU";
+    await nodemailer_config_1.transporter.sendMail({
+        from: "'Attention!' <securityteam@qotes.com>",
+        to: userMail,
+        subject: "Reset Password - reset link",
+        html: `
                     <div style="
                       background-color: #f4f4f4;
                       padding: 40px 20px;
@@ -232,16 +226,14 @@ const resetPasswordLink = async (userMail, link) => {
                 </div>
             </div>
         `,
-    },
-    (err, info) => {
-      if (err) {
-        console.log("Error in sending mail", err);
+    }, (err, info) => {
+        if (err) {
+            console.log("Error in sending mail", err);
+            return;
+        }
+        console.log("Message sent", info);
         return;
-      }
-      console.log("Message sent", info);
-      return;
-    },
-  );
+    });
 };
 exports.resetPasswordLink = resetPasswordLink;
 //# sourceMappingURL=forgotPasswordMailer.js.map

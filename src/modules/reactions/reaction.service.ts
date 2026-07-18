@@ -10,6 +10,10 @@ import {
 } from "../../infrastructure/cache/reaction.cache";
 import { producer } from "../../infrastructure/kafka/config/kafka.config";
 import { enqueueNotificationJob } from "../../shared/queues/quoteNotifications.queue";
+import {
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
 
@@ -165,7 +169,9 @@ const reactionService = {
 
     const query = { quoteId: new mongoose.Types.ObjectId(quoteId) };
     if (type) query.type = type;
-    if (cursor) query.createdAt = { $lt: new Date(cursor) };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+    }
 
     // 4. THE MONGO AGGREGATION
     const reactions = await Reaction.aggregate([
@@ -202,17 +208,13 @@ const reactionService = {
     ]);
 
     // 5. PAGINATION & CACHE FILL
-    const hasMore = reactions.length > limit;
-    if (hasMore) reactions.pop();
+    const { data, pagination } = processPaginatedResults(reactions, limit, ['createdAt']);
 
     const result = {
       total,
       breakdown,
-      users: reactions,
-      pagination: {
-        hasMore,
-        nextCursor: hasMore ? reactions[reactions.length - 1].createdAt : null,
-      },
+      users: data,
+      pagination,
     };
 
     if (!cursor && !type) {

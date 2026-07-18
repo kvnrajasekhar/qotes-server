@@ -5,6 +5,12 @@ import mongoose from "mongoose";
 
 import User, { IUser } from "../../models/user.model";
 import Quote, { IQuote } from "../../models/quote.model";
+import {
+  encodeCursor,
+  decodeCursor,
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 @Injectable()
 export class SearchService {
@@ -108,13 +114,14 @@ export class SearchService {
     ];
 
     if (cursor) {
+      const decoded = decodeCursor(cursor);
       pipeline.push({
         $match: {
           $or: [
-            { score: { $lt: cursor.score } },
+            { score: { $lt: decoded.score } },
             {
-              score: cursor.score,
-              _id: { $gt: new mongoose.Types.ObjectId(cursor.id) },
+              score: decoded.score,
+              _id: { $gt: new mongoose.Types.ObjectId(String(decoded.id)) },
             },
           ],
         },
@@ -128,20 +135,11 @@ export class SearchService {
     );
 
     const users = await this.userModel.aggregate(pipeline);
-    const hasMore = users.length > limit;
-    if (hasMore) users.pop();
+    const { data, pagination } = processPaginatedResults(users, limit, ['score', '_id']);
 
     return {
-      users,
-      pagination: {
-        nextCursor: hasMore
-          ? {
-              score: users[users.length - 1].score,
-              id: users[users.length - 1]._id,
-            }
-          : null,
-        hasMore,
-      },
+      users: data,
+      pagination,
     };
   }
 
@@ -183,7 +181,7 @@ export class SearchService {
       };
 
       if (cursor?.quotes) {
-        quoteQuery.createdAt = { $lt: new Date(cursor.quotes) };
+        Object.assign(quoteQuery, buildCursorQuery(cursor.quotes, 'createdAt', -1));
       }
 
       const quotes = await this.quoteModel
@@ -193,11 +191,10 @@ export class SearchService {
         .populate("creator", "username avatarUrl")
         .lean();
 
-      const hasMore = quotes.length > limit;
-      if (hasMore) quotes.pop();
+      const { data: quoteData, pagination: quotePagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
-      results.quotes = quotes;
-      nextCursor.quotes = hasMore ? quotes[quotes.length - 1].createdAt : null;
+      results.quotes = quoteData;
+      nextCursor.quotes = quotePagination.nextCursor;
     }
 
     if (type === "all" || type === "hashtags") {

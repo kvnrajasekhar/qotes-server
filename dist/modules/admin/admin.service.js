@@ -1,78 +1,73 @@
 "use strict";
-var __importDefault =
-  (this && this.__importDefault) ||
-  function (mod) {
-    return mod && mod.__esModule ? mod : { default: mod };
-  };
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = __importDefault(require("mongoose"));
+exports.AdminService = void 0;
+const common_1 = require("@nestjs/common");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
 const user_model_1 = __importDefault(require("../../models/user.model"));
 const quote_model_1 = __importDefault(require("../../models/quote.model"));
-const adminService = {
-  getAllUsers: async ({ cursor = null, limit = 20 }) => {
-    const query = {};
-    if (cursor) {
-      query.$or = [
-        { createdAt: { $lt: new Date(cursor.createdAt) } },
-        {
-          createdAt: new Date(cursor.createdAt),
-          _id: { $gt: new mongoose_1.default.Types.ObjectId(cursor.id) },
-        },
-      ];
+const cursor_util_1 = require("../../shared/utils/cursor.util");
+let AdminService = class AdminService {
+    constructor(userModel, quoteModel) {
+        this.userModel = userModel;
+        this.quoteModel = quoteModel;
     }
-    const users = await user_model_1.default
-      .find(query)
-      .sort({ createdAt: -1, _id: 1 })
-      .limit(limit + 1)
-      .select("-password -__v")
-      .lean();
-    const hasMore = users.length > limit;
-    if (hasMore) users.pop();
-    return {
-      users,
-      pagination: {
-        nextCursor: hasMore
-          ? {
-              createdAt: users[users.length - 1].createdAt,
-              id: users[users.length - 1]._id,
-            }
-          : null,
-        hasMore,
-      },
-    };
-  },
-  getHiddenQuotes: async ({ cursor = null, limit = 20 }) => {
-    const query = { isHiddenBySystem: true };
-    if (cursor) {
-      query.$or = [
-        { createdAt: { $lt: new Date(cursor.createdAt) } },
-        {
-          createdAt: new Date(cursor.createdAt),
-          _id: { $gt: new mongoose_1.default.Types.ObjectId(cursor.id) },
-        },
-      ];
+    async getAllUsers({ cursor = null, limit = 20, }) {
+        const query = {};
+        if (cursor) {
+            Object.assign(query, (0, cursor_util_1.buildCompoundCursorQuery)(cursor, ['createdAt', '_id'], [-1, 1]));
+        }
+        const users = await this.userModel
+            .find(query)
+            .sort({ createdAt: -1, _id: 1 })
+            .limit(limit + 1)
+            .select("-password -__v")
+            .lean();
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, ['createdAt', '_id']);
+        return {
+            users: data,
+            pagination,
+        };
     }
-    const quotes = await quote_model_1.default
-      .find(query)
-      .sort({ createdAt: -1, _id: 1 })
-      .limit(limit + 1)
-      .populate("creator", "username email createdAt")
-      .lean();
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
-    return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore
-          ? {
-              createdAt: quotes[quotes.length - 1].createdAt,
-              id: quotes[quotes.length - 1]._id,
-            }
-          : null,
-        hasMore,
-      },
-    };
-  },
+    async getHiddenQuotes({ cursor = null, limit = 20, }) {
+        const query = { isHiddenBySystem: true };
+        if (cursor) {
+            Object.assign(query, (0, cursor_util_1.buildCompoundCursorQuery)(cursor, ['createdAt', '_id'], [-1, 1]));
+        }
+        const quotes = await this.quoteModel
+            .find(query)
+            .sort({ createdAt: -1, _id: 1 })
+            .limit(limit + 1)
+            .populate("creator", "username email createdAt")
+            .lean();
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt', '_id']);
+        return {
+            quotes: data,
+            pagination,
+        };
+    }
 };
-exports.default = adminService;
+exports.AdminService = AdminService;
+exports.AdminService = AdminService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
+    __param(1, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model])
+], AdminService);
 //# sourceMappingURL=admin.service.js.map

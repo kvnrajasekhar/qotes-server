@@ -13,6 +13,10 @@ import User, { IUser } from "../../models/user.model";
 import Follow, { IFollow } from "../../models/follow.model";
 import Quote, { IQuote } from "../../models/quote.model";
 import { Inject } from "@nestjs/common";
+import {
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 @Injectable()
 export class UsersService {
@@ -243,7 +247,7 @@ export class UsersService {
     };
 
     if (cursor) {
-      query._id = { $lt: cursor };
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
     }
 
     const quotes = await this.quoteModel
@@ -252,16 +256,11 @@ export class UsersService {
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['_id']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore ? quotes[quotes.length - 1]._id : null,
-        hasMore,
-        pageSize: limit,
-      },
+      quotes: data,
+      pagination,
     };
   }
 
@@ -277,7 +276,9 @@ export class UsersService {
     limit?: number;
   }) {
     const query: any = { following: userId };
-    if (cursor) query._id = { $lt: cursor };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+    }
 
     const follows = await this.followModel
       .find(query)
@@ -286,10 +287,9 @@ export class UsersService {
       .populate("follower", "username firstName lastName avatarUrl bio stats")
       .lean();
 
-    const hasMore = follows.length > limit;
-    if (hasMore) follows.pop();
+    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followerList = follows.map((f: any) => f.follower);
+    const followerList = data.map((f: any) => f.follower);
     const followerIds = followerList.map((f: any) => f._id);
 
     let followingStatus: any[] = [];
@@ -312,10 +312,7 @@ export class UsersService {
         ...user,
         isFollowing: followingSet.has(user._id.toString()),
       })),
-      pagination: {
-        nextCursor: hasMore ? follows[follows.length - 1]._id : null,
-        hasMore,
-      },
+      pagination,
     };
   }
 
@@ -331,7 +328,9 @@ export class UsersService {
     limit?: number;
   }) {
     const query: any = { follower: userId };
-    if (cursor) query._id = { $lt: cursor };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+    }
 
     const follows = await this.followModel
       .find(query)
@@ -340,10 +339,9 @@ export class UsersService {
       .populate("following", "username firstName lastName avatarUrl bio stats")
       .lean();
 
-    const hasMore = follows.length > limit;
-    if (hasMore) follows.pop();
+    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followingList = follows.map((f: any) => f.following);
+    const followingList = data.map((f: any) => f.following);
     const followingIds = followingList.map((f: any) => f._id);
 
     let followedByStatus: any[] = [];
@@ -366,11 +364,7 @@ export class UsersService {
         ...user,
         followsYou: followedBySet.has(user._id.toString()),
       })),
-      pagination: {
-        nextCursor: hasMore ? follows[follows.length - 1]._id : null,
-        hasMore,
-        pageSize: limit,
-      },
+      pagination,
     };
   }
 }

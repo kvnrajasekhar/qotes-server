@@ -2,6 +2,10 @@
 import Notification from "../../models/notification.model";
 import { NOTIFICATION_CONFIG } from "./notification.constants";
 import { getIO } from "./notification.socket";
+import {
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 declare global {
   var userSocketMap: Map<string, Set<string>> | undefined;
@@ -18,7 +22,7 @@ interface CreateNotificationData {
 }
 
 interface GetNotificationsOptions {
-  page?: number;
+  cursor?: string | null;
   limit?: number;
   unreadOnly?: boolean;
 }
@@ -113,14 +117,13 @@ const isUserOnline = (userId: string): boolean => {
 const getNotifications = async (
   userId: string,
   {
-    page = 1,
+    cursor = null,
     limit = NOTIFICATION_CONFIG.DEFAULT_PAGE_SIZE,
     unreadOnly = false,
   }: GetNotificationsOptions = {},
 ) => {
   try {
     const sanitizedLimit = Math.min(limit, NOTIFICATION_CONFIG.MAX_PAGE_SIZE);
-    const skip = (page - 1) * sanitizedLimit;
 
     const query: any = {
       recipient: userId,
@@ -131,30 +134,21 @@ const getNotifications = async (
       query.isRead = false;
     }
 
-    const [notifications, total] = await Promise.all([
-      Notification.find(query)
-        .populate("sender", "username name avatar")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(sanitizedLimit)
-        .lean(),
-      Notification.countDocuments(query),
-    ]);
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+    }
 
-    const totalPages = Math.ceil(total / sanitizedLimit);
-    const hasNext = page < totalPages;
-    const hasPrev = page > 1;
+    const notifications = await Notification.find(query)
+      .populate("sender", "username name avatar")
+      .sort({ createdAt: -1 })
+      .limit(sanitizedLimit + 1)
+      .lean();
+
+    const { data, pagination } = processPaginatedResults(notifications, sanitizedLimit, ['createdAt']);
 
     return {
-      notifications,
-      pagination: {
-        currentPage: page,
-        itemsPerPage: sanitizedLimit,
-        totalItems: total,
-        totalPages,
-        hasNext,
-        hasPrev,
-      },
+      notifications: data,
+      pagination,
     };
   } catch (error) {
     console.error("Error getting notifications:", error);

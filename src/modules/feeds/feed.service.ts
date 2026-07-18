@@ -3,6 +3,13 @@ import Quote from "../../models/quote.model";
 import Follow from "../../models/follow.model";
 import Block from "../../models/block.model";
 import UserContentPreference from "../../models/userContentPreference.model";
+import {
+  encodeCursor,
+  decodeCursor,
+  buildCursorQuery,
+  buildCompoundCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 const quoteService = {
   getGlobalFeed: async ({ userId, cursor = null, limit = 10 }) => {
     const query = { isHiddenBySystem: { $ne: true } }; // Only show safe content
@@ -41,22 +48,20 @@ const quoteService = {
       query.tags = { $nin: excludedTags };
     }
 
-    if (cursor) query.createdAt = { $lt: new Date(cursor) };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+    }
 
     const quotes = await Quote.find(query)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore ? quotes[quotes.length - 1].createdAt : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   },
 
@@ -93,22 +98,20 @@ const quoteService = {
     }
 
     // 3. Pagination Logic
-    if (cursor) query.createdAt = { $lt: new Date(cursor) };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+    }
 
     const quotes = await Quote.find(query)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore ? quotes[quotes.length - 1].createdAt : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   },
 
@@ -164,11 +167,7 @@ const quoteService = {
 
     // 5. PAGINATION (Tie-breaker cursor logic)
     if (cursor) {
-      const { createdAt, id } = decodeCursor(cursor);
-      query.$or = [
-        { createdAt: { $lt: createdAt } },
-        { createdAt, _id: { $lt: id } },
-      ];
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1]));
     }
 
     const quotes = await Quote.find(query)
@@ -176,19 +175,11 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
-
-    const last = quotes[quotes.length - 1];
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore
-          ? encodeCursor({ createdAt: last.createdAt, id: last._id })
-          : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   },
 
@@ -245,22 +236,20 @@ const quoteService = {
     }
 
     // 7. Pagination
-    if (cursor) query.createdAt = { $lt: new Date(cursor) };
+    if (cursor) {
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+    }
 
     const quotes = await Quote.find(query)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore ? quotes[quotes.length - 1].createdAt : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   },
 };

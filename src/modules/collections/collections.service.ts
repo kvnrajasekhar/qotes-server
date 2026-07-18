@@ -11,6 +11,10 @@ import CollectionItem, {
   ICollectionItem,
 } from "../../models/collectionItem.model";
 import Quote, { IQuote } from "../../models/quote.model";
+import {
+  buildCursorQuery,
+  processPaginatedResults,
+} from "../../shared/utils/cursor.util";
 
 @Injectable()
 export class CollectionsService {
@@ -33,7 +37,7 @@ export class CollectionsService {
     const query: any = { owner: userId };
 
     if (cursor) {
-      query.createdAt = { $lt: new Date(cursor) };
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const collections = await this.collectionModel
@@ -43,17 +47,11 @@ export class CollectionsService {
       .limit(limit + 1)
       .lean();
 
-    const hasMore = collections.length > limit;
-    if (hasMore) collections.pop();
+    const { data, pagination } = processPaginatedResults(collections, limit, ['createdAt']);
 
     return {
-      collections,
-      pagination: {
-        nextCursor: hasMore
-          ? collections[collections.length - 1].createdAt
-          : null,
-        hasMore,
-      },
+      collections: data,
+      pagination,
     };
   }
 
@@ -69,7 +67,7 @@ export class CollectionsService {
     const query: any = { collectionId };
 
     if (cursor) {
-      query.addedAt = { $lt: new Date(cursor) };
+      Object.assign(query, buildCursorQuery(cursor, 'addedAt', -1));
     }
 
     const items = await this.collectionItemModel
@@ -82,15 +80,11 @@ export class CollectionsService {
       })
       .lean();
 
-    const hasMore = items.length > limit;
-    if (hasMore) items.pop();
+    const { data, pagination } = processPaginatedResults(items, limit, ['addedAt']);
 
     return {
-      items: items.map((i: any) => i.quoteId),
-      pagination: {
-        nextCursor: hasMore ? items[items.length - 1].addedAt : null,
-        hasMore,
-      },
+      items: data.map((i: any) => i.quoteId),
+      pagination,
     };
   }
 

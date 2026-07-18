@@ -1,13 +1,33 @@
-import { createLogger, format, transports, Logger } from "winston";
+import { createLogger, format, transports } from "winston";
 
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
 const isProduction = process.env.NODE_ENV === "production";
+
+/**
+ * Safely stringify objects that may contain circular references.
+ */
+const safeStringify = (obj: unknown): string => {
+  const seen = new WeakSet();
+
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return "[Circular]";
+      }
+      seen.add(value);
+    }
+
+    return value;
+  });
+};
 
 const sharedFormat = format.combine(
   format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
   format.errors({ stack: true }),
   format.splat(),
-  format.metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
+  format.metadata({
+    fillExcept: ["message", "level", "timestamp", "label"],
+  }),
 );
 
 const consoleFormat = isProduction
@@ -18,30 +38,37 @@ const consoleFormat = isProduction
       format.printf(({ timestamp, level, message, stack, metadata }) => {
         const meta =
           metadata && Object.keys(metadata).length
-            ? ` ${JSON.stringify(metadata)}`
+            ? ` ${safeStringify(metadata)}`
             : "";
+
         return stack
           ? `${timestamp} ${level}: ${message} - ${stack}${meta}`
           : `${timestamp} ${level}: ${message}${meta}`;
       }),
     );
 
-const logger: any = createLogger({
+const baseLogger = createLogger({
   level: LOG_LEVEL,
   format: consoleFormat,
   transports: [
-    new transports.Console({ stderrLevels: ["error"], handleExceptions: true }),
+    new transports.Console({
+      stderrLevels: ["error"],
+      handleExceptions: true,
+    }),
   ],
   exitOnError: false,
 });
 
-logger.stream = {
-  write(message: string) {
-    const trimmed = message.trim();
-    if (trimmed) {
-      logger.info(trimmed);
-    }
+// Add Morgan-compatible stream without conflicting with Logger.stream()
+const logger = Object.assign(baseLogger, {
+  morganStream: {
+    write(message: string) {
+      const trimmed = message.trim();
+      if (trimmed) {
+        baseLogger.info(trimmed);
+      }
+    },
   },
-};
+});
 
 export default logger;
