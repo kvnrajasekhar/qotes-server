@@ -34,13 +34,15 @@ const quoteService = {
             query.tags = { $nin: excludedTags };
         }
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const quotes = await quote_model_1.default.find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
+            "createdAt",
+        ]);
         return {
             quotes: data,
             pagination,
@@ -67,13 +69,15 @@ const quoteService = {
             }
         }
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const quotes = await quote_model_1.default.find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
+            "createdAt",
+        ]);
         return {
             quotes: data,
             pagination,
@@ -108,13 +112,16 @@ const quoteService = {
             isHiddenBySystem: { $ne: true },
         };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCompoundCursorQuery)(cursor, ['createdAt', '_id'], [-1, -1]));
+            Object.assign(query, (0, cursor_util_1.buildCompoundCursorQuery)(cursor, ["createdAt", "_id"], [-1, -1]));
         }
         const quotes = await quote_model_1.default.find(query)
             .sort({ createdAt: -1, _id: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt', '_id']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
+            "createdAt",
+            "_id",
+        ]);
         return {
             quotes: data,
             pagination,
@@ -157,13 +164,15 @@ const quoteService = {
             query.tags = { $nin: excludedTags };
         }
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const quotes = await quote_model_1.default.find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
+            "createdAt",
+        ]);
         return {
             quotes: data,
             pagination,

@@ -200,14 +200,16 @@ let UsersService = class UsersService {
             isHiddenBySystem: false,
         };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, '_id', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "_id", -1));
         }
         const quotes = await this.quoteModel
             .find(query)
             .sort({ _id: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['_id']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
+            "_id",
+        ]);
         return {
             quotes: data,
             pagination,
@@ -216,7 +218,7 @@ let UsersService = class UsersService {
     async getFollowers({ userId, currentUserId, cursor = null, limit = 20, }) {
         const query = { following: userId };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, '_id', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "_id", -1));
         }
         const follows = await this.followModel
             .find(query)
@@ -224,7 +226,9 @@ let UsersService = class UsersService {
             .limit(limit + 1)
             .populate("follower", "username firstName lastName avatarUrl bio stats")
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, ['_id']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, [
+            "_id",
+        ]);
         const followerList = data.map((f) => f.follower);
         const followerIds = followerList.map((f) => f._id);
         let followingStatus = [];
@@ -249,7 +253,7 @@ let UsersService = class UsersService {
     async getFollowing({ userId, currentUserId, cursor = null, limit = 20, }) {
         const query = { follower: userId };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, '_id', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "_id", -1));
         }
         const follows = await this.followModel
             .find(query)
@@ -257,7 +261,9 @@ let UsersService = class UsersService {
             .limit(limit + 1)
             .populate("following", "username firstName lastName avatarUrl bio stats")
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, ['_id']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, [
+            "_id",
+        ]);
         const followingList = data.map((f) => f.following);
         const followingIds = followingList.map((f) => f._id);
         let followedByStatus = [];

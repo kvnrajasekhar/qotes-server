@@ -11,20 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SafetyService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const block_model_1 = __importDefault(require("../../models/block.model"));
-const report_model_1 = __importDefault(require("../../models/report.model"));
-const user_model_1 = __importDefault(require("../../models/user.model"));
-const quote_model_1 = __importDefault(require("../../models/quote.model"));
-const follow_model_1 = __importDefault(require("../../models/follow.model"));
-const reportStats_model_1 = __importDefault(require("../../models/reportStats.model"));
 let SafetyService = class SafetyService {
     constructor(blockModel, reportModel, userModel, quoteModel, followModel, reportStatsModel) {
         this.blockModel = blockModel;
@@ -102,12 +93,12 @@ let SafetyService = class SafetyService {
 exports.SafetyService = SafetyService;
 exports.SafetyService = SafetyService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)(block_model_1.default.name)),
-    __param(1, (0, mongoose_1.InjectModel)(report_model_1.default.name)),
-    __param(2, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
-    __param(3, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
-    __param(4, (0, mongoose_1.InjectModel)(follow_model_1.default.name)),
-    __param(5, (0, mongoose_1.InjectModel)(reportStats_model_1.default.name)),
+    __param(0, (0, mongoose_1.InjectModel)('Block')),
+    __param(1, (0, mongoose_1.InjectModel)('Report')),
+    __param(2, (0, mongoose_1.InjectModel)('User')),
+    __param(3, (0, mongoose_1.InjectModel)('Quote')),
+    __param(4, (0, mongoose_1.InjectModel)('Follow')),
+    __param(5, (0, mongoose_1.InjectModel)('ReportStats')),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,

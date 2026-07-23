@@ -12,12 +12,13 @@ import {
   UploadedFile,
   UseFilters,
 } from "@nestjs/common";
-import { Request, Response } from "express";
+import { Response } from "express";
 import { Throttle } from "@nestjs/throttler";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
 import { AuthService } from "./auth.service";
+import { AuthenticatedRequest } from "../../shared/interfaces/authenticated-request.interface";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { ResponseInterceptor } from "../../shared/interceptors/response.interceptor";
 import { HttpExceptionFilter } from "../../shared/filters/http-exception.filter";
@@ -44,7 +45,7 @@ export class AuthController {
   @Post("login")
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
-  async login(@Req() req: Request, @Res() res: Response) {
+  async login(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const { identifier, password } = req.body;
 
     const result = await this.authService.login(identifier, password);
@@ -73,7 +74,7 @@ export class AuthController {
   @Post("signup")
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseInterceptors(FileInterceptor("avatar", multerConfig))
-  async signup(@Req() req: Request) {
+  async signup(@Req() req: AuthenticatedRequest) {
     const { username, email, password, firstName, lastName, bio } = req.body;
     const avatarFile = req.file || null;
 
@@ -107,7 +108,7 @@ export class AuthController {
 
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: Request, @Res() res: Response) {
+  async logout(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const refreshToken = req.cookies.refreshToken;
 
     if (refreshToken) {
@@ -126,7 +127,7 @@ export class AuthController {
   @Post("refresh")
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: Request) {
+  async refresh(@Req() req: AuthenticatedRequest) {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
@@ -188,12 +189,12 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   async updatePassword(
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Res() res: Response,
     @Body()
     body: { oldPassword: string; newPassword: string; confirmPassword: string },
   ) {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     const { oldPassword, newPassword, confirmPassword } = body;
 
     const result = await this.authService.updateUserPassword(

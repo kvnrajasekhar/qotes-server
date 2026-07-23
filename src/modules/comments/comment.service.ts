@@ -136,7 +136,7 @@ const commentService = {
     };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const replies = await Comment.find(query)
@@ -145,7 +145,9 @@ const commentService = {
       .populate("author", "username avatar")
       .lean();
 
-    const { data, pagination } = processPaginatedResults(replies, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(replies, limit, [
+      "createdAt",
+    ]);
 
     return {
       replies: data,

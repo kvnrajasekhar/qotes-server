@@ -32,7 +32,7 @@ let CollectionsService = class CollectionsService {
     async getUserCollections({ userId, cursor = null, limit = 20, }) {
         const query = { owner: userId };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const collections = await this.collectionModel
             .find(query)
@@ -40,7 +40,9 @@ let CollectionsService = class CollectionsService {
             .sort({ isDefault: -1, createdAt: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, [
+            "createdAt",
+        ]);
         return {
             collections: data,
             pagination,
@@ -49,7 +51,7 @@ let CollectionsService = class CollectionsService {
     async getCollectionDetails({ collectionId, cursor = null, limit = 20, }) {
         const query = { collectionId };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'addedAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "addedAt", -1));
         }
         const items = await this.collectionItemModel
             .find(query)
@@ -60,7 +62,9 @@ let CollectionsService = class CollectionsService {
             select: "text author category reactions likes saves requotes createdAt",
         })
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, ['addedAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, [
+            "addedAt",
+        ]);
         return {
             items: data.map((i) => i.quoteId),
             pagination,

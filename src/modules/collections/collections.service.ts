@@ -37,7 +37,7 @@ export class CollectionsService {
     const query: any = { owner: userId };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const collections = await this.collectionModel
@@ -47,7 +47,9 @@ export class CollectionsService {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(collections, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(collections, limit, [
+      "createdAt",
+    ]);
 
     return {
       collections: data,
@@ -67,7 +69,7 @@ export class CollectionsService {
     const query: any = { collectionId };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'addedAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "addedAt", -1));
     }
 
     const items = await this.collectionItemModel
@@ -80,7 +82,9 @@ export class CollectionsService {
       })
       .lean();
 
-    const { data, pagination } = processPaginatedResults(items, limit, ['addedAt']);
+    const { data, pagination } = processPaginatedResults(items, limit, [
+      "addedAt",
+    ]);
 
     return {
       items: data.map((i: any) => i.quoteId),

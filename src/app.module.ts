@@ -34,7 +34,7 @@ import { QueuesModule } from "./shared/queues/queues.module";
       envFilePath: ".env",
     }),
     MongooseModule.forRoot(
-      process.env.MONGODB_URI || "mongodb://localhost:27017/qotes",
+      process.env.MONGO_URI || "mongodb://localhost:27017/qotes",
     ),
     ThrottlerModule.forRoot([
       {

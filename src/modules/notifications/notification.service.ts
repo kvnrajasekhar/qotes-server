@@ -135,7 +135,7 @@ const getNotifications = async (
     }
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const notifications = await Notification.find(query)
@@ -144,7 +144,11 @@ const getNotifications = async (
       .limit(sanitizedLimit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(notifications, sanitizedLimit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(
+      notifications,
+      sanitizedLimit,
+      ["createdAt"],
+    );
 
     return {
       notifications: data,

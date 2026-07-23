@@ -8,6 +8,7 @@ import { initializeSocket } from "./modules/notifications/notification.socket";
 import logger from "./shared/utils/logger.util";
 import { ResponseInterceptor } from "./shared/interceptors/response.interceptor";
 import { HttpExceptionFilter } from "./shared/filters/http-exception.filter";
+import { requestLogger } from "./shared/middlewares/logger.middleware";
 
 async function bootstrap() {
   await connectToDatabase();
@@ -20,6 +21,8 @@ async function bootstrap() {
     origin: "*",
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
   });
+
+  app.use(requestLogger);
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -85,14 +85,14 @@ const getNotifications = async (userId, { cursor = null, limit = notification_co
             query.isRead = false;
         }
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const notifications = await notification_model_1.default.find(query)
             .populate("sender", "username name avatar")
             .sort({ createdAt: -1 })
             .limit(sanitizedLimit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, ["createdAt"]);
         return {
             notifications: data,
             pagination,

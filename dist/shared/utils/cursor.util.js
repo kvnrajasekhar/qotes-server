@@ -8,15 +8,15 @@ exports.getNextCursor = getNextCursor;
 exports.processPaginatedResults = processPaginatedResults;
 function encodeCursor(data) {
     const jsonString = JSON.stringify(data);
-    return Buffer.from(jsonString).toString('base64');
+    return Buffer.from(jsonString).toString("base64");
 }
 function decodeCursor(cursor) {
     try {
-        const jsonString = Buffer.from(cursor, 'base64').toString('utf-8');
+        const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
         return JSON.parse(jsonString);
     }
     catch (error) {
-        throw new Error('Invalid cursor format');
+        throw new Error("Invalid cursor format");
     }
 }
 function buildCursorQuery(cursor, field, direction = -1) {
@@ -54,17 +54,17 @@ function buildCompoundCursorQuery(cursor, fields, directions) {
     }
     return query;
 }
-function getNextCursor(results, limit, fields = ['createdAt']) {
+function getNextCursor(results, limit, fields = ["createdAt"]) {
     if (results.length <= limit)
         return null;
     const lastItem = results[results.length - 1];
     const cursorData = {};
-    fields.forEach(field => {
+    fields.forEach((field) => {
         cursorData[field] = lastItem[field];
     });
     return encodeCursor(cursorData);
 }
-function processPaginatedResults(results, limit, cursorFields = ['createdAt']) {
+function processPaginatedResults(results, limit, cursorFields = ["createdAt"]) {
     const hasMore = results.length > limit;
     const data = hasMore ? results.slice(0, limit) : results;
     return {

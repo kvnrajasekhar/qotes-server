@@ -7,6 +7,7 @@ exports.asyncLocalStorage = exports.withTraceId = exports.getTraceId = exports.c
 const winston_1 = __importDefault(require("winston"));
 const winston_daily_rotate_file_1 = __importDefault(require("winston-daily-rotate-file"));
 const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const async_hooks_1 = require("async_hooks");
 const asyncLocalStorage = new async_hooks_1.AsyncLocalStorage();
 exports.asyncLocalStorage = asyncLocalStorage;
@@ -53,9 +54,12 @@ const createLogger = (serviceName = "default-service") => {
     const env = (process.env.NODE_ENV || "development").trim();
     const isProduction = env === "production";
     const enableFileLogging = (process.env.ENABLE_FILE_LOGGING || "").trim().toLowerCase() === "true" ||
-        isProduction;
+        isProduction ||
+        env === "development";
     console.log(`--- LOGGER DEBUG [${serviceName}]: NODE_ENV='${process.env.NODE_ENV}', ENABLE_FILE_LOGGING='${process.env.ENABLE_FILE_LOGGING}', Computed Flag=${enableFileLogging} ---`);
     const logsDir = path_1.default.resolve(__dirname, "../../../logs");
+    fs_1.default.mkdirSync(logsDir, { recursive: true });
+    fs_1.default.mkdirSync(path_1.default.join(logsDir, "errors"), { recursive: true });
     console.log(`--- FILESYSTEM TARGET PATH: '${logsDir}' ---`);
     transports.push(new winston_1.default.transports.Console({
         format: isProduction ? productionFormat : developmentFormat,

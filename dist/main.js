@@ -13,6 +13,7 @@ const notification_socket_1 = require("./modules/notifications/notification.sock
 const logger_util_1 = __importDefault(require("./shared/utils/logger.util"));
 const response_interceptor_1 = require("./shared/interceptors/response.interceptor");
 const http_exception_filter_1 = require("./shared/filters/http-exception.filter");
+const logger_middleware_1 = require("./shared/middlewares/logger.middleware");
 async function bootstrap() {
     await (0, database_1.connectToDatabase)();
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
@@ -22,6 +23,7 @@ async function bootstrap() {
         origin: "*",
         methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     });
+    app.use(logger_middleware_1.requestLogger);
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,

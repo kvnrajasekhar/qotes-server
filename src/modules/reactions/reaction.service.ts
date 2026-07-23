@@ -170,7 +170,7 @@ const reactionService = {
     const query = { quoteId: new mongoose.Types.ObjectId(quoteId) };
     if (type) query.type = type;
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     // 4. THE MONGO AGGREGATION
@@ -208,7 +208,9 @@ const reactionService = {
     ]);
 
     // 5. PAGINATION & CACHE FILL
-    const { data, pagination } = processPaginatedResults(reactions, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(reactions, limit, [
+      "createdAt",
+    ]);
 
     const result = {
       total,

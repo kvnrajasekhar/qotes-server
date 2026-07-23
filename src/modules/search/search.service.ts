@@ -135,7 +135,10 @@ export class SearchService {
     );
 
     const users = await this.userModel.aggregate(pipeline);
-    const { data, pagination } = processPaginatedResults(users, limit, ['score', '_id']);
+    const { data, pagination } = processPaginatedResults(users, limit, [
+      "score",
+      "_id",
+    ]);
 
     return {
       users: data,
@@ -181,7 +184,10 @@ export class SearchService {
       };
 
       if (cursor?.quotes) {
-        Object.assign(quoteQuery, buildCursorQuery(cursor.quotes, 'createdAt', -1));
+        Object.assign(
+          quoteQuery,
+          buildCursorQuery(cursor.quotes, "createdAt", -1),
+        );
       }
 
       const quotes = await this.quoteModel
@@ -191,7 +197,8 @@ export class SearchService {
         .populate("creator", "username avatarUrl")
         .lean();
 
-      const { data: quoteData, pagination: quotePagination } = processPaginatedResults(quotes, limit, ['createdAt']);
+      const { data: quoteData, pagination: quotePagination } =
+        processPaginatedResults(quotes, limit, ["createdAt"]);
 
       results.quotes = quoteData;
       nextCursor.quotes = quotePagination.nextCursor;

@@ -49,7 +49,7 @@ const quoteService = {
     }
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const quotes = await Quote.find(query)
@@ -57,7 +57,9 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "createdAt",
+    ]);
 
     return {
       quotes: data,
@@ -99,7 +101,7 @@ const quoteService = {
 
     // 3. Pagination Logic
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const quotes = await Quote.find(query)
@@ -107,7 +109,9 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "createdAt",
+    ]);
 
     return {
       quotes: data,
@@ -167,7 +171,10 @@ const quoteService = {
 
     // 5. PAGINATION (Tie-breaker cursor logic)
     if (cursor) {
-      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1]));
+      Object.assign(
+        query,
+        buildCompoundCursorQuery(cursor, ["createdAt", "_id"], [-1, -1]),
+      );
     }
 
     const quotes = await Quote.find(query)
@@ -175,7 +182,10 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "createdAt",
+      "_id",
+    ]);
 
     return {
       quotes: data,
@@ -237,7 +247,7 @@ const quoteService = {
 
     // 7. Pagination
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
+      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
     }
 
     const quotes = await Quote.find(query)
@@ -245,7 +255,9 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "createdAt",
+    ]);
 
     return {
       quotes: data,

@@ -247,7 +247,7 @@ export class UsersService {
     };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
     }
 
     const quotes = await this.quoteModel
@@ -256,7 +256,9 @@ export class UsersService {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['_id']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "_id",
+    ]);
 
     return {
       quotes: data,
@@ -277,7 +279,7 @@ export class UsersService {
   }) {
     const query: any = { following: userId };
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
     }
 
     const follows = await this.followModel
@@ -287,7 +289,9 @@ export class UsersService {
       .populate("follower", "username firstName lastName avatarUrl bio stats")
       .lean();
 
-    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
+    const { data, pagination } = processPaginatedResults(follows, limit, [
+      "_id",
+    ]);
 
     const followerList = data.map((f: any) => f.follower);
     const followerIds = followerList.map((f: any) => f._id);
@@ -329,7 +333,7 @@ export class UsersService {
   }) {
     const query: any = { follower: userId };
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
     }
 
     const follows = await this.followModel
@@ -339,7 +343,9 @@ export class UsersService {
       .populate("following", "username firstName lastName avatarUrl bio stats")
       .lean();
 
-    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
+    const { data, pagination } = processPaginatedResults(follows, limit, [
+      "_id",
+    ]);
 
     const followingList = data.map((f: any) => f.following);
     const followingIds = followingList.map((f: any) => f._id);

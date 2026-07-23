@@ -1,6 +1,7 @@
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
+import fs from "fs";
 import { AsyncLocalStorage } from "async_hooks";
 
 const asyncLocalStorage = new AsyncLocalStorage<{ traceId?: string }>();
@@ -73,13 +74,16 @@ const createLogger = (serviceName = "default-service"): winston.Logger => {
 
   const enableFileLogging =
     (process.env.ENABLE_FILE_LOGGING || "").trim().toLowerCase() === "true" ||
-    isProduction;
+    isProduction ||
+    env === "development";
 
   console.log(
     `--- LOGGER DEBUG [${serviceName}]: NODE_ENV='${process.env.NODE_ENV}', ENABLE_FILE_LOGGING='${process.env.ENABLE_FILE_LOGGING}', Computed Flag=${enableFileLogging} ---`,
   );
 
   const logsDir = path.resolve(__dirname, "../../../logs");
+  fs.mkdirSync(logsDir, { recursive: true });
+  fs.mkdirSync(path.join(logsDir, "errors"), { recursive: true });
   console.log(`--- FILESYSTEM TARGET PATH: '${logsDir}' ---`);
 
   transports.push(

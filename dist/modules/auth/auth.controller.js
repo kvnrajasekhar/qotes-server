@@ -122,7 +122,7 @@ let AuthController = class AuthController {
         };
     }
     async updatePassword(req, res, body) {
-        const userId = req.user.userId;
+        const userId = req.user?.userId;
         const { oldPassword, newPassword, confirmPassword } = body;
         const result = await this.authService.updateUserPassword(userId, oldPassword, newPassword, confirmPassword);
         res.clearCookie("refreshToken");

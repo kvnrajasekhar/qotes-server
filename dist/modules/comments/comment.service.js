@@ -109,14 +109,16 @@ const commentService = {
             parentComment: parentCommentId,
         };
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const replies = await comment_model_1.default.find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .populate("author", "username avatar")
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(replies, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(replies, limit, [
+            "createdAt",
+        ]);
         return {
             replies: data,
             pagination,

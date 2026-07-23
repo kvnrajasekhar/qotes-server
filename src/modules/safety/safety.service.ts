@@ -15,15 +15,14 @@ import ReportStats, { IReportStats } from "../../models/reportStats.model";
 
 @Injectable()
 export class SafetyService {
-  constructor(
-    @InjectModel(Block.name) private blockModel: Model<IUserBlock>,
-    @InjectModel(Report.name) private reportModel: Model<IReport>,
-    @InjectModel(User.name) private userModel: Model<IUser>,
-    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
-    @InjectModel(Follow.name) private followModel: Model<IFollow>,
-    @InjectModel(ReportStats.name)
-    private reportStatsModel: Model<IReportStats>,
-  ) {}
+constructor(
+    @InjectModel('Block') private readonly blockModel: Model<IUserBlock>,
+    @InjectModel('Report') private readonly reportModel: Model<IReport>,
+    @InjectModel('User') private readonly userModel: Model<IUser>,
+    @InjectModel('Quote') private readonly quoteModel: Model<IQuote>,
+    @InjectModel('Follow') private readonly followModel: Model<IFollow>,
+    @InjectModel('ReportStats') private readonly reportStatsModel: Model<IReportStats>,
+    ) {}
 
   async toggleBlockUser(blockerId: string, blockedId: string) {
     if (blockerId.toString() === blockedId.toString()) {

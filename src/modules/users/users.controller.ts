@@ -14,7 +14,6 @@ import {
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
-import { Request } from "express";
 import { Throttle } from "@nestjs/throttler";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
@@ -22,6 +21,7 @@ import { extname } from "path";
 import { UsersService } from "./users.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ResponseInterceptor } from "../../shared/interceptors/response.interceptor";
+import { AuthenticatedRequest } from "../../shared/interfaces/authenticated-request.interface";
 
 // Multer configuration for file uploads
 const multerConfig = {
@@ -40,11 +40,14 @@ const multerConfig = {
 @Controller("user")
 @UseInterceptors(ResponseInterceptor)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @Get("suggested")
   @UseGuards(JwtAuthGuard)
-  async getSuggestedUsers(@Req() req: Request, @Query("limit") limit?: string) {
+  async getSuggestedUsers(
+    @Req() req: AuthenticatedRequest,
+    @Query("limit") limit?: string,
+  ) {
     const userId = req.user?.id || null;
     const parsedLimit = parseInt(limit) || 8;
     const suggestedUsers = await this.usersService.getSuggestedUsers({
@@ -77,7 +80,7 @@ export class UsersController {
   @Get("u/:username")
   async getUserByUsername(
     @Param("username") username: string,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
   ) {
     const user = await this.usersService.getUserByUsername(
       username,
@@ -93,7 +96,7 @@ export class UsersController {
 
   @Get("profile/me")
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Req() req: Request) {
+  async getProfile(@Req() req: AuthenticatedRequest) {
     const userId = req.user.id;
     const user = await this.usersService.getUserByUsername(userId);
     return {
@@ -106,7 +109,7 @@ export class UsersController {
 
   @Patch("profile/me")
   @UseGuards(JwtAuthGuard)
-  async updateProfile(@Req() req: Request, @Body() body: any) {
+  async updateProfile(@Req() req: AuthenticatedRequest, @Body() body: any) {
     const userId = req.user.id;
     const { firstName, lastName, email } = body;
     const updateUserProfile = await this.usersService.updateUserProfile(
@@ -128,7 +131,10 @@ export class UsersController {
   @Put("avatar")
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor("avatar", multerConfig))
-  async updateAvatar(@Req() req: Request, @UploadedFile() avatarFile: any) {
+  async updateAvatar(
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() avatarFile: any,
+  ) {
     const userId = req.user.userId;
 
     if (!avatarFile) {
@@ -150,7 +156,10 @@ export class UsersController {
 
   @Post("follow/:id")
   @UseGuards(JwtAuthGuard)
-  async toggleFollow(@Req() req: Request, @Param("id") targetId: string) {
+  async toggleFollow(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") targetId: string,
+  ) {
     const followerId = req.user.userId;
     const result = await this.usersService.toggleFollow(followerId, targetId);
     return {
@@ -165,7 +174,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getRequotes(
     @Param("userId") userId: string,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ) {
@@ -187,7 +196,7 @@ export class UsersController {
   @Get("me/following")
   @UseGuards(JwtAuthGuard)
   async getMyFollowing(
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ) {
@@ -210,7 +219,7 @@ export class UsersController {
   @Get("me/followers")
   @UseGuards(JwtAuthGuard)
   async getMyFollowers(
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ) {
@@ -234,7 +243,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getUserFollowers(
     @Param("userId") userId: string,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ) {
@@ -257,7 +266,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getUserFollowing(
     @Param("userId") userId: string,
-    @Req() req: Request,
+    @Req() req: AuthenticatedRequest,
     @Query("cursor") cursor?: string,
     @Query("limit") limit?: string,
   ) {

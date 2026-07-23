@@ -127,7 +127,10 @@ let SearchService = class SearchService {
         }
         pipeline.push({ $sort: { score: -1, _id: 1 } }, { $limit: limit + 1 }, { $project: { password: 0, __v: 0 } });
         const users = await this.userModel.aggregate(pipeline);
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, ['score', '_id']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, [
+            "score",
+            "_id",
+        ]);
         return {
             users: data,
             pagination,
@@ -164,7 +167,7 @@ let SearchService = class SearchService {
                 $or: [{ text: containsRegex }, { hashtags: prefixRegex }],
             };
             if (cursor?.quotes) {
-                Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, 'createdAt', -1));
+                Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, "createdAt", -1));
             }
             const quotes = await this.quoteModel
                 .find(quoteQuery)
@@ -172,7 +175,7 @@ let SearchService = class SearchService {
                 .limit(limit + 1)
                 .populate("creator", "username avatarUrl")
                 .lean();
-            const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
+            const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ["createdAt"]);
             results.quotes = quoteData;
             nextCursor.quotes = quotePagination.nextCursor;
         }

@@ -124,7 +124,7 @@ const reactionService = {
         if (type)
             query.type = type;
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
         }
         const reactions = await reaction_model_1.default.aggregate([
             { $match: query },
@@ -158,7 +158,9 @@ const reactionService = {
                 },
             },
         ]);
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(reactions, limit, ['createdAt']);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(reactions, limit, [
+            "createdAt",
+        ]);
         const result = {
             total,
             breakdown,

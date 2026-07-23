@@ -14,7 +14,7 @@ export interface CursorData {
  */
 export function encodeCursor(data: CursorData): string {
   const jsonString = JSON.stringify(data);
-  return Buffer.from(jsonString).toString('base64');
+  return Buffer.from(jsonString).toString("base64");
 }
 
 /**
@@ -24,10 +24,10 @@ export function encodeCursor(data: CursorData): string {
  */
 export function decodeCursor(cursor: string): CursorData {
   try {
-    const jsonString = Buffer.from(cursor, 'base64').toString('utf-8');
+    const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
     return JSON.parse(jsonString);
   } catch (error) {
-    throw new Error('Invalid cursor format');
+    throw new Error("Invalid cursor format");
   }
 }
 
@@ -41,7 +41,7 @@ export function decodeCursor(cursor: string): CursorData {
 export function buildCursorQuery(
   cursor: string | null,
   field: string,
-  direction: -1 | 1 = -1
+  direction: -1 | 1 = -1,
 ): any {
   if (!cursor) return {};
 
@@ -65,7 +65,7 @@ export function buildCursorQuery(
 export function buildCompoundCursorQuery(
   cursor: string | null,
   fields: string[],
-  directions: (-1 | 1)[]
+  directions: (-1 | 1)[],
 ): any {
   if (!cursor) return {};
 
@@ -79,7 +79,7 @@ export function buildCompoundCursorQuery(
     const value = decoded[field];
 
     const condition: any = {};
-    
+
     // Add equality conditions for all previous fields
     for (let j = 0; j < i; j++) {
       condition[fields[j]] = decoded[fields[j]];
@@ -108,14 +108,14 @@ export function buildCompoundCursorQuery(
 export function getNextCursor(
   results: any[],
   limit: number,
-  fields: string[] = ['createdAt']
+  fields: string[] = ["createdAt"],
 ): string | null {
   if (results.length <= limit) return null;
 
   const lastItem = results[results.length - 1];
   const cursorData: CursorData = {};
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     cursorData[field] = lastItem[field];
   });
 
@@ -140,7 +140,7 @@ export interface PaginationResponse {
 export function processPaginatedResults<T>(
   results: T[],
   limit: number,
-  cursorFields: string[] = ['createdAt']
+  cursorFields: string[] = ["createdAt"],
 ): { data: T[]; pagination: PaginationResponse } {
   const hasMore = results.length > limit;
   const data = hasMore ? results.slice(0, limit) : results;
@@ -148,14 +148,15 @@ export function processPaginatedResults<T>(
   return {
     data,
     pagination: {
-      nextCursor: hasMore && data.length > 0 
-        ? encodeCursor(
-            cursorFields.reduce((acc, field) => {
-              acc[field] = (data[data.length - 1] as any)[field];
-              return acc;
-            }, {} as CursorData)
-          )
-        : null,
+      nextCursor:
+        hasMore && data.length > 0
+          ? encodeCursor(
+              cursorFields.reduce((acc, field) => {
+                acc[field] = (data[data.length - 1] as any)[field];
+                return acc;
+              }, {} as CursorData),
+            )
+          : null,
       hasMore,
     },
   };

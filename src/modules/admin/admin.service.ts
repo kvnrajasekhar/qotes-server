@@ -13,8 +13,8 @@ import {
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<IUser>,
-    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
+    @InjectModel("User") private readonly userModel: Model<IUser>,
+    @InjectModel("Quote") private readonly quoteModel: Model<IQuote>,
   ) {}
 
   async getAllUsers({
@@ -27,7 +27,10 @@ export class AdminService {
     const query: any = {};
 
     if (cursor) {
-      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, 1]));
+      Object.assign(
+        query,
+        buildCompoundCursorQuery(cursor, ["createdAt", "_id"], [-1, 1]),
+      );
     }
 
     const users = await this.userModel
@@ -37,7 +40,10 @@ export class AdminService {
       .select("-password -__v")
       .lean();
 
-    const { data, pagination } = processPaginatedResults(users, limit, ['createdAt', '_id']);
+    const { data, pagination } = processPaginatedResults(users, limit, [
+      "createdAt",
+      "_id",
+    ]);
 
     return {
       users: data,
@@ -55,7 +61,10 @@ export class AdminService {
     const query: any = { isHiddenBySystem: true };
 
     if (cursor) {
-      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, 1]));
+      Object.assign(
+        query,
+        buildCompoundCursorQuery(cursor, ["createdAt", "_id"], [-1, 1]),
+      );
     }
 
     const quotes = await this.quoteModel
@@ -65,7 +74,10 @@ export class AdminService {
       .populate("creator", "username email createdAt")
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
+    const { data, pagination } = processPaginatedResults(quotes, limit, [
+      "createdAt",
+      "_id",
+    ]);
 
     return {
       quotes: data,
