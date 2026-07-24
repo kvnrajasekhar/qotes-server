@@ -9,12 +9,10 @@ import {
   Body,
   Req,
   UseGuards,
-  HttpCode,
   HttpStatus,
   UseInterceptors,
   UploadedFile,
 } from "@nestjs/common";
-import { Throttle } from "@nestjs/throttler";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { extname } from "path";
@@ -40,7 +38,7 @@ const multerConfig = {
 @Controller("user")
 @UseInterceptors(ResponseInterceptor)
 export class UsersController {
-  constructor(private usersService: UsersService) { }
+  constructor(private usersService: UsersService) {}
 
   @Get("suggested")
   @UseGuards(JwtAuthGuard)

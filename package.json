@@ -20,7 +20,11 @@
     "dlq:replay": "ts-node src/infrastructure/kafka/dlq/universal.dlq.ts",
     "kafka:init": "ts-node src/infrastructure/kafka/initTopics.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky "
+    "prepare": "husky ",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md,css,html}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md,css,html}\""
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

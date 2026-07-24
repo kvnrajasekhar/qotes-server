@@ -22,9 +22,11 @@ server.ts (repo root)
 `src/app.ts` is a plain Express app: CORS, JSON body parsing, request logging, a Prometheus-style `/metrics` endpoint, `/health`, `/ready` (checks Mongo required, Redis/Kafka optional), and route mounting for admin, collections, comments, feed, notifications, preferences, quotes, reactions, safety, search, users, system.
 
 **Auth is not mounted here.** The line exists and is commented out:
+
 ```ts
 // app.use("/v1/auth", authRouter); // Migrated to NestJS
 ```
+
 There is no `authRouter` implementation left on the Express side to mount even if uncommented — auth logic lives only in the NestJS module (see below).
 
 ### Entrypoint B — NestJS (currently built but not started by any script)
@@ -48,21 +50,21 @@ For every domain module except Auth, the pattern is: a real, working Express rou
 
 ## 2. Module inventory (domain modules under `src/modules/`)
 
-| Module | Express side (route+service) | NestJS side (controller+module+service) | Notes |
-|---|---|---|---|
-| `auth` | Not implemented (mount commented out) | ✅ Fully implemented — login, register, refresh, guards, JWT strategy | NestJS-only; the gap described above |
-| `admin` | ✅ route + controller + service | Module wraps the same controller (no separate NestJS service split observed) | |
-| `collections` | ✅ route + service | Controller + module scaffolded; stray empty file `collections.controller` (no extension, 0 bytes — dead artifact) | |
-| `comments` | ✅ route + service (real logic, ~5.4KB) | Controller + module + service present but service is an **empty stub** (`@Injectable() class CommentsService {}`) | |
-| `feeds` | ✅ route + service — global/following/discover feed logic, uses cursor pagination | Controller + module scaffolded | Following feed uses a compound cursor (`createdAt`,`_id`); global/discover feeds use a single-field cursor |
-| `notifications` | ✅ route + service + socket + validation + constants (real logic) | Controller + module + service present, **service is an empty stub** | Socket.IO notification delivery lives only on the Express/plain-Node side (`notification.socket.ts`), not wired into the NestJS app |
-| `preferences` | ✅ route + service | Controller + module scaffolded | |
-| `quotes` | ✅ route + service | Controller + module scaffolded | |
-| `reactions` | ✅ route + service, uses Redis cache (`reaction.cache.ts`) | Controller + module scaffolded | Only module with real Redis caching |
-| `safety` | ✅ route + service (reports, blocks) | Controller + module scaffolded | |
-| `search` | ✅ route + service — Mongo `$regexMatch` aggregation, not Trie-based | Controller + module scaffolded | |
-| `users` | ✅ route + service | Controller + module scaffolded | |
-| `system` | ✅ route + service — exposes `/v1/system/routes` | Controller + module scaffolded | |
+| Module          | Express side (route+service)                                                      | NestJS side (controller+module+service)                                                                           | Notes                                                                                                                               |
+| --------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`          | Not implemented (mount commented out)                                             | ✅ Fully implemented — login, register, refresh, guards, JWT strategy                                             | NestJS-only; the gap described above                                                                                                |
+| `admin`         | ✅ route + controller + service                                                   | Module wraps the same controller (no separate NestJS service split observed)                                      |                                                                                                                                     |
+| `collections`   | ✅ route + service                                                                | Controller + module scaffolded; stray empty file `collections.controller` (no extension, 0 bytes — dead artifact) |                                                                                                                                     |
+| `comments`      | ✅ route + service (real logic, ~5.4KB)                                           | Controller + module + service present but service is an **empty stub** (`@Injectable() class CommentsService {}`) |                                                                                                                                     |
+| `feeds`         | ✅ route + service — global/following/discover feed logic, uses cursor pagination | Controller + module scaffolded                                                                                    | Following feed uses a compound cursor (`createdAt`,`_id`); global/discover feeds use a single-field cursor                          |
+| `notifications` | ✅ route + service + socket + validation + constants (real logic)                 | Controller + module + service present, **service is an empty stub**                                               | Socket.IO notification delivery lives only on the Express/plain-Node side (`notification.socket.ts`), not wired into the NestJS app |
+| `preferences`   | ✅ route + service                                                                | Controller + module scaffolded                                                                                    |                                                                                                                                     |
+| `quotes`        | ✅ route + service                                                                | Controller + module scaffolded                                                                                    |                                                                                                                                     |
+| `reactions`     | ✅ route + service, uses Redis cache (`reaction.cache.ts`)                        | Controller + module scaffolded                                                                                    | Only module with real Redis caching                                                                                                 |
+| `safety`        | ✅ route + service (reports, blocks)                                              | Controller + module scaffolded                                                                                    |                                                                                                                                     |
+| `search`        | ✅ route + service — Mongo `$regexMatch` aggregation, not Trie-based              | Controller + module scaffolded                                                                                    |                                                                                                                                     |
+| `users`         | ✅ route + service                                                                | Controller + module scaffolded                                                                                    |                                                                                                                                     |
+| `system`        | ✅ route + service — exposes `/v1/system/routes`                                  | Controller + module scaffolded                                                                                    |                                                                                                                                     |
 
 "Scaffolded" above means: the NestJS controller/module files exist and are wired into `AppModule`, but the corresponding service class has no business logic — it's an empty `@Injectable()` shell. This is consistent across nearly every module except `auth` (fully done) and `reactions`/`admin` (partially wired, still Express-driven in practice).
 
@@ -87,7 +89,8 @@ For every domain module except Auth, the pattern is: a real, working Express rou
 
 ## 5. What's genuinely solid
 
-To be clear about what's *not* broken:
+To be clear about what's _not_ broken:
+
 - Mongoose data modeling is careful — compound indexes are used deliberately (e.g. `Follow`, `Quote`, `Notification` all have query-shaped compound indexes, not just single-field ones). See [`04-data-model.md`](./04-data-model.md).
 - Cursor-based pagination is correctly implemented as a shared utility (base64-encoded, single + compound field support) and used correctly in feed queries.
 - Kafka, BullMQ queues, and workers are real, running infrastructure, not just scaffolding — see [`05-infrastructure-and-async.md`](./05-infrastructure-and-async.md).

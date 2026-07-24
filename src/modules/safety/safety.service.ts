@@ -4,25 +4,26 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model, ClientSession } from "mongoose";
+import { Model } from "mongoose";
 
-import Block, { IUserBlock } from "../../models/block.model";
-import Report, { IReport } from "../../models/report.model";
-import User, { IUser } from "../../models/user.model";
-import Quote, { IQuote } from "../../models/quote.model";
-import Follow, { IFollow } from "../../models/follow.model";
-import ReportStats, { IReportStats } from "../../models/reportStats.model";
+import { IUserBlock } from "../../models/block.model";
+import { IReport } from "../../models/report.model";
+import { IUser } from "../../models/user.model";
+import { IQuote } from "../../models/quote.model";
+import { IFollow } from "../../models/follow.model";
+import { IReportStats } from "../../models/reportStats.model";
 
 @Injectable()
 export class SafetyService {
-constructor(
-    @InjectModel('Block') private readonly blockModel: Model<IUserBlock>,
-    @InjectModel('Report') private readonly reportModel: Model<IReport>,
-    @InjectModel('User') private readonly userModel: Model<IUser>,
-    @InjectModel('Quote') private readonly quoteModel: Model<IQuote>,
-    @InjectModel('Follow') private readonly followModel: Model<IFollow>,
-    @InjectModel('ReportStats') private readonly reportStatsModel: Model<IReportStats>,
-    ) {}
+  constructor(
+    @InjectModel("Block") private readonly blockModel: Model<IUserBlock>,
+    @InjectModel("Report") private readonly reportModel: Model<IReport>,
+    @InjectModel("User") private readonly userModel: Model<IUser>,
+    @InjectModel("Quote") private readonly quoteModel: Model<IQuote>,
+    @InjectModel("Follow") private readonly followModel: Model<IFollow>,
+    @InjectModel("ReportStats")
+    private readonly reportStatsModel: Model<IReportStats>,
+  ) {}
 
   async toggleBlockUser(blockerId: string, blockedId: string) {
     if (blockerId.toString() === blockedId.toString()) {
@@ -64,7 +65,7 @@ constructor(
         await session.abortTransaction();
         throw error;
       } finally {
-        session.endSession();
+        await session.endSession();
       }
     }
   }

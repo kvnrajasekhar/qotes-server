@@ -18,11 +18,13 @@ This split isn't sustainable: it doubles the surface area for every change, make
 Standardize on **NestJS** as the framework going forward. `src/main.ts` becomes the entrypoint. `src/server.ts` / `src/app.ts` (the Express app) will be retired once each module has a working NestJS equivalent.
 
 **Rationale (why NestJS over Express, given both exist):**
+
 - Auth — the highest-risk, most security-sensitive module — is already fully built in NestJS. Rebuilding it in Express would mean re-solving JWT strategy, guards, and validation from scratch, in the framework we're trying to move away from.
 - NestJS's structure (modules, DI, guards, interceptors, pipes) maps cleanly onto the model-per-domain structure this codebase already has, and gives the app-wide-cache-policy, circuit-breaker, and service-boundary work described in the roadmap a natural home (interceptors/guards) rather than ad hoc Express middleware.
 - The project's stated direction — eventual service decomposition — benefits from NestJS's module boundaries being enforced by the framework, not just by folder convention.
 
 **Consequences:**
+
 - Every domain module needs its NestJS service ported from the working Express service (not rewritten from scratch — the Express services are the source of truth for business logic; see [`03-nestjs-migration-plan.md`](./03-nestjs-migration-plan.md)).
 - Cross-cutting concerns need to be re-homed: `/health`, `/ready`, `/metrics`, and the Winston/correlation-ID logging currently only exist on the Express side and must be added to the NestJS bootstrap before cutover.
 - Socket.IO notification delivery (`notification.socket.ts`) currently isn't wired into the NestJS app at all and needs an explicit integration point.

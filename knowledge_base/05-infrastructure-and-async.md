@@ -5,6 +5,7 @@
 ## Redis
 
 **Actual usage is narrower than "app-wide cache strategy" — it's one feature.** Confirmed usage:
+
 - `reaction.cache.ts` — TTL-based (3600s) cache of reaction breakdowns per quote, using Redis hashes. Also backs a custom Lua-scripted atomic command (`redis.defineCommand("updateReaction", ...)`) for atomic increment/decrement across a type change (e.g. user switches their reaction from "like" to "thoughtful").
 - A second custom Lua command, `slidingWindowRateLimit`, is also registered in `redis.utils.ts` — used for rate limiting (not caching). Confirms the "rate limiting" cross-cutting concern is Redis-backed, not in-memory.
 - BullMQ uses Redis as its connection backend for all four queues (see below) — this is infrastructure usage, not application caching.
@@ -16,6 +17,7 @@ No other module touches Redis directly for caching. The 🟡 "app-wide Redis cac
 ## Kafka
 
 Two topics only, defined in `topics.ts`:
+
 - `auth-events`
 - `reaction-events`
 
@@ -29,12 +31,12 @@ Kafka startup is **non-fatal** in `src/server.ts` — if Kafka is unavailable, t
 
 All four are real (not stubs), each with its own file under `src/shared/queues/`, backed by Redis:
 
-| Queue | File | Purpose | Notable config |
-|---|---|---|---|
-| `image-generation-queue` | `imageGeneration.queue.ts` | Rendering quote images (e.g. for sharing) | Gated behind `IMAGE_GENERATION_ENABLED` env flag — if unset, jobs are silently skipped (logged, not queued) rather than erroring |
-| `quote-notifications-queue` | `quoteNotifications.queue.ts` | Notification dispatch | Gated behind `NOTIFICATIONS_ENABLED`; has a rate limiter (max 80/sec) — the only queue with a limiter |
-| `scheduled-cron-queue` | `scheduledCron.queue.ts` | Cron-style scheduled jobs | No feature flag — always active |
-| `content-sync-queue` | `contentSync.queue.ts` | Content sync (external source sync, presumably) | No feature flag — always active |
+| Queue                       | File                          | Purpose                                         | Notable config                                                                                                                   |
+| --------------------------- | ----------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `image-generation-queue`    | `imageGeneration.queue.ts`    | Rendering quote images (e.g. for sharing)       | Gated behind `IMAGE_GENERATION_ENABLED` env flag — if unset, jobs are silently skipped (logged, not queued) rather than erroring |
+| `quote-notifications-queue` | `quoteNotifications.queue.ts` | Notification dispatch                           | Gated behind `NOTIFICATIONS_ENABLED`; has a rate limiter (max 80/sec) — the only queue with a limiter                            |
+| `scheduled-cron-queue`      | `scheduledCron.queue.ts`      | Cron-style scheduled jobs                       | No feature flag — always active                                                                                                  |
+| `content-sync-queue`        | `contentSync.queue.ts`        | Content sync (external source sync, presumably) | No feature flag — always active                                                                                                  |
 
 All four share a consistent retry/cleanup convention: exponential backoff, `removeOnComplete: {age: 3600}`, `removeOnFail: {age: 86400}` — this consistency is a good sign, it means whoever built these queues was following a deliberate pattern rather than copy-pasting inconsistently.
 
@@ -43,6 +45,7 @@ All four share a consistent retry/cleanup convention: exponential backoff, `remo
 ## Workers
 
 `src/workers/` — six workers, one per major async job type:
+
 - `contentSync.worker.ts`
 - `cron.worker.ts`
 - `imageGeneration.worker.ts`
@@ -54,13 +57,13 @@ These correspond directly to the four BullMQ queues plus two workers without an 
 
 ## Failure isolation — current vs. proposed
 
-| Dependency | Proposed behavior (roadmap) | Actually implemented today |
-|---|---|---|
-| MongoDB | Required, fails readiness | ✅ Matches — `/ready` checks Mongo |
-| Redis | Optional/degraded | Partially — BullMQ *requires* Redis to function (queues won't work without it); only the reaction-cache read path degrades gracefully (via try/catch, though see the bug above) |
-| Kafka | Optional | ✅ Matches — non-fatal startup |
-| BullMQ workers | Optional, job stays queued | Plausible but not verified — didn't confirm graceful handling of queue-add failures across all call sites |
-| Media/Cloudinary | Feature-specific | ✅ Matches — image generation is explicitly flag-gated and no-ops cleanly when disabled |
-| Notifications | Optional | ✅ Matches — flag-gated the same way as image generation |
+| Dependency       | Proposed behavior (roadmap) | Actually implemented today                                                                                                                                                      |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MongoDB          | Required, fails readiness   | ✅ Matches — `/ready` checks Mongo                                                                                                                                              |
+| Redis            | Optional/degraded           | Partially — BullMQ _requires_ Redis to function (queues won't work without it); only the reaction-cache read path degrades gracefully (via try/catch, though see the bug above) |
+| Kafka            | Optional                    | ✅ Matches — non-fatal startup                                                                                                                                                  |
+| BullMQ workers   | Optional, job stays queued  | Plausible but not verified — didn't confirm graceful handling of queue-add failures across all call sites                                                                       |
+| Media/Cloudinary | Feature-specific            | ✅ Matches — image generation is explicitly flag-gated and no-ops cleanly when disabled                                                                                         |
+| Notifications    | Optional                    | ✅ Matches — flag-gated the same way as image generation                                                                                                                        |
 
 This table itself should be re-verified once the NestJS migration lands, since queue/cache initialization logic will move.

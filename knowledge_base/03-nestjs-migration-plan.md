@@ -11,12 +11,14 @@ Per [ADR-001](./02-decision-log.md#adr-001-commit-to-nestjs-as-the-single-framew
 ## Phase 0 — Close the auth gap immediately
 
 This isn't really "migration" — it's a live bug. Before anything else:
+
 - [ ] Confirm in your actual deployment (Docker/PM2/hosting config, not in this repo) which entrypoint is really running in production. If it's `server.ts`, auth is currently broken for real users.
 - [ ] Either temporarily start `main.ts` in deployment, or temporarily restore a minimal Express `authRouter` calling into `AuthService`'s logic, until Phase 2 lands.
 
 ## Phase 1 — Bring cross-cutting concerns into the NestJS bootstrap
 
 These currently exist only in `src/app.ts` / `src/server.ts` and have no NestJS equivalent yet:
+
 - [ ] `/health` endpoint
 - [ ] `/ready` endpoint (Mongo required, Redis/Kafka optional — same degraded-readiness logic)
 - [ ] `/metrics` endpoint (or replace with `prom-client` per roadmap — see [`06-roadmap.md`](./06-roadmap.md))
@@ -27,21 +29,21 @@ These currently exist only in `src/app.ts` / `src/server.ts` and have no NestJS 
 
 Suggested order: highest-traffic / most load-bearing first, since each cutover is a risk window. Each row becomes "done" when the NestJS service has been verified to reproduce the Express service's behavior (ideally with tests — see [`06-roadmap.md`](./06-roadmap.md) item on test coverage) and the Express route is removed from `app.ts`.
 
-| Order | Module | Current NestJS state | Complexity to port | Notes |
-|---|---|---|---|---|
-| 1 | `auth` | ✅ Already done | — | Already NestJS-only; just needs to actually be reachable (Phase 0) |
-| 2 | `quotes` | Empty stub | Medium | Core entity; most other modules reference it |
-| 3 | `users` | Empty stub | Medium | Referenced everywhere; do early |
-| 4 | `reactions` | Empty stub, but Express side has real Redis caching logic | Medium-high | Port the Redis TTL cache logic carefully — this is the one module with real caching today |
-| 5 | `feeds` | Empty stub | High | Three feed types (global/following/discover), compound cursor logic — port carefully, this is query-heavy |
-| 6 | `comments` | Empty stub (has `@InjectModel` wired already) | Medium | Constructor injection already scaffolded correctly |
-| 7 | `notifications` | Empty stub | High | Also needs Socket.IO delivery wired in — this module has the most cross-cutting complexity (see the 40KB notification design doc in `docs/`) |
-| 8 | `collections` | Empty stub + stray dead file `collections.controller` | Low-medium | Delete the extensionless `collections.controller` file as part of this |
-| 9 | `search` | Empty stub | Medium | Consider doing the Trie/autocomplete work (roadmap item) at the same time rather than porting regex search then replacing it right after |
-| 10 | `preferences` | Empty stub | Low | |
-| 11 | `safety` | Empty stub | Low-medium | |
-| 12 | `admin` | Partially wired | Low | |
-| 13 | `system` | Empty stub | Low | Exposes `/v1/system/routes` — keep this working through the transition, it's useful for verifying what's live |
+| Order | Module          | Current NestJS state                                      | Complexity to port | Notes                                                                                                                                        |
+| ----- | --------------- | --------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `auth`          | ✅ Already done                                           | —                  | Already NestJS-only; just needs to actually be reachable (Phase 0)                                                                           |
+| 2     | `quotes`        | Empty stub                                                | Medium             | Core entity; most other modules reference it                                                                                                 |
+| 3     | `users`         | Empty stub                                                | Medium             | Referenced everywhere; do early                                                                                                              |
+| 4     | `reactions`     | Empty stub, but Express side has real Redis caching logic | Medium-high        | Port the Redis TTL cache logic carefully — this is the one module with real caching today                                                    |
+| 5     | `feeds`         | Empty stub                                                | High               | Three feed types (global/following/discover), compound cursor logic — port carefully, this is query-heavy                                    |
+| 6     | `comments`      | Empty stub (has `@InjectModel` wired already)             | Medium             | Constructor injection already scaffolded correctly                                                                                           |
+| 7     | `notifications` | Empty stub                                                | High               | Also needs Socket.IO delivery wired in — this module has the most cross-cutting complexity (see the 40KB notification design doc in `docs/`) |
+| 8     | `collections`   | Empty stub + stray dead file `collections.controller`     | Low-medium         | Delete the extensionless `collections.controller` file as part of this                                                                       |
+| 9     | `search`        | Empty stub                                                | Medium             | Consider doing the Trie/autocomplete work (roadmap item) at the same time rather than porting regex search then replacing it right after     |
+| 10    | `preferences`   | Empty stub                                                | Low                |                                                                                                                                              |
+| 11    | `safety`        | Empty stub                                                | Low-medium         |                                                                                                                                              |
+| 12    | `admin`         | Partially wired                                           | Low                |                                                                                                                                              |
+| 13    | `system`        | Empty stub                                                | Low                | Exposes `/v1/system/routes` — keep this working through the transition, it's useful for verifying what's live                                |
 
 ## Phase 3 — Decommission Express
 
@@ -54,9 +56,9 @@ Suggested order: highest-traffic / most load-bearing first, since each cutover i
 
 Update this table as phases complete. This is the fastest way for an AI agent picking up this project later to know exactly what state the migration is in without re-deriving it from the source tree.
 
-| Phase | Status |
-|---|---|
-| Phase 0 (auth gap) | 🔴 Not started |
+| Phase                   | Status         |
+| ----------------------- | -------------- |
+| Phase 0 (auth gap)      | 🔴 Not started |
 | Phase 1 (cross-cutting) | 🔴 Not started |
-| Phase 2 (modules) | 🔴 Not started |
-| Phase 3 (decommission) | 🔴 Not started |
+| Phase 2 (modules)       | 🔴 Not started |
+| Phase 3 (decommission)  | 🔴 Not started |

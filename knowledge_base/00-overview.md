@@ -2,7 +2,7 @@
 
 **Repository:** [kvnrajasekhar/qotes-server](https://github.com/kvnrajasekhar/qotes-server)
 **Last verified against source:** 2026-07-22 (commit at time of writing on `main`)
-**Purpose of this KB:** a single source of truth for what the system *actually is*, as opposed to what it was intended to be or what it should become. Every document here is written to be read by both human engineers and AI coding agents, so it separates three things explicitly, always:
+**Purpose of this KB:** a single source of truth for what the system _actually is_, as opposed to what it was intended to be or what it should become. Every document here is written to be read by both human engineers and AI coding agents, so it separates three things explicitly, always:
 
 - 🟢 **CURRENT** — verified against the code, as of the date above
 - 🟡 **RECOMMENDED** — a change we've agreed on but not yet built
@@ -16,14 +16,14 @@ A quote-sharing social media backend — think "X/Twitter, but the post is a quo
 
 ## Documents in this KB
 
-| Doc | Covers |
-|---|---|
+| Doc                                                                      | Covers                                                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | [`01-architecture-current-state.md`](./01-architecture-current-state.md) | What's actually running today, module by module, verified against source |
-| [`02-decision-log.md`](./02-decision-log.md) | Architecture Decision Records (ADRs) — why we chose what we chose |
-| [`03-nestjs-migration-plan.md`](./03-nestjs-migration-plan.md) | Module-by-module plan to finish the Express → NestJS migration |
-| [`04-data-model.md`](./04-data-model.md) | Mongoose schemas, relationships, indexes, as they exist in code |
-| [`05-infrastructure-and-async.md`](./05-infrastructure-and-async.md) | Redis, Kafka, BullMQ, workers — current scope and gaps |
-| [`06-roadmap.md`](./06-roadmap.md) | Production-hygiene priorities + future microservice split |
+| [`02-decision-log.md`](./02-decision-log.md)                             | Architecture Decision Records (ADRs) — why we chose what we chose        |
+| [`03-nestjs-migration-plan.md`](./03-nestjs-migration-plan.md)           | Module-by-module plan to finish the Express → NestJS migration           |
+| [`04-data-model.md`](./04-data-model.md)                                 | Mongoose schemas, relationships, indexes, as they exist in code          |
+| [`05-infrastructure-and-async.md`](./05-infrastructure-and-async.md)     | Redis, Kafka, BullMQ, workers — current scope and gaps                   |
+| [`06-roadmap.md`](./06-roadmap.md)                                       | Production-hygiene priorities + future microservice split                |
 
 ## How to keep this KB honest
 
