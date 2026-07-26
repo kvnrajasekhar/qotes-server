@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+*.spec.ts
+*.spec.js
+*.test.ts
+*.test.js
+
+# Logs
+logs/
+*.log
+
+# Uploads and temporary files
+uploads/
+temp/
+tmp/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Config files that should maintain their format
+eslint.config.js
+prettier.config.js
+.prettierrc*
+.prettierignore
+
+# Documentation
+CHANGELOG.md
+LICENSE
