@@ -1,35 +1,28 @@
-// @ts-nocheck
-import mongoose from "mongoose";
-import Reaction from "../../models/reaction.model";
-import Quote from "../../models/quote.model";
-import Follow from "../../models/follow.model";
-import { redis, RedisKeys } from "../../shared/utils/redis.utils";
-import {
-  atomicUpdateCache,
-  getReactionBreakdown,
-} from "../../infrastructure/cache/reaction.cache";
-import { producer } from "../../infrastructure/kafka/config/kafka.config";
-import { enqueueNotificationJob } from "../../shared/queues/quoteNotifications.queue";
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from "../../shared/utils/cursor.util";
+import mongoose from 'mongoose';
+import Reaction from '../../models/reaction.model';
+import Quote from '../../models/quote.model';
+import Follow from '../../models/follow.model';
+import { redis, RedisKeys } from '../../shared/utils/redis.utils';
+import { atomicUpdateCache, getReactionBreakdown } from '../../infrastructure/cache/reaction.cache';
+import { producer } from '../../infrastructure/kafka/config/kafka.config';
+import { enqueueNotificationJob } from '../../shared/queues/quoteNotifications.queue';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
-const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 
 const reactionService = {
   toggleReaction: async ({ userId, quoteId, type }) => {
     // 1. RATE LIMITING (Using our new custom command)
-    const allowed = await redis.slidingWindowRateLimit(
+    const allowed = await (redis as any).slidingWindowRateLimit(
       RedisKeys.rateLimitBurst(userId),
       RedisKeys.rateLimitSustain(userId),
       Date.now(),
       10000, // burst window (10s)
       5, // burst limit
       3600000, // sustained window (1hr)
-      20, // sustained limit
+      20 // sustained limit
     );
-    if (!allowed) throw new Error("Too many requests");
+    if (!allowed) throw new Error('Too many requests');
 
     // 2. Determine Action
     const stateKey = RedisKeys.reactionState(userId, quoteId);
@@ -39,22 +32,22 @@ const reactionService = {
       oldType = null;
 
     if (!existingType) {
-      action = "added";
+      action = 'added';
     } else if (existingType === type) {
-      action = "removed";
+      action = 'removed';
     } else {
-      action = "updated";
+      action = 'updated';
       oldType = existingType;
     }
 
     // 3. UPDATE REDIS (Fast Path)
-    const delta = action === "added" ? 1 : action === "removed" ? -1 : 0;
+    const delta = action === 'added' ? 1 : action === 'removed' ? -1 : 0;
 
     // Execute state update and count update concurrently
     const updatePromises = [atomicUpdateCache(quoteId, type, delta, oldType)];
 
     // CRITICAL FIX: Ensure the user's individual state is eagerly updated in Redis
-    if (action === "removed") {
+    if (action === 'removed') {
       updatePromises.push(redis.del(stateKey));
     } else {
       // Set state with a TTL (e.g., 30 days) to prevent infinite memory growth
@@ -66,7 +59,7 @@ const reactionService = {
     // Fire and forget, or handle errors so Kafka downtime doesn't break the UI
     producer
       .send({
-        topic: "reaction-events",
+        topic: 'reaction-events',
         messages: [
           {
             key: quoteId,
@@ -82,29 +75,27 @@ const reactionService = {
           },
         ],
       })
-      .catch((err) => {
-        console.error("Failed to publish reaction to Kafka:", err);
+      .catch(err => {
+        console.error('Failed to publish reaction to Kafka:', err);
         // Optional: Push to a dead-letter queue or local retry mechanism here
       });
 
     // Enqueue a notification for the quote owner when someone likes their quote
-    if (action === "added" && type === "like") {
-      process.nextTick(async () => {
+    if (action === 'added' && type === 'like') {
+      void process.nextTick(async () => {
         try {
-          const quote = await Quote.findById(quoteId).select("creator").lean();
+          const quote = await Quote.findById(quoteId).select('creator').lean();
           const recipientId = quote?.creator?.toString();
           if (recipientId && recipientId !== userId && NOTIFICATIONS_ENABLED) {
             enqueueNotificationJob({
-              type: "quote-like",
+              type: 'quote-like',
               recipientId,
               actorId: userId,
               quoteId,
-            }).catch((err) =>
-              console.error("Failed to enqueue quote-like notification:", err),
-            );
+            }).catch(err => console.error('Failed to enqueue quote-like notification:', err));
           }
         } catch (e) {
-          console.error("Failed to lookup quote for notification:", e);
+          console.error('Failed to lookup quote for notification:', e);
         }
       });
     }
@@ -113,27 +104,18 @@ const reactionService = {
     return { success: true, action, type };
   },
 
-  getQuoteReactions: async ({
-    quoteId,
-    viewerId,
-    type,
-    cursor,
-    limit = 10,
-  }) => {
+  getQuoteReactions: async ({ quoteId, viewerId, type, cursor, limit = 10 }) => {
     // 1. GET COUNTS
     const { breakdown, total } = await getReactionBreakdown(quoteId);
 
     // 2. FIRST-PAGE CACHING
-    const firstPageKey = RedisKeys.firstPageReactions(
-      quoteId,
-      viewerId || "guest",
-    );
+    const firstPageKey = RedisKeys.firstPageReactions(quoteId, viewerId || 'guest');
     if (!cursor && !type) {
       try {
         const cached = await redis.get(firstPageKey);
         if (cached) return JSON.parse(cached);
       } catch (err) {
-        console.warn("Failed to fetch first-page cache:", err.message);
+        console.warn('Failed to fetch first-page cache:', err.message);
       }
     }
 
@@ -144,33 +126,31 @@ const reactionService = {
       try {
         followingIds = await redis.smembers(followingKey);
       } catch (err) {
-        console.warn("Redis smembers failed, falling back to DB:", err.message);
+        console.warn('Redis smembers failed, falling back to DB:', err.message);
       }
 
       if (followingIds.length === 0) {
-        followingIds = await Follow.find({ followerId: viewerId }).distinct(
-          "followingId",
-        );
+        followingIds = await Follow.find({ followerId: viewerId }).distinct('followingId');
 
         if (followingIds.length > 0) {
           try {
             // Fire and forget the read-repair
-            redis
+            void redis
               .pipeline()
-              .sadd(followingKey, ...followingIds.map((id) => id.toString()))
+              .sadd(followingKey, ...followingIds.map(id => id.toString()))
               .expire(followingKey, 86400)
               .exec();
           } catch (err) {
-            console.error("Failed to repair following cache:", err.message);
+            console.error('Failed to repair following cache:', err.message);
           }
         }
       }
     }
 
-    const query = { quoteId: new mongoose.Types.ObjectId(quoteId) };
+    const query: any = { quoteId: new mongoose.Types.ObjectId(quoteId) };
     if (type) query.type = type;
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     // 4. THE MONGO AGGREGATION
@@ -179,10 +159,7 @@ const reactionService = {
       {
         $addFields: {
           isFriend: {
-            $in: [
-              "$userId",
-              followingIds.map((id) => new mongoose.Types.ObjectId(id)),
-            ],
+            $in: ['$userId', followingIds.map(id => new mongoose.Types.ObjectId(id))],
           },
         },
       },
@@ -190,13 +167,13 @@ const reactionService = {
       { $limit: limit + 1 },
       {
         $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
         },
       },
-      { $unwind: "$user" },
+      { $unwind: '$user' },
       {
         $project: {
           type: 1,
@@ -208,9 +185,7 @@ const reactionService = {
     ]);
 
     // 5. PAGINATION & CACHE FILL
-    const { data, pagination } = processPaginatedResults(reactions, limit, [
-      "createdAt",
-    ]);
+    const { data, pagination } = processPaginatedResults(reactions, limit, ['createdAt']);
 
     const result = {
       total,
@@ -220,8 +195,8 @@ const reactionService = {
     };
 
     if (!cursor && !type) {
-      redis.setex(firstPageKey, 30, JSON.stringify(result)).catch((err) => {
-        console.warn("Failed to set first-page cache:", err.message);
+      redis.setex(firstPageKey, 30, JSON.stringify(result)).catch(err => {
+        console.warn('Failed to set first-page cache:', err.message);
       });
     }
 

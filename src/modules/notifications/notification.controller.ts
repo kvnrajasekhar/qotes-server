@@ -1,101 +1,94 @@
-// @ts-nocheck
-import asyncHandler from "express-async-handler";
-import notificationService from "./notification.service";
-import {
-  successResponse,
-  errorResponse,
-} from "../../shared/utils/responseFormatter.util";
-import { Request, Response } from "express";
+import asyncHandler from 'express-async-handler';
+import notificationService from './notification.service';
+import { successResponse, errorResponse } from '../../shared/utils/responseFormatter.util';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-      };
-    }
+const getNotifications = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    errorResponse(res, 401, 'Unauthorized');
+    return;
   }
-}
 
-const getNotifications = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
-  const { page = 1, limit = 20, unreadOnly = false } = req.query;
+  const { cursor, limit = 20, unreadOnly = false } = req.query;
 
-  const parsedPage = parseInt(page as string, 10);
-  const parsedLimit = parseInt(limit as string, 10);
-  const parsedUnreadOnly = unreadOnly === "true" || unreadOnly === true;
+  const parsedLimit = Number.parseInt(String(limit), 10) || 20;
+  const parsedUnreadOnly =
+    typeof unreadOnly === 'string' ? unreadOnly.toLowerCase() === 'true' : Boolean(unreadOnly);
 
   const result = await notificationService.getNotifications(userId, {
-    page: parsedPage,
+    cursor: typeof cursor === 'string' ? cursor : null,
     limit: parsedLimit,
     unreadOnly: parsedUnreadOnly,
   });
 
-  return successResponse(
-    res,
-    200,
-    "Notifications retrieved successfully",
-    result,
-  );
+  successResponse(res, 200, 'Notifications retrieved successfully', result);
 });
 
-const getUnreadCount = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
+const getUnreadCount = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    errorResponse(res, 401, 'Unauthorized');
+    return;
+  }
+
   const unreadCount = await notificationService.getUnreadCount(userId);
 
-  return successResponse(res, 200, "Unread count retrieved successfully", {
+  successResponse(res, 200, 'Unread count retrieved successfully', {
     unreadCount,
   });
 });
 
-const markAsRead = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
+const markAsRead = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    errorResponse(res, 401, 'Unauthorized');
+    return;
+  }
+
   const notificationId = req.params.id;
 
   try {
-    const notification = await notificationService.markAsRead(
-      notificationId,
-      userId,
-    );
-    return successResponse(
-      res,
-      200,
-      "Notification marked as read",
-      notification,
-    );
-  } catch (error: any) {
-    if (error.message === "Notification not found") {
-      return errorResponse(res, 404, "Notification not found");
+    const notification = await notificationService.markAsRead(notificationId as string, userId);
+    successResponse(res, 200, 'Notification marked as read', notification);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Notification not found') {
+      errorResponse(res, 404, 'Notification not found');
+      return;
     }
     throw error;
   }
 });
 
-const markAllAsRead = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
+const markAllAsRead = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    errorResponse(res, 401, 'Unauthorized');
+    return;
+  }
 
   const result = await notificationService.markAllAsRead(userId);
-  return successResponse(res, 200, "All notifications marked as read", result);
+  successResponse(res, 200, 'All notifications marked as read', result);
 });
 
-const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
+const deleteNotification = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    errorResponse(res, 401, 'Unauthorized');
+    return;
+  }
+
   const notificationId = req.params.id;
 
   try {
     const notification = await notificationService.deleteNotification(
-      notificationId,
-      userId,
+      notificationId as string,
+      userId
     );
-    return successResponse(
-      res,
-      200,
-      "Notification deleted successfully",
-      notification,
-    );
-  } catch (error: any) {
-    if (error.message === "Notification not found") {
-      return errorResponse(res, 404, "Notification not found");
+    successResponse(res, 200, 'Notification deleted successfully', notification);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Notification not found') {
+      errorResponse(res, 404, 'Notification not found');
+      return;
     }
     throw error;
   }

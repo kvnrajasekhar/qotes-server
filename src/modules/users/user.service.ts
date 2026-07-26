@@ -1,32 +1,44 @@
-// @ts-nocheck
-import User from "../../models/user.model";
-import Follow from "../../models/follow.model";
-import Quote from "../../models/quote.model";
-import { enqueueNotificationJob } from "../../shared/queues/quoteNotifications.queue";
-import cloudinaryService from "../../infrastructure/media/cloudinary.service";
-import { promises as fs } from "fs";
+import User from '../../models/user.model';
+import Follow from '../../models/follow.model';
+import Quote from '../../models/quote.model';
+import { enqueueNotificationJob } from '../../shared/queues/quoteNotifications.queue';
+import cloudinaryService from '../../infrastructure/media/cloudinary.service';
+import { promises as fs } from 'fs';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
-const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  username?: string;
+}
+
+interface AvatarFile {
+  path: string;
+}
+
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 
 const getUserByUsername = async (username: string) => {
-  const user = await User.findOne({ username: username }).select("-password");
+  const user = await User.findOne({ username: username }).select('-password');
   return user;
 };
 
-const updateUserProfile = async (userId: string, updateData: any) => {
-  const allowedUpdates = ["firstName", "lastName", "bio", "avatarUrl"];
+const updateUserProfile = async (userId: string, updateData: UpdateProfileData) => {
+  const allowedUpdates = ['firstName', 'lastName', 'bio', 'avatarUrl'];
 
-  const filteredData: any = {};
-  Object.keys(updateData).forEach((key) => {
+  const filteredData: Partial<UpdateProfileData> = {};
+  Object.keys(updateData).forEach(key => {
     if (allowedUpdates.includes(key)) {
-      filteredData[key] = updateData[key];
+      filteredData[key as keyof UpdateProfileData] = updateData[key as keyof UpdateProfileData];
     }
   });
 
   if (updateData.username) {
     const existing = await User.findOne({ username: updateData.username });
     if (existing && existing._id.toString() !== userId) {
-      throw new Error("Username already taken");
+      throw new Error('Username already taken');
     }
     filteredData.username = updateData.username;
   }
@@ -37,24 +49,24 @@ const updateUserProfile = async (userId: string, updateData: any) => {
     {
       new: true,
       runValidators: true,
-      select: "-password",
-    },
+      select: '-password',
+    }
   ).lean();
 
   if (!updatedUser) {
-    throw new Error("User not found");
+    throw new Error('User not found');
   }
 
   return updatedUser;
 };
 
-const updateUserAvatar = async (userId: string, avatarFile: any) => {
+const updateUserAvatar = async (userId: string, avatarFile: AvatarFile) => {
   let newAvatarUrl: string;
   const filePath = avatarFile.path;
 
-  const user = await User.findById(userId).select("avatar");
+  const user = (await User.findById(userId).select('avatar')) as any;
   if (!user) {
-    throw new Error("User not found.");
+    throw new Error('User not found.');
   }
 
   try {
@@ -71,17 +83,15 @@ const updateUserAvatar = async (userId: string, avatarFile: any) => {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: { avatar: newAvatarUrl } },
-      { new: true, select: "-password" },
+      { new: true, select: '-password' }
     );
 
     await fs.unlink(filePath);
 
     return updatedUser;
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (filePath) {
-      await fs
-        .unlink(filePath)
-        .catch((err) => console.error("Cleanup error:", err));
+      await fs.unlink(filePath).catch(err => console.error('Cleanup error:', err));
     }
     throw error;
   }
@@ -98,14 +108,12 @@ const getSuggestedUsers = async ({
     return await User.find({})
       .sort({ followersCount: -1, lastActiveAt: -1 })
       .limit(limit)
-      .select("username firstName lastName avatarUrl bio stats isBanned");
+      .select('username firstName lastName avatarUrl bio stats isBanned');
   }
 
-  const followed = await Follow.find({ follower: userId })
-    .select("following")
-    .lean();
+  const followed = await Follow.find({ follower: userId }).select('following').lean();
 
-  const followedIds = followed.map((f: any) => f.following);
+  const followedIds = followed.map(f => (f.following as any).toString());
 
   const suggestions = await Follow.aggregate([
     {
@@ -115,7 +123,7 @@ const getSuggestedUsers = async ({
     },
     {
       $group: {
-        _id: "$following",
+        _id: '$following',
         mutualCount: { $sum: 1 },
       },
     },
@@ -128,20 +136,20 @@ const getSuggestedUsers = async ({
     { $limit: limit },
     {
       $lookup: {
-        from: "users",
-        localField: "_id",
-        foreignField: "_id",
-        as: "user",
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user',
       },
     },
-    { $unwind: "$user" },
+    { $unwind: '$user' },
     {
       $project: {
-        _id: "$user._id",
-        username: "$user.username",
-        firstName: "$user.firstName",
-        lastName: "$user.lastName",
-        avatar: "$user.avatar",
+        _id: '$user._id',
+        username: '$user.username',
+        firstName: '$user.firstName',
+        lastName: '$user.lastName',
+        avatar: '$user.avatar',
         mutualCount: 1,
       },
     },
@@ -152,7 +160,7 @@ const getSuggestedUsers = async ({
 
 const toggleFollow = async (followerId: string, targetId: string) => {
   if (followerId === targetId) {
-    throw new Error("You cannot follow yourself.");
+    throw new Error('You cannot follow yourself.');
   }
 
   const existingFollow = await Follow.findOne({
@@ -164,13 +172,13 @@ const toggleFollow = async (followerId: string, targetId: string) => {
     await Follow.deleteOne({ _id: existingFollow._id });
 
     await User.findByIdAndUpdate(followerId, {
-      $inc: { "stats.followingCount": -1 },
+      $inc: { 'stats.followingCount': -1 },
     });
     await User.findByIdAndUpdate(targetId, {
-      $inc: { "stats.followerCount": -1 },
+      $inc: { 'stats.followerCount': -1 },
     });
 
-    return { followed: false, message: "Unfollowed successfully" };
+    return { followed: false, message: 'Unfollowed successfully' };
   } else {
     const newFollow = new Follow({
       follower: followerId,
@@ -179,26 +187,26 @@ const toggleFollow = async (followerId: string, targetId: string) => {
     await newFollow.save();
 
     await User.findByIdAndUpdate(followerId, {
-      $inc: { "stats.followingCount": 1 },
+      $inc: { 'stats.followingCount': 1 },
     });
     await User.findByIdAndUpdate(targetId, {
-      $inc: { "stats.followerCount": 1 },
+      $inc: { 'stats.followerCount': 1 },
     });
 
     if (NOTIFICATIONS_ENABLED) {
-      process.nextTick(() => {
+      void process.nextTick(() => {
         enqueueNotificationJob({
-          type: "user-follow",
+          type: 'user-follow',
           recipientId: targetId,
           actorId: followerId,
-          subject: "New follower on Qotes",
-        }).catch((err: any) => {
-          console.error("Failed to enqueue follow notification job:", err);
+          subject: 'New follower on Qotes',
+        }).catch((err: unknown) => {
+          console.error('Failed to enqueue follow notification job:', err);
         });
       });
     }
 
-    return { followed: true, message: "Followed successfully" };
+    return { followed: true, message: 'Followed successfully' };
   }
 };
 
@@ -211,14 +219,14 @@ const getUserRequotes = async ({
   cursor?: string | null;
   limit?: number;
 }) => {
-  const query: any = {
+  const query: Record<string, unknown> = {
     creator: userId,
     isRequote: true,
     isHiddenBySystem: false,
   };
 
   if (cursor) {
-    query._id = { $lt: cursor };
+    Object.assign(query, buildCursorQuery(cursor, '_id', -1));
   }
 
   const quotes = await Quote.find(query)
@@ -226,16 +234,11 @@ const getUserRequotes = async ({
     .limit(limit + 1)
     .lean();
 
-  const hasMore = quotes.length > limit;
-  if (hasMore) quotes.pop();
+  const { data, pagination } = processPaginatedResults(quotes, limit, ['_id']);
 
   return {
-    quotes,
-    pagination: {
-      nextCursor: hasMore ? quotes[quotes.length - 1]._id : null,
-      hasMore,
-      pageSize: limit,
-    },
+    quotes: data,
+    pagination,
   };
 };
 
@@ -250,44 +253,40 @@ const getFollowers = async ({
   cursor?: string | null;
   limit?: number;
 }) => {
-  const query: any = { following: userId };
-  if (cursor) query._id = { $lt: cursor };
+  const query: Record<string, unknown> = { following: userId };
+  if (cursor) {
+    Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+  }
 
   const follows = await Follow.find(query)
     .sort({ _id: -1 })
     .limit(limit + 1)
-    .populate("follower", "username firstName lastName avatarUrl bio stats")
+    .populate('follower', 'username firstName lastName avatarUrl bio stats')
     .lean();
 
-  const hasMore = follows.length > limit;
-  if (hasMore) follows.pop();
+  const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-  const followerList = follows.map((f: any) => f.follower);
-  const followerIds = followerList.map((f: any) => f._id);
+  const followerList = data.map(f => f.follower as any);
+  const followerIds = followerList.map(f => f._id.toString());
 
-  let followingStatus: any[] = [];
+  let followingStatus = [];
   if (currentUserId) {
     followingStatus = await Follow.find({
       follower: currentUserId,
       following: { $in: followerIds },
     })
-      .select("following")
+      .select('following')
       .lean();
   }
 
-  const followingSet = new Set(
-    followingStatus.map((f: any) => f.following.toString()),
-  );
+  const followingSet = new Set(followingStatus.map(f => (f.following as any).toString()));
 
   return {
-    users: followerList.map((user: any) => ({
+    users: followerList.map(user => ({
       ...user,
       isFollowing: followingSet.has(user._id.toString()),
     })),
-    pagination: {
-      nextCursor: hasMore ? follows[follows.length - 1]._id : null,
-      hasMore,
-    },
+    pagination,
   };
 };
 
@@ -302,45 +301,40 @@ const getFollowing = async ({
   cursor?: string | null;
   limit?: number;
 }) => {
-  const query: any = { follower: userId };
-  if (cursor) query._id = { $lt: cursor };
+  const query: Record<string, unknown> = { follower: userId };
+  if (cursor) {
+    Object.assign(query, buildCursorQuery(cursor, '_id', -1));
+  }
 
   const follows = await Follow.find(query)
     .sort({ _id: -1 })
     .limit(limit + 1)
-    .populate("following", "username firstName lastName avatarUrl bio stats")
+    .populate('following', 'username firstName lastName avatarUrl bio stats')
     .lean();
 
-  const hasMore = follows.length > limit;
-  if (hasMore) follows.pop();
+  const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-  const followingList = follows.map((f: any) => f.following);
-  const followingIds = followingList.map((f: any) => f._id);
+  const followingList = data.map(f => f.following as any);
+  const followingIds = followingList.map(f => f._id.toString());
 
-  let followedByStatus: any[] = [];
+  let followedByStatus = [];
   if (currentUserId) {
     followedByStatus = await Follow.find({
       follower: { $in: followingIds },
       following: currentUserId,
     })
-      .select("follower")
+      .select('follower')
       .lean();
   }
 
-  const followedBySet = new Set(
-    followedByStatus.map((f: any) => f.follower.toString()),
-  );
+  const followedBySet = new Set(followedByStatus.map(f => (f.follower as any).toString()));
 
   return {
-    following: followingList.map((user: any) => ({
+    following: followingList.map(user => ({
       ...user,
       followsYou: followedBySet.has(user._id.toString()),
     })),
-    pagination: {
-      nextCursor: hasMore ? follows[follows.length - 1]._id : null,
-      hasMore,
-      pageSize: limit,
-    },
+    pagination,
   };
 };
 

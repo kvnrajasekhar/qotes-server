@@ -1,18 +1,11 @@
-// @ts-nocheck
-import Comment from "../../models/comment.model";
-import Quote from "../../models/quote.model";
-import User from "../../models/user.model";
-import notificationService from "../notifications/notification.service";
-import {
-  NOTIFICATION_TYPES,
-  REFERENCE_TYPES,
-} from "../notifications/notification.constants";
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from "../../shared/utils/cursor.util";
+import Comment from '../../models/comment.model';
+import Quote from '../../models/quote.model';
+import User from '../../models/user.model';
+import notificationService from '../notifications/notification.service';
+import { NOTIFICATION_TYPES, REFERENCE_TYPES } from '../notifications/notification.constants';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
-const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 
 const commentService = {
   addComment: async ({ quoteId, userId, text, parentCommentId = null }) => {
@@ -31,22 +24,17 @@ const commentService = {
 
       // Notify original comment author about reply
       if (NOTIFICATIONS_ENABLED) {
-        process.nextTick(async () => {
+        void process.nextTick(async () => {
           try {
-            const parentComment =
-              await Comment.findById(parentCommentId).lean();
+            const parentComment = await Comment.findById(parentCommentId).lean();
             const author = await User.findById(userId).lean();
 
-            if (
-              parentComment &&
-              author &&
-              parentComment.author.toString() !== userId
-            ) {
+            if (parentComment && author && parentComment.author.toString() !== userId) {
               await notificationService.createNotification({
                 recipient: parentComment.author,
                 sender: userId,
                 type: NOTIFICATION_TYPES.REPLY_COMMENT,
-                message: `${author.username || "Someone"} replied to your comment`,
+                message: `${author.username || 'Someone'} replied to your comment`,
                 referenceId: comment._id,
                 referenceType: REFERENCE_TYPES.COMMENT,
                 metadata: {
@@ -58,7 +46,7 @@ const commentService = {
               });
             }
           } catch (error) {
-            console.error("Failed to create reply notification:", error);
+            console.error('Failed to create reply notification:', error);
           }
         });
       }
@@ -70,11 +58,9 @@ const commentService = {
 
       // Notify quote creator about comment
       if (NOTIFICATIONS_ENABLED) {
-        process.nextTick(async () => {
+        void process.nextTick(async () => {
           try {
-            const quote = await Quote.findById(quoteId)
-              .select("creator text author")
-              .lean();
+            const quote = await Quote.findById(quoteId).select('creator text author').lean();
             const author = await User.findById(userId).lean();
 
             if (quote && author && quote.creator.toString() !== userId) {
@@ -82,7 +68,7 @@ const commentService = {
                 recipient: quote.creator,
                 sender: userId,
                 type: NOTIFICATION_TYPES.COMMENT_QUOTE,
-                message: `${author.username || "Someone"} commented on your quote`,
+                message: `${author.username || 'Someone'} commented on your quote`,
                 referenceId: comment._id,
                 referenceType: REFERENCE_TYPES.COMMENT,
                 metadata: {
@@ -95,7 +81,7 @@ const commentService = {
               });
             }
           } catch (error) {
-            console.error("Failed to create comment notification:", error);
+            console.error('Failed to create comment notification:', error);
           }
         });
       }
@@ -105,7 +91,7 @@ const commentService = {
   },
   editComment: async ({ commentId, userId, text }) => {
     if (!text || !text.trim()) {
-      throw new Error("Comment text cannot be empty");
+      throw new Error('Comment text cannot be empty');
     }
 
     const comment = await Comment.findOneAndUpdate(
@@ -115,39 +101,32 @@ const commentService = {
         isEdited: true,
         updatedAt: new Date(),
       },
-      { new: true },
+      { new: true }
     );
 
     if (!comment) {
-      throw new Error("Comment not found or unauthorized");
+      throw new Error('Comment not found or unauthorized');
     }
 
     return comment;
   },
-  getComments: async ({
-    quoteId,
-    parentCommentId,
-    cursor = null,
-    limit = 10,
-  }) => {
+  getComments: async ({ quoteId, parentCommentId, cursor = null, limit = 10 }) => {
     const query = {
       quote: quoteId,
       parentComment: parentCommentId,
     };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const replies = await Comment.find(query)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
-      .populate("author", "username avatar")
+      .populate('author', 'username avatar')
       .lean();
 
-    const { data, pagination } = processPaginatedResults(replies, limit, [
-      "createdAt",
-    ]);
+    const { data, pagination } = processPaginatedResults(replies, limit, ['createdAt']);
 
     return {
       replies: data,
@@ -159,27 +138,27 @@ const commentService = {
       { _id: commentId, author: userId },
       {
         isDeleted: true,
-        text: "[deleted]",
+        text: '[deleted]',
         deletedAt: new Date(),
       },
-      { new: true },
+      { new: true }
     );
 
     if (!comment) {
-      throw new Error("Comment not found or unauthorized");
+      throw new Error('Comment not found or unauthorized');
     }
 
     return comment;
   },
   toggleLike: async ({ commentId, userId }) => {
-    const comment = await Comment.findById(commentId).select("likes");
+    const comment = await Comment.findById(commentId).select('likes');
 
-    if (!comment) throw new Error("Comment not found");
+    if (!comment) throw new Error('Comment not found');
 
     const hasLiked = comment.likes.includes(userId);
 
     await Comment.findByIdAndUpdate(commentId, {
-      [hasLiked ? "$pull" : "$addToSet"]: { likes: userId },
+      [hasLiked ? '$pull' : '$addToSet']: { likes: userId },
     });
 
     return {

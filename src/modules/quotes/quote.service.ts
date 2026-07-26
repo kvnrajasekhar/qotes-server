@@ -1,16 +1,12 @@
-// @ts-nocheck
-import Quote from "../../models/quote.model";
-import User from "../../models/user.model";
-import { addImageGenerationJob } from "../../shared/queues/imageGeneration.queue";
-import notificationService from "../notifications/notification.service";
-import {
-  NOTIFICATION_TYPES,
-  REFERENCE_TYPES,
-} from "../notifications/notification.constants";
+import Quote from '../../models/quote.model';
+import User from '../../models/user.model';
+import { addImageGenerationJob } from '../../shared/queues/imageGeneration.queue';
+import notificationService from '../notifications/notification.service';
+import { NOTIFICATION_TYPES, REFERENCE_TYPES } from '../notifications/notification.constants';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
-const IMAGE_GENERATION_ENABLED =
-  process.env.IMAGE_GENERATION_ENABLED === "true";
-const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === "true";
+const IMAGE_GENERATION_ENABLED = process.env.IMAGE_GENERATION_ENABLED === 'true';
+const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 const quoteService = {
   createQuote: async ({
     text,
@@ -30,7 +26,7 @@ const quoteService = {
       // Validate parent quote if requote
       if (isRequote) {
         if (!parentQuoteId) {
-          throw new Error("parentQuoteId is required for requote");
+          throw new Error('parentQuoteId is required for requote');
         }
 
         const parentQuote = await Quote.findOne({
@@ -39,7 +35,7 @@ const quoteService = {
         }).session(session);
 
         if (!parentQuote) {
-          throw new Error("Parent quote not found or hidden");
+          throw new Error('Parent quote not found or hidden');
         }
 
         // Prevent duplicate requote by same user
@@ -49,7 +45,7 @@ const quoteService = {
         }).session(session);
 
         if (alreadyRequoted) {
-          throw new Error("Already requoted");
+          throw new Error('Already requoted');
         }
       }
 
@@ -57,8 +53,8 @@ const quoteService = {
         [
           {
             text,
-            author: author || "Anonymous",
-            category: category || "",
+            author: author || 'Anonymous',
+            category: category || '',
             hashtags: hashtags || [],
             taggedUsers,
             creator,
@@ -67,36 +63,28 @@ const quoteService = {
             isHiddenBySystem,
           },
         ],
-        { session },
+        { session }
       );
 
       if (isRequote) {
-        await Quote.updateOne(
-          { _id: parentQuoteId },
-          { $inc: { requotes: 1 } },
-          { session },
-        );
+        await Quote.updateOne({ _id: parentQuoteId }, { $inc: { requotes: 1 } }, { session });
 
         // Notify original quote creator about requote
         if (NOTIFICATIONS_ENABLED) {
-          process.nextTick(async () => {
+          void process.nextTick(async () => {
             try {
               const parentQuote = await Quote.findById(parentQuoteId)
-                .select("creator text author")
+                .select('creator text author')
                 .lean();
               const requoter = await User.findById(creator).lean();
 
-              if (
-                parentQuote &&
-                requoter &&
-                parentQuote.creator.toString() !== creator
-              ) {
+              if (parentQuote && requoter && parentQuote.creator.toString() !== creator) {
                 await notificationService.createNotification({
-                  recipient: parentQuote.creator,
+                  recipient: parentQuote.creator.toString(),
                   sender: creator,
                   type: NOTIFICATION_TYPES.REQUOTE_QUOTE,
-                  message: `${requoter.username || "Someone"} requoted your quote`,
-                  referenceId: savedQuote._id,
+                  message: `${requoter.username || 'Someone'} requoted your quote`,
+                  referenceId: newQuote[0]._id.toString(),
                   referenceType: REFERENCE_TYPES.QUOTE,
                   metadata: {
                     originalQuoteId: parentQuoteId,
@@ -107,34 +95,32 @@ const quoteService = {
                 });
               }
             } catch (error) {
-              console.error("Failed to create requote notification:", error);
+              console.error('Failed to create requote notification:', error);
             }
           });
         }
       }
 
-      await session.commitTransaction();
-      session.endSession();
+      void session.commitTransaction();
+      void session.endSession();
 
       const savedQuote = newQuote[0];
       if (IMAGE_GENERATION_ENABLED) {
-        process.nextTick(() => {
-          addImageGenerationJob({ quoteId: savedQuote._id.toString() }).catch(
-            (err) => {
-              console.error("Failed to enqueue image generation job:", err);
-            },
-          );
+        void process.nextTick(() => {
+          addImageGenerationJob({ quoteId: savedQuote._id.toString() }).catch(err => {
+            console.error('Failed to enqueue image generation job:', err);
+          });
         });
       }
       return savedQuote;
     } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
+      void session.abortTransaction();
+      void session.endSession();
       throw error;
     }
   },
 
-  getQuoteById: async (id) => {
+  getQuoteById: async id => {
     return await Quote.findById(id);
   },
   getAllQuotes: async () => {
@@ -143,14 +129,14 @@ const quoteService = {
   updateQuote: async (id, updateData) => {
     return await Quote.findByIdAndUpdate(id, updateData, { new: true });
   },
-  deleteQuote: async (id) => {
+  deleteQuote: async id => {
     return await Quote.findByIdAndDelete(id);
   },
   getQuotesByUser: async ({ userId, cursor = null, limit = 20 }) => {
     const query = { creator: userId };
 
     if (cursor) {
-      query.createdAt = { $lt: new Date(cursor) };
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const quotes = await Quote.find(query)
@@ -158,29 +144,24 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const hasMore = quotes.length > limit;
-    if (hasMore) quotes.pop();
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
-      quotes,
-      pagination: {
-        nextCursor: hasMore ? quotes[quotes.length - 1].createdAt : null,
-        hasMore,
-      },
+      quotes: data,
+      pagination,
     };
   },
 
-  likeQuote: async (quoteId, userId) => {
+  likeQuote: async (quoteId, _userId) => {
     const quote = await Quote.findById(quoteId);
     if (!quote) {
       return null;
     }
-    if (!quote.likes.includes(userId)) {
-      quote.likes.push(userId);
-      await quote.save();
-    }
+    // Increment likes count
+    await Quote.findByIdAndUpdate(quoteId, { $inc: { likes: 1 } });
+    const updatedQuote = await Quote.findById(quoteId);
     // return the updated like count
-    return { likeCount: quote.likes.length };
+    return { likeCount: updatedQuote?.likes || 0 };
   },
 };
 
