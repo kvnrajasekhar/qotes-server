@@ -9,8 +9,6 @@ import {
   HttpCode,
   HttpStatus,
   UseInterceptors,
-  UploadedFile,
-  UseFilters,
 } from "@nestjs/common";
 import { Response } from "express";
 import { Throttle } from "@nestjs/throttler";
@@ -21,7 +19,7 @@ import { AuthService } from "./auth.service";
 import { AuthenticatedRequest } from "../../shared/interfaces/authenticated-request.interface";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { ResponseInterceptor } from "../../shared/interceptors/response.interceptor";
-import { HttpExceptionFilter } from "../../shared/filters/http-exception.filter";
+import bcrypt from "bcryptjs";
 
 // Multer configuration for file uploads
 const multerConfig = {
@@ -40,7 +38,7 @@ const multerConfig = {
 @Controller("auth")
 @UseInterceptors(ResponseInterceptor)
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post("login")
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -85,7 +83,6 @@ export class AuthController {
       throw new Error("Username already exists");
     }
 
-    const bcrypt = require("bcryptjs");
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await this.authService.saveUser(

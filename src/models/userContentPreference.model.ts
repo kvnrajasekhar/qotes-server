@@ -61,3 +61,4 @@ export default mongoose.model<IUserContentPreference>(
   "UserContentPreference",
   userContentPreferenceSchema,
 );
+export { userContentPreferenceSchema, IUserContentPreference, PreferenceType, PreferenceReason };

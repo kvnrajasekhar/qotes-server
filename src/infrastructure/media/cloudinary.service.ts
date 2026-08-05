@@ -1,7 +1,6 @@
 import cloudinary from "../../config/cloudinary.config";
-import { promisify } from "util";
-import { unlink } from "fs";
-const unlinkAsync = promisify(unlink);
+
+// unlinkAsync intentionally removed since not used; keep imports minimal
 
 interface CloudinaryService {
   getPublicIdFromUrl: (imageUrl: string, folderName?: string) => string | null;
@@ -20,7 +19,7 @@ const cloudinaryService: CloudinaryService = {
     imageUrl: string,
     folderName = "quotes-app/avatars",
   ): string | null => {
-    const folderEscaped = folderName.replace(/[/\.]/g, "\\$&");
+    const folderEscaped = folderName.replace(/[/.]/g, "\\$&");
     const regex = new RegExp(`${folderEscaped}/([^/]+)\\.`, "i");
     const match = imageUrl.match(regex);
     return match ? match[1] : null;
@@ -48,7 +47,7 @@ const cloudinaryService: CloudinaryService = {
       return result.secure_url;
     } catch (error) {
       console.error("Cloudinary Upload Error:", error);
-      throw new Error("Image upload failed.");
+      throw error;
     }
   },
 

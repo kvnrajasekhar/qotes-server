@@ -4,6 +4,7 @@ import { Request, Response, NextFunction } from "express";
 
 const logger = createLogger("request-logger");
 
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {
@@ -68,7 +69,7 @@ const errorHandler = (
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) => {
   const status = err.status || 500;
   const userId = req.user?.id || req.user?._id || "anonymous";

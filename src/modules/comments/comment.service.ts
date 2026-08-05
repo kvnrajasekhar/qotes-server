@@ -31,11 +31,11 @@ const commentService = {
 
             if (parentComment && author && parentComment.author.toString() !== userId) {
               await notificationService.createNotification({
-                recipient: parentComment.author,
+                recipient: parentComment.author.toString(),
                 sender: userId,
                 type: NOTIFICATION_TYPES.REPLY_COMMENT,
                 message: `${author.username || 'Someone'} replied to your comment`,
-                referenceId: comment._id,
+                referenceId: comment._id.toString(),
                 referenceType: REFERENCE_TYPES.COMMENT,
                 metadata: {
                   quoteId,
@@ -65,11 +65,11 @@ const commentService = {
 
             if (quote && author && quote.creator.toString() !== userId) {
               await notificationService.createNotification({
-                recipient: quote.creator,
+                recipient: quote.creator.toString(),
                 sender: userId,
                 type: NOTIFICATION_TYPES.COMMENT_QUOTE,
                 message: `${author.username || 'Someone'} commented on your quote`,
-                referenceId: comment._id,
+                referenceId: comment._id.toString(),
                 referenceType: REFERENCE_TYPES.COMMENT,
                 metadata: {
                   quoteId,

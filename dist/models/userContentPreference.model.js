@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.userContentPreferenceSchema = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const userContentPreferenceSchema = new mongoose_1.Schema({
     userId: {
@@ -61,6 +62,7 @@ const userContentPreferenceSchema = new mongoose_1.Schema({
         default: "NOT_INTERESTED",
     },
 }, { timestamps: true });
+exports.userContentPreferenceSchema = userContentPreferenceSchema;
 userContentPreferenceSchema.index({ userId: 1, type: 1, targetId: 1 }, { unique: true });
 userContentPreferenceSchema.index({ userId: 1 });
 userContentPreferenceSchema.index({ userId: 1, type: 1, createdAt: -1 });

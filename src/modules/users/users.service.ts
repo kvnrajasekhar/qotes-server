@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Inject,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
@@ -12,11 +13,12 @@ import { promises as fs } from "fs";
 import User, { IUser } from "../../models/user.model";
 import Follow, { IFollow } from "../../models/follow.model";
 import Quote, { IQuote } from "../../models/quote.model";
-import { Inject } from "@nestjs/common";
 import {
   buildCursorQuery,
   processPaginatedResults,
 } from "../../shared/utils/cursor.util";
+import { UserCacheService } from "../../infrastructure/cache/user.cache";
+import { CacheInvalidationService } from "../../infrastructure/cache/cache-invalidation.service";
 
 @Injectable()
 export class UsersService {
@@ -26,17 +28,23 @@ export class UsersService {
     @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
     private configService: ConfigService,
     @Inject("CLOUDINARY_SERVICE") private cloudinaryService: any,
-  ) {}
+    private readonly userCache: UserCacheService,
+    private readonly cacheInvalidation: CacheInvalidationService,
+  ) { }
 
   private get NOTIFICATIONS_ENABLED(): boolean {
     return this.configService.get("NOTIFICATIONS_ENABLED") === "true";
   }
 
-  async getUserByUsername(username: string, currentUserId?: string) {
+  async getUserByUsername(username: string, _currentUserId?: string) {
     const user = await this.userModel.findOne({ username }).select("-password");
     if (!user) {
       throw new NotFoundException("User not found");
     }
+
+    // Cache user profile
+    await this.userCache.warmUpUserCache(user._id.toString(), { profile: user });
+
     return user;
   }
 
@@ -76,6 +84,9 @@ export class UsersService {
       throw new NotFoundException("User not found");
     }
 
+    // Invalidate user cache after update
+    this.cacheInvalidation.emitUserUpdated(userId);
+
     return updatedUser;
   }
 
@@ -109,6 +120,9 @@ export class UsersService {
 
       await fs.unlink(filePath);
 
+      // Invalidate user cache after avatar update
+      this.cacheInvalidation.emitUserUpdated(userId);
+
       return updatedUser;
     } catch (error: any) {
       if (filePath) {
@@ -135,54 +149,57 @@ export class UsersService {
         .select("username firstName lastName avatarUrl bio stats isBanned");
     }
 
-    const followed = await this.followModel
-      .find({ follower: userId })
-      .select("following")
-      .lean();
+    // Use cache for suggested users
+    return await this.userCache.getSuggestedUsers(userId, async () => {
+      const followed = await this.followModel
+        .find({ follower: userId })
+        .select("following")
+        .lean();
 
-    const followedIds = followed.map((f: any) => f.following);
+      const followedIds = followed.map((f: any) => f.following);
 
-    const suggestions = await this.followModel.aggregate([
-      {
-        $match: {
-          follower: { $in: followedIds },
+      const suggestions = await this.followModel.aggregate([
+        {
+          $match: {
+            follower: { $in: followedIds },
+          },
         },
-      },
-      {
-        $group: {
-          _id: "$following",
-          mutualCount: { $sum: 1 },
+        {
+          $group: {
+            _id: "$following",
+            mutualCount: { $sum: 1 },
+          },
         },
-      },
-      {
-        $match: {
-          _id: { $nin: [...followedIds, userId] },
+        {
+          $match: {
+            _id: { $nin: [...followedIds, userId] },
+          },
         },
-      },
-      { $sort: { mutualCount: -1 } },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "user",
+        { $sort: { mutualCount: -1 } },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "user",
+          },
         },
-      },
-      { $unwind: "$user" },
-      {
-        $project: {
-          _id: "$user._id",
-          username: "$user.username",
-          firstName: "$user.firstName",
-          lastName: "$user.lastName",
-          avatar: "$user.avatarUrl",
-          mutualCount: 1,
+        { $unwind: "$user" },
+        {
+          $project: {
+            _id: "$user._id",
+            username: "$user.username",
+            firstName: "$user.firstName",
+            lastName: "$user.lastName",
+            avatar: "$user.avatarUrl",
+            mutualCount: 1,
+          },
         },
-      },
-    ]);
+      ]);
 
-    return suggestions;
+      return suggestions;
+    });
   }
 
   async toggleFollow(followerId: string, targetId: string) {
@@ -205,6 +222,9 @@ export class UsersService {
         $inc: { "stats.followerCount": -1 },
       });
 
+      // Invalidate cache for both users
+      this.cacheInvalidation.emitFollowToggled(followerId, targetId);
+
       return { followed: false, message: "Unfollowed successfully" };
     } else {
       const newFollow = new this.followModel({
@@ -219,6 +239,9 @@ export class UsersService {
       await this.userModel.findByIdAndUpdate(targetId, {
         $inc: { "stats.followerCount": 1 },
       });
+
+      // Invalidate cache for both users
+      this.cacheInvalidation.emitFollowToggled(followerId, targetId);
 
       if (this.NOTIFICATIONS_ENABLED) {
         // Queue notification job would go here

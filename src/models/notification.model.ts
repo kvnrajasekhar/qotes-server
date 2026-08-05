@@ -1,16 +1,29 @@
-// @ts-nocheck
 import mongoose from "mongoose";
-const Schema = mongoose.Schema;
-const {
+import { Schema, Document } from "mongoose";
+import {
   NOTIFICATION_TYPES,
   REFERENCE_TYPES,
-} = require("../modules/notifications/notification.constants");
+} from "../modules/notifications/notification.constants";
+
+interface INotification extends Document {
+  recipient: mongoose.Types.ObjectId;
+  sender: mongoose.Types.ObjectId;
+  type: string;
+  message: string;
+  referenceId?: mongoose.Types.ObjectId;
+  referenceType?: string;
+  metadata?: Map<string, any>;
+  isRead: boolean;
+  isDeleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 /**
  * Notification Schema
  * Represents a notification in the system
  */
-const NotificationSchema = new Schema(
+const NotificationSchema = new Schema<INotification>(
   {
     _id: { type: Schema.Types.ObjectId, auto: true },
     recipient: {
@@ -106,6 +119,7 @@ NotificationSchema.pre("findOneAndUpdate", function (next) {
   next();
 });
 
-const Notification = mongoose.model("Notification", NotificationSchema);
+const Notification = mongoose.model<INotification>("Notification", NotificationSchema);
 
 export default Notification;
+export { NotificationSchema, INotification };

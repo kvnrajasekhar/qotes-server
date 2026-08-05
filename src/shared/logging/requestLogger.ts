@@ -1,17 +1,6 @@
-/**
- * Express Request Logger Middleware
- *
- * Features:
- * - Captures HTTP request lifecycle (method, URL, status code, response time)
- * - Generates/extracts unique Correlation ID (X-Correlation-ID header)
- * - Stores correlation ID in async context for automatic inclusion in all logs
- * - Tracks response time with millisecond precision
- * - Logs request/response metadata for debugging and monitoring
- */
-
-// @ts-nocheck
-const { v4: uuidv4 } = require("uuid");
-const { createLogger, withTraceId } = require("./logger");
+import { v4 as uuidv4 } from "uuid";
+import { createLogger, withTraceId } from "./logger";
+import { Request, Response, NextFunction } from "express";
 
 const logger = createLogger("request-logger");
 
@@ -22,19 +11,21 @@ const logger = createLogger("request-logger");
  *   const { requestLoggerMiddleware } = require('./src/shared/logging/requestLogger');
  *   app.use(requestLoggerMiddleware);
  */
-const requestLoggerMiddleware = (req, res, next) => {
+const requestLoggerMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // ============== STEP 1: EXTRACT OR GENERATE CORRELATION ID ==============
   // Check if correlation ID exists in header (from upstream service/client)
-  let traceId = req.headers["x-correlation-id"] || req.headers["x-trace-id"];
+  const headerId = Array.isArray(req.headers["x-correlation-id"])
+    ? req.headers["x-correlation-id"][0]
+    : (req.headers["x-correlation-id"] as string | undefined);
+  const headerTrace = Array.isArray(req.headers["x-trace-id"])
+    ? req.headers["x-trace-id"][0]
+    : (req.headers["x-trace-id"] as string | undefined);
 
-  // Generate new correlation ID if not provided
-  if (!traceId) {
-    traceId = `${Date.now()}-${uuidv4()}`;
-  }
+  let traceId: string = headerId || headerTrace || `${Date.now()}-${uuidv4()}`;
 
   // Attach to request object for access in route handlers
-  req.traceId = traceId;
-  req.correlationId = traceId; // Alternative naming convention
+  (req as any).traceId = traceId;
+  (req as any).correlationId = traceId; // Alternative naming convention
 
   // Add to response headers (for client/upstream services to track)
   res.setHeader("X-Correlation-ID", traceId);
@@ -45,12 +36,12 @@ const requestLoggerMiddleware = (req, res, next) => {
 
   // ============== STEP 3: INTERCEPT RESPONSE ==============
   // Capture the original res.end to log after response is sent
-  const originalEnd = res.end;
-  res.end = function (...args) {
+  const originalEnd = res.end.bind(res);
+  (res as any).end = function (...args: any[]) {
     const responseTime = Date.now() - requestStart;
 
-    // Call original end
-    originalEnd.apply(res, args);
+    // Call original end and capture return value
+    const ret = originalEnd(...args as any);
 
     // ============== STEP 4: LOG REQUEST WITHIN TRACE CONTEXT ==============
     // This ensures all logs generated during request handling include the traceId
@@ -80,32 +71,38 @@ const requestLoggerMiddleware = (req, res, next) => {
         logger.info("HTTP Request", logData);
       }
     });
+
+    return ret as any;
   };
 
   // ============== STEP 5: WRAP next() IN TRACE CONTEXT ==============
   // Ensures all async handlers have access to traceId via AsyncLocalStorage
-  withTraceId(traceId, () => {
-    next();
-  });
+  withTraceId(traceId, () => next());
 };
 
 /**
  * Alternative: Express async middleware wrapper for cleaner error handling
  * Use this if you need better error propagation
  */
-const asyncRequestLoggerMiddleware = (req, res, next) => {
-  const traceId =
-    req.headers["x-correlation-id"] || `${Date.now()}-${uuidv4()}`;
-  req.traceId = traceId;
-  req.correlationId = traceId;
+const asyncRequestLoggerMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const headerId = Array.isArray(req.headers["x-correlation-id"])
+    ? req.headers["x-correlation-id"][0]
+    : (req.headers["x-correlation-id"] as string | undefined);
+  const traceId = headerId || `${Date.now()}-${uuidv4()}`;
+  (req as any).traceId = traceId;
+  (req as any).correlationId = traceId;
   res.setHeader("X-Correlation-ID", traceId);
 
   const requestStart = Date.now();
-  const originalEnd = res.end;
+  const originalEnd = res.end.bind(res);
 
-  res.end = function (...args) {
+  (res as any).end = function (...args: any[]) {
     const responseTime = Date.now() - requestStart;
-    originalEnd.apply(res, args);
+    const ret = originalEnd(...args as any);
 
     withTraceId(traceId, () => {
       const logData = {
@@ -124,6 +121,8 @@ const asyncRequestLoggerMiddleware = (req, res, next) => {
         logger.info("HTTP Request Success", logData);
       }
     });
+
+    return ret as any;
   };
 
   withTraceId(traceId, () => next());
@@ -135,16 +134,12 @@ const asyncRequestLoggerMiddleware = (req, res, next) => {
  * Usage:
  *   app.use(setCorrelationId);
  */
-const setCorrelationId = (req, res, next) => {
-  const traceId =
-    req.headers["x-correlation-id"] || `${Date.now()}-${uuidv4()}`;
-  req.traceId = traceId;
+const setCorrelationId = (req: Request, res: Response, next: NextFunction) => {
+  const traceId = req.headers["x-correlation-id"] || `${Date.now()}-${uuidv4()}`;
+  // attach to request as any extension for middleware compatibility
+  (req as any).traceId = traceId;
   res.setHeader("X-Correlation-ID", traceId);
   next();
 };
 
-module.exports = {
-  requestLoggerMiddleware,
-  asyncRequestLoggerMiddleware,
-  setCorrelationId,
-};
+export { requestLoggerMiddleware, asyncRequestLoggerMiddleware, setCorrelationId };

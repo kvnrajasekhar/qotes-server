@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {
@@ -26,7 +27,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const decoded = jwt.verify(token, JWT_SECRET || "");
     req.user = decoded;
     next();
-  } catch (err) {
+  } catch {
     return res.status(403).json({ message: "Invalid or expired access token" });
   }
 };

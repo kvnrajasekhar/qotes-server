@@ -18,13 +18,13 @@ import { v2 as cloudinary } from "cloudinary";
     },
     {
       provide: "CLOUDINARY_SERVICE",
-      useFactory: () => {
+      useFactory: async () => {
         // Import the service dynamically to avoid circular dependency
-        const cloudinaryService = require("./cloudinary.service").default;
-        return cloudinaryService;
+        const mod = await import("./cloudinary.service");
+        return mod.default;
       },
     },
   ],
   exports: ["CLOUDINARY", "CLOUDINARY_SERVICE"],
 })
-export class MediaModule {}
+export class MediaModule { }

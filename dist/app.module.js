@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const throttler_1 = require("@nestjs/throttler");
+const event_emitter_1 = require("@nestjs/event-emitter");
 const auth_module_1 = require("./modules/auth/auth.module");
 const users_module_1 = require("./modules/users/users.module");
 const quotes_module_1 = require("./modules/quotes/quotes.module");
@@ -46,6 +47,7 @@ exports.AppModule = AppModule = __decorate([
                     limit: 100,
                 },
             ]),
+            event_emitter_1.EventEmitterModule.forRoot(),
             kafka_module_1.KafkaModule,
             mailer_module_1.MailerModule,
             media_module_1.MediaModule,

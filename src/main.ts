@@ -9,6 +9,7 @@ import logger from "./shared/utils/logger.util";
 import { ResponseInterceptor } from "./shared/interceptors/response.interceptor";
 import { HttpExceptionFilter } from "./shared/filters/http-exception.filter";
 import { requestLogger } from "./shared/middlewares/logger.middleware";
+import { observeRequest } from "./shared/observability/metrics";
 
 async function bootstrap() {
   await connectToDatabase();
@@ -23,6 +24,7 @@ async function bootstrap() {
   });
 
   app.use(requestLogger);
+  app.use(observeRequest);
 
   app.useGlobalPipes(
     new ValidationPipe({

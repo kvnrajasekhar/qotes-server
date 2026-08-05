@@ -1,15 +1,9 @@
-// @ts-nocheck
 import jwt from "jsonwebtoken";
 import { Server, Socket } from "socket.io";
 import notificationService from "./notification.service";
 import { SOCKET_EVENTS } from "./notification.constants";
 
 let io: Server | null = null;
-
-interface SocketWithUser extends Socket {
-  userId?: string;
-  username?: string;
-}
 
 const initializeSocket = (server: any): Server => {
   if (io) {
@@ -25,7 +19,7 @@ const initializeSocket = (server: any): Server => {
     transports: ["websocket", "polling"],
   });
 
-  io.use((socket: any, next: any) => {
+  io.use((socket: Socket & { userId?: string; username?: string }, next: any) => {
     const token = socket.handshake.auth.token;
 
     if (!token) {
@@ -37,12 +31,12 @@ const initializeSocket = (server: any): Server => {
       socket.userId = decoded.userId;
       socket.username = decoded.username;
       next();
-    } catch (err) {
+    } catch {
       next(new Error("Authentication error: Invalid token"));
     }
   });
 
-  io.on("connection", (socket: any) => {
+  io.on("connection", (socket: Socket & { userId?: string; username?: string }) => {
     console.log(`User connected: ${socket.userId}, Socket ID: ${socket.id}`);
 
     notificationService.registerUserSocket(socket.userId, socket.id);

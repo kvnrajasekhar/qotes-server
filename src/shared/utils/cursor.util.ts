@@ -23,12 +23,8 @@ export function encodeCursor(data: CursorData): string {
  * @returns Decoded cursor data object
  */
 export function decodeCursor(cursor: string): CursorData {
-  try {
-    const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
-    return JSON.parse(jsonString);
-  } catch (error) {
-    throw new Error("Invalid cursor format");
-  }
+  const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
+  return JSON.parse(jsonString);
 }
 
 /**
@@ -151,11 +147,11 @@ export function processPaginatedResults<T>(
       nextCursor:
         hasMore && data.length > 0
           ? encodeCursor(
-              cursorFields.reduce((acc, field) => {
-                acc[field] = (data[data.length - 1] as any)[field];
-                return acc;
-              }, {} as CursorData),
-            )
+            cursorFields.reduce((acc, field) => {
+              acc[field] = (data[data.length - 1] as any)[field];
+              return acc;
+            }, {} as CursorData),
+          )
           : null,
       hasMore,
     },

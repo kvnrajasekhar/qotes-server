@@ -8,6 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
+import { AuthGuard } from "../../shared/guards/auth.guard";
 import User, { UserSchema } from "../../models/user.model";
 import Token, { tokenSchema } from "../../models/token.model";
 import { MediaModule } from "../../infrastructure/media/media.module";
@@ -35,7 +36,7 @@ import { KafkaModule } from "../../infrastructure/kafka/kafka.module";
     KafkaModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, AuthGuard],
+  exports: [AuthService, AuthGuard, JwtModule, PassportModule, MongooseModule],
 })
-export class AuthModule {}
+export class AuthModule { }

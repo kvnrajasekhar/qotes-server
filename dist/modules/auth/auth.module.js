@@ -49,6 +49,7 @@ const config_1 = require("@nestjs/config");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
+const auth_guard_1 = require("../../shared/guards/auth.guard");
 const user_model_1 = __importStar(require("../../models/user.model"));
 const token_model_1 = __importStar(require("../../models/token.model"));
 const media_module_1 = require("../../infrastructure/media/media.module");
@@ -79,8 +80,8 @@ exports.AuthModule = AuthModule = __decorate([
             kafka_module_1.KafkaModule,
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
-        exports: [auth_service_1.AuthService],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, auth_guard_1.AuthGuard],
+        exports: [auth_service_1.AuthService, auth_guard_1.AuthGuard, jwt_1.JwtModule, passport_1.PassportModule, mongoose_1.MongooseModule],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

@@ -18,20 +18,6 @@ import {
   errorHandler,
 } from "./shared/middlewares/logger.middleware";
 
-// Express routes - will be replaced by NestJS controllers
-import adminRouter from "./modules/admin/admin.route";
-import collectionRouter from "./modules/collections/collections.route";
-import commentRouter from "./modules/comments/comment.route";
-import feedRouter from "./modules/feeds/feed.route";
-import notificationRouter from "./modules/notifications/notification.route";
-import preferenceRouter from "./modules/preferences/preference.route";
-import quoteRouter from "./modules/quotes/quote.route";
-import reactionRouter from "./modules/reactions/reaction.route";
-import safetyRouter from "./modules/safety/safety.route";
-import searchRouter from "./modules/search/search.route";
-import userRouter from "./modules/users/user.route";
-import systemRouter from "./modules/system/system.route";
-
 const app = express();
 
 app.use(
@@ -95,19 +81,8 @@ app.get("/metrics", (req: Request, res: Response) => {
   return res.status(200).send(toPrometheus(snapshot));
 });
 
-app.use("/v1/admin", adminRouter);
-// app.use("/v1/auth", authRouter); // Migrated to NestJS
-app.use("/v1/collections", collectionRouter);
-app.use("/v1/comment", commentRouter);
-app.use("/v1/feed", feedRouter);
-app.use("/v1/notifications", notificationRouter);
-app.use("/v1/preference", preferenceRouter);
-app.use("/v1/quote", quoteRouter);
-app.use("/v1/reaction", reactionRouter);
-app.use("/v1/safety", safetyRouter);
-app.use("/v1/search", searchRouter);
-app.use("/v1/user", userRouter);
-app.use("/v1/system", systemRouter);
+// All API routes are now handled by NestJS controllers
+// Express routes removed after migration to NestJS
 
 app.use(notFoundHandler);
 app.use(errorHandler);

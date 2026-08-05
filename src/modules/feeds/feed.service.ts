@@ -1,18 +1,16 @@
-// @ts-nocheck
 import Quote from "../../models/quote.model";
 import Follow from "../../models/follow.model";
 import Block from "../../models/block.model";
 import UserContentPreference from "../../models/userContentPreference.model";
 import {
-  encodeCursor,
-  decodeCursor,
   buildCursorQuery,
   buildCompoundCursorQuery,
   processPaginatedResults,
+
 } from "../../shared/utils/cursor.util";
 const quoteService = {
   getGlobalFeed: async ({ userId, cursor = null, limit = 10 }) => {
-    const query = { isHiddenBySystem: { $ne: true } }; // Only show safe content
+    const query: any = { isHiddenBySystem: { $ne: true } }; // Only show safe content
 
     if (userId) {
       // 1. Fetch Blocked User IDs (Both ways)
@@ -74,7 +72,7 @@ const quoteService = {
     limit = 10,
   }) => {
     // 1. Initial Query: Only show content that belongs to the user and is safe
-    const query = {
+    const query: any = {
       creator: targetUserId,
       isHiddenBySystem: { $ne: true },
     };
@@ -162,7 +160,7 @@ const quoteService = {
     // but you could add that logic if "Muting" is a separate feature.
 
     // 4. CONSTRUCT THE MASTER QUERY
-    const query = {
+    const query: any = {
       author: { $in: followedUserIds },
       _id: { $nin: excludedQuoteIds },
       tags: { $nin: excludedTags },
@@ -196,7 +194,7 @@ const quoteService = {
   // Discovery feed = popular + recent quotes from outside the user’s network.
   getDiscoverFeed: async ({ userId, cursor = null, limit = 20 }) => {
     // 1. Core Discovery Logic: Exclude self
-    const query = {
+    const query: any = {
       creator: { $ne: userId },
       isHiddenBySystem: { $ne: true }, // Safety: Hide reported content
     };

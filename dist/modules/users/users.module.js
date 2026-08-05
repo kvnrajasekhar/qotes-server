@@ -50,6 +50,7 @@ const follow_model_1 = __importStar(require("../../models/follow.model"));
 const quote_model_1 = __importStar(require("../../models/quote.model"));
 const media_module_1 = require("../../infrastructure/media/media.module");
 const queues_module_1 = require("../../shared/queues/queues.module");
+const cache_module_1 = require("../../infrastructure/cache/cache.module");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -64,6 +65,7 @@ exports.UsersModule = UsersModule = __decorate([
             throttler_1.ThrottlerModule,
             media_module_1.MediaModule,
             queues_module_1.QueuesModule,
+            cache_module_1.CacheModule,
         ],
         controllers: [users_controller_1.UsersController],
         providers: [users_service_1.UsersService],

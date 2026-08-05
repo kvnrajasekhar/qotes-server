@@ -3,19 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.NotificationSchema = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
-const Schema = mongoose_1.default.Schema;
+const mongoose_2 = require("mongoose");
 const { NOTIFICATION_TYPES, REFERENCE_TYPES, } = require("../modules/notifications/notification.constants");
-const NotificationSchema = new Schema({
-    _id: { type: Schema.Types.ObjectId, auto: true },
+const NotificationSchema = new mongoose_2.Schema({
+    _id: { type: mongoose_2.Schema.Types.ObjectId, auto: true },
     recipient: {
-        type: Schema.Types.ObjectId,
+        type: mongoose_2.Schema.Types.ObjectId,
         ref: "User",
         required: true,
         index: true,
     },
     sender: {
-        type: Schema.Types.ObjectId,
+        type: mongoose_2.Schema.Types.ObjectId,
         ref: "User",
         required: true,
         index: true,
@@ -32,7 +33,7 @@ const NotificationSchema = new Schema({
         maxlength: 200,
     },
     referenceId: {
-        type: Schema.Types.ObjectId,
+        type: mongoose_2.Schema.Types.ObjectId,
         index: true,
     },
     referenceType: {
@@ -42,7 +43,7 @@ const NotificationSchema = new Schema({
     },
     metadata: {
         type: Map,
-        of: Schema.Types.Mixed,
+        of: mongoose_2.Schema.Types.Mixed,
         default: {},
     },
     isRead: {
@@ -67,6 +68,7 @@ const NotificationSchema = new Schema({
 }, {
     timestamps: true,
 });
+exports.NotificationSchema = NotificationSchema;
 NotificationSchema.index({ recipient: 1 });
 NotificationSchema.index({ sender: 1 });
 NotificationSchema.index({ type: 1 });

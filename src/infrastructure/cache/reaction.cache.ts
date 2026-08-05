@@ -53,7 +53,7 @@ async function getReactionBreakdown(
       breakdown: breakdown as unknown as Record<string, number>,
       total: Number(total || 0),
     };
-  } catch (error) {
+  } catch {
     return { breakdown: {}, total: 0 };
   }
 }
@@ -72,7 +72,7 @@ async function atomicUpdateCache(
       delta,
       oldType || "none",
     );
-  } catch (error) {
+  } catch {
     return null;
   }
 }

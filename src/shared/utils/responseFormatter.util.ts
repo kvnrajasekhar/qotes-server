@@ -1,19 +1,5 @@
 import { Response } from "express";
 
-interface SuccessResponseData {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  data: any;
-}
-
-interface ErrorResponseData {
-  success: boolean;
-  statusCode: number;
-  message: string;
-  errors: any;
-}
-
 /**
  * Standardizes successful API response formatting.
  * @param {object} res - The Express response object.

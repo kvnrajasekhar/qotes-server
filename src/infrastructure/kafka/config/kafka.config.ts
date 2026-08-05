@@ -26,4 +26,6 @@ const connectKafka = async (): Promise<void> => {
   }
 };
 
-export { kafka, producer, connectKafka };
+const isKafkaConnected = (): boolean => isProducerConnected;
+
+export { kafka, producer, connectKafka, isKafkaConnected };

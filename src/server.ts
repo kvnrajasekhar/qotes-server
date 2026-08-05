@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import express from "express";
 
 import logger from "./shared/utils/logger.util";
 import app from "./app";

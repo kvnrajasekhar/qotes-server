@@ -47,6 +47,7 @@ const collections_service_1 = require("./collections.service");
 const collections_model_1 = __importStar(require("../../models/collections.model"));
 const collectionItem_model_1 = __importStar(require("../../models/collectionItem.model"));
 const quote_model_1 = __importStar(require("../../models/quote.model"));
+const cache_module_1 = require("../../infrastructure/cache/cache.module");
 let CollectionsModule = class CollectionsModule {
 };
 exports.CollectionsModule = CollectionsModule;
@@ -58,6 +59,7 @@ exports.CollectionsModule = CollectionsModule = __decorate([
                 { name: collectionItem_model_1.default.name, schema: collectionItem_model_1.CollectionItemSchema },
                 { name: quote_model_1.default.name, schema: quote_model_1.QuoteSchema },
             ]),
+            cache_module_1.CacheModule,
         ],
         controllers: [collections_controller_1.CollectionsController],
         providers: [collections_service_1.CollectionsService],

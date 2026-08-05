@@ -4,7 +4,6 @@ import {
   withTraceId,
   asyncLocalStorage,
 } from "./logger";
-import getServiceLogger from "./loggerFactory";
 
 export { createLogger, getTraceId, withTraceId, asyncLocalStorage };
 

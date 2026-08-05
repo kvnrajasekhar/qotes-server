@@ -42,20 +42,26 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuotesModule = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
+const auth_module_1 = require("../auth/auth.module");
 const quotes_controller_1 = require("./quotes.controller");
 const quotes_service_1 = require("./quotes.service");
 const quote_model_1 = __importStar(require("../../models/quote.model"));
 const user_model_1 = __importStar(require("../../models/user.model"));
+const notifications_module_1 = require("../notifications/notifications.module");
+const cache_module_1 = require("../../infrastructure/cache/cache.module");
 let QuotesModule = class QuotesModule {
 };
 exports.QuotesModule = QuotesModule;
 exports.QuotesModule = QuotesModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            auth_module_1.AuthModule,
             mongoose_1.MongooseModule.forFeature([
                 { name: quote_model_1.default.name, schema: quote_model_1.QuoteSchema },
                 { name: user_model_1.default.name, schema: user_model_1.UserSchema },
             ]),
+            (0, common_1.forwardRef)(() => notifications_module_1.NotificationsModule),
+            cache_module_1.CacheModule,
         ],
         controllers: [quotes_controller_1.QuotesController],
         providers: [quotes_service_1.QuotesService],

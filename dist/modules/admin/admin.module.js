@@ -20,8 +20,8 @@ exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([
-                { name: 'User', schema: user_model_1.UserSchema },
-                { name: 'Quote', schema: quote_model_1.QuoteSchema },
+                { name: "User", schema: user_model_1.UserSchema },
+                { name: "Quote", schema: quote_model_1.QuoteSchema },
             ]),
         ],
         controllers: [admin_controller_1.AdminController],

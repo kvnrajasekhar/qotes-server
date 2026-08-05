@@ -19,16 +19,25 @@ exports.PreferencesService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const user_model_1 = __importDefault(require("../../models/user.model"));
+const userContentPreference_model_1 = __importDefault(require("../../models/userContentPreference.model"));
 let PreferencesService = class PreferencesService {
-    constructor(userModel) {
-        this.userModel = userModel;
+    constructor(preferenceModel) {
+        this.preferenceModel = preferenceModel;
+    }
+    async savePreference({ userId, type, targetId, reason }) {
+        if (!['QUOTE', 'AUTHOR', 'TAG'].includes(type)) {
+            throw new common_1.BadRequestException('Invalid type');
+        }
+        return await this.preferenceModel.updateOne({ userId, type, targetId }, {
+            $set: { reason, updatedAt: new Date() },
+            $setOnInsert: { createdAt: new Date() },
+        }, { upsert: true });
     }
 };
 exports.PreferencesService = PreferencesService;
 exports.PreferencesService = PreferencesService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
+    __param(0, (0, mongoose_1.InjectModel)(userContentPreference_model_1.default.name)),
     __metadata("design:paramtypes", [mongoose_2.Model])
 ], PreferencesService);
 //# sourceMappingURL=preferences.service.js.map

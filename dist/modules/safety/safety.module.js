@@ -24,12 +24,12 @@ exports.SafetyModule = SafetyModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([
-                { name: 'Block', schema: block_model_1.UserBlockSchema },
-                { name: 'Report', schema: report_model_1.reportSchema },
-                { name: 'User', schema: user_model_1.UserSchema },
-                { name: 'Quote', schema: quote_model_1.QuoteSchema },
-                { name: 'Follow', schema: follow_model_1.FollowSchema },
-                { name: 'ReportStats', schema: reportStats_model_1.reportStatsSchema },
+                { name: "Block", schema: block_model_1.UserBlockSchema },
+                { name: "Report", schema: report_model_1.reportSchema },
+                { name: "User", schema: user_model_1.UserSchema },
+                { name: "Quote", schema: quote_model_1.QuoteSchema },
+                { name: "Follow", schema: follow_model_1.FollowSchema },
+                { name: "ReportStats", schema: reportStats_model_1.reportStatsSchema },
             ]),
         ],
         controllers: [safety_controller_1.SafetyController],

@@ -58,7 +58,7 @@ let SafetyService = class SafetyService {
                 throw error;
             }
             finally {
-                session.endSession();
+                await session.endSession();
             }
         }
     }
@@ -93,12 +93,12 @@ let SafetyService = class SafetyService {
 exports.SafetyService = SafetyService;
 exports.SafetyService = SafetyService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)('Block')),
-    __param(1, (0, mongoose_1.InjectModel)('Report')),
-    __param(2, (0, mongoose_1.InjectModel)('User')),
-    __param(3, (0, mongoose_1.InjectModel)('Quote')),
-    __param(4, (0, mongoose_1.InjectModel)('Follow')),
-    __param(5, (0, mongoose_1.InjectModel)('ReportStats')),
+    __param(0, (0, mongoose_1.InjectModel)("Block")),
+    __param(1, (0, mongoose_1.InjectModel)("Report")),
+    __param(2, (0, mongoose_1.InjectModel)("User")),
+    __param(3, (0, mongoose_1.InjectModel)("Quote")),
+    __param(4, (0, mongoose_1.InjectModel)("Follow")),
+    __param(5, (0, mongoose_1.InjectModel)("ReportStats")),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,

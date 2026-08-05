@@ -1,6 +1,6 @@
 import {
   Injectable,
-  ConflictException,
+
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
@@ -27,7 +27,7 @@ export class AuthService {
     private configService: ConfigService,
     @Inject("CLOUDINARY_SERVICE") private cloudinaryService: any,
     @Inject("KAFKA_PRODUCER") private kafkaProducer: any,
-  ) {}
+  ) { }
 
   async findUserByUsernameOrEmail(identifier: string) {
     return await this.userModel
@@ -44,7 +44,6 @@ export class AuthService {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) return null;
 
-    const JWT_SECRET = this.configService.get("JWT_SECRET");
     const REFRESH_SECRET = this.configService.get("REFRESH_SECRET");
 
     const payload = {
@@ -157,7 +156,7 @@ export class AuthService {
 
     try {
       decoded = jwt.verify(refreshToken, REFRESH_SECRET || "");
-    } catch (err) {
+    } catch {
       throw new UnauthorizedException("Expired or invalid refresh token");
     }
 
@@ -203,7 +202,7 @@ export class AuthService {
 
     const link = `${LOCALHOST}/forgotpassword/${user._id}/${token}`;
 
-    forgotPasswordLink(user.email, link);
+    await forgotPasswordLink(user.email, link);
 
     return {
       success: true,
@@ -234,7 +233,7 @@ export class AuthService {
     let payload: any;
     try {
       payload = jwt.verify(token, secret);
-    } catch (error) {
+    } catch {
       throw new BadRequestException(
         "Password reset link is invalid or has expired",
       );

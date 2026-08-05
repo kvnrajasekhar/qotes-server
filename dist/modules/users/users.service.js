@@ -24,15 +24,18 @@ const fs_1 = require("fs");
 const user_model_1 = __importDefault(require("../../models/user.model"));
 const follow_model_1 = __importDefault(require("../../models/follow.model"));
 const quote_model_1 = __importDefault(require("../../models/quote.model"));
-const common_2 = require("@nestjs/common");
 const cursor_util_1 = require("../../shared/utils/cursor.util");
+const user_cache_1 = require("../../infrastructure/cache/user.cache");
+const cache_invalidation_service_1 = require("../../infrastructure/cache/cache-invalidation.service");
 let UsersService = class UsersService {
-    constructor(userModel, followModel, quoteModel, configService, cloudinaryService) {
+    constructor(userModel, followModel, quoteModel, configService, cloudinaryService, userCache, cacheInvalidation) {
         this.userModel = userModel;
         this.followModel = followModel;
         this.quoteModel = quoteModel;
         this.configService = configService;
         this.cloudinaryService = cloudinaryService;
+        this.userCache = userCache;
+        this.cacheInvalidation = cacheInvalidation;
     }
     get NOTIFICATIONS_ENABLED() {
         return this.configService.get("NOTIFICATIONS_ENABLED") === "true";
@@ -42,6 +45,7 @@ let UsersService = class UsersService {
         if (!user) {
             throw new common_1.NotFoundException("User not found");
         }
+        await this.userCache.warmUpUserCache(user._id.toString(), { profile: user });
         return user;
     }
     async updateUserProfile(userId, updateData) {
@@ -71,6 +75,7 @@ let UsersService = class UsersService {
         if (!updatedUser) {
             throw new common_1.NotFoundException("User not found");
         }
+        this.cacheInvalidation.emitUserUpdated(userId);
         return updatedUser;
     }
     async updateUserAvatar(userId, avatarFile) {
@@ -90,6 +95,7 @@ let UsersService = class UsersService {
             }
             const updatedUser = await this.userModel.findByIdAndUpdate(userId, { $set: { avatarUrl: newAvatarUrl } }, { new: true, select: "-password" });
             await fs_1.promises.unlink(filePath);
+            this.cacheInvalidation.emitUserUpdated(userId);
             return updatedUser;
         }
         catch (error) {
@@ -109,51 +115,53 @@ let UsersService = class UsersService {
                 .limit(limit)
                 .select("username firstName lastName avatarUrl bio stats isBanned");
         }
-        const followed = await this.followModel
-            .find({ follower: userId })
-            .select("following")
-            .lean();
-        const followedIds = followed.map((f) => f.following);
-        const suggestions = await this.followModel.aggregate([
-            {
-                $match: {
-                    follower: { $in: followedIds },
+        return await this.userCache.getSuggestedUsers(userId, async () => {
+            const followed = await this.followModel
+                .find({ follower: userId })
+                .select("following")
+                .lean();
+            const followedIds = followed.map((f) => f.following);
+            const suggestions = await this.followModel.aggregate([
+                {
+                    $match: {
+                        follower: { $in: followedIds },
+                    },
                 },
-            },
-            {
-                $group: {
-                    _id: "$following",
-                    mutualCount: { $sum: 1 },
+                {
+                    $group: {
+                        _id: "$following",
+                        mutualCount: { $sum: 1 },
+                    },
                 },
-            },
-            {
-                $match: {
-                    _id: { $nin: [...followedIds, userId] },
+                {
+                    $match: {
+                        _id: { $nin: [...followedIds, userId] },
+                    },
                 },
-            },
-            { $sort: { mutualCount: -1 } },
-            { $limit: limit },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "user",
+                { $sort: { mutualCount: -1 } },
+                { $limit: limit },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "_id",
+                        foreignField: "_id",
+                        as: "user",
+                    },
                 },
-            },
-            { $unwind: "$user" },
-            {
-                $project: {
-                    _id: "$user._id",
-                    username: "$user.username",
-                    firstName: "$user.firstName",
-                    lastName: "$user.lastName",
-                    avatar: "$user.avatarUrl",
-                    mutualCount: 1,
+                { $unwind: "$user" },
+                {
+                    $project: {
+                        _id: "$user._id",
+                        username: "$user.username",
+                        firstName: "$user.firstName",
+                        lastName: "$user.lastName",
+                        avatar: "$user.avatarUrl",
+                        mutualCount: 1,
+                    },
                 },
-            },
-        ]);
-        return suggestions;
+            ]);
+            return suggestions;
+        });
     }
     async toggleFollow(followerId, targetId) {
         if (followerId === targetId) {
@@ -171,6 +179,7 @@ let UsersService = class UsersService {
             await this.userModel.findByIdAndUpdate(targetId, {
                 $inc: { "stats.followerCount": -1 },
             });
+            this.cacheInvalidation.emitFollowToggled(followerId, targetId);
             return { followed: false, message: "Unfollowed successfully" };
         }
         else {
@@ -185,6 +194,7 @@ let UsersService = class UsersService {
             await this.userModel.findByIdAndUpdate(targetId, {
                 $inc: { "stats.followerCount": 1 },
             });
+            this.cacheInvalidation.emitFollowToggled(followerId, targetId);
             if (this.NOTIFICATIONS_ENABLED) {
                 process.nextTick(() => {
                     console.log("Notification queued for follow");
@@ -292,10 +302,11 @@ exports.UsersService = UsersService = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
     __param(1, (0, mongoose_1.InjectModel)(follow_model_1.default.name)),
     __param(2, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
-    __param(4, (0, common_2.Inject)("CLOUDINARY_SERVICE")),
+    __param(4, (0, common_1.Inject)("CLOUDINARY_SERVICE")),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
-        config_1.ConfigService, Object])
+        config_1.ConfigService, Object, user_cache_1.UserCacheService,
+        cache_invalidation_service_1.CacheInvalidationService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

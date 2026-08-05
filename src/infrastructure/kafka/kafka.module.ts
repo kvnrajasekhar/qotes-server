@@ -6,7 +6,7 @@ import { producer, connectKafka } from "./config/kafka.config";
   providers: [
     {
       provide: "KAFKA_PRODUCER",
-      useFactory: async (configService: ConfigService) => {
+      useFactory: async (_configService: ConfigService) => {
         await connectKafka();
         return producer;
       },
@@ -15,4 +15,4 @@ import { producer, connectKafka } from "./config/kafka.config";
   ],
   exports: ["KAFKA_PRODUCER"],
 })
-export class KafkaModule {}
+export class KafkaModule { }

@@ -23,52 +23,60 @@ const collections_model_1 = __importDefault(require("../../models/collections.mo
 const collectionItem_model_1 = __importDefault(require("../../models/collectionItem.model"));
 const quote_model_1 = __importDefault(require("../../models/quote.model"));
 const cursor_util_1 = require("../../shared/utils/cursor.util");
+const collections_cache_1 = require("../../infrastructure/cache/collections.cache");
+const cache_invalidation_service_1 = require("../../infrastructure/cache/cache-invalidation.service");
 let CollectionsService = class CollectionsService {
-    constructor(collectionModel, collectionItemModel, quoteModel) {
+    constructor(collectionModel, collectionItemModel, quoteModel, collectionsCache, cacheInvalidation) {
         this.collectionModel = collectionModel;
         this.collectionItemModel = collectionItemModel;
         this.quoteModel = quoteModel;
+        this.collectionsCache = collectionsCache;
+        this.cacheInvalidation = cacheInvalidation;
     }
     async getUserCollections({ userId, cursor = null, limit = 20, }) {
-        const query = { owner: userId };
-        if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
-        }
-        const collections = await this.collectionModel
-            .find(query)
-            .select("name isPrivate isDefault createdAt")
-            .sort({ isDefault: -1, createdAt: -1 })
-            .limit(limit + 1)
-            .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, [
-            "createdAt",
-        ]);
-        return {
-            collections: data,
-            pagination,
-        };
+        return await this.collectionsCache.getUserCollections(userId, async () => {
+            const query = { owner: userId };
+            if (cursor) {
+                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
+            }
+            const collections = await this.collectionModel
+                .find(query)
+                .select("name isPrivate isDefault createdAt")
+                .sort({ isDefault: -1, createdAt: -1 })
+                .limit(limit + 1)
+                .lean();
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, [
+                "createdAt",
+            ]);
+            return {
+                collections: data,
+                pagination,
+            };
+        });
     }
     async getCollectionDetails({ collectionId, cursor = null, limit = 20, }) {
-        const query = { collectionId };
-        if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "addedAt", -1));
-        }
-        const items = await this.collectionItemModel
-            .find(query)
-            .sort({ addedAt: -1 })
-            .limit(limit + 1)
-            .populate({
-            path: "quoteId",
-            select: "text author category reactions likes saves requotes createdAt",
-        })
-            .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, [
-            "addedAt",
-        ]);
-        return {
-            items: data.map((i) => i.quoteId),
-            pagination,
-        };
+        return await this.collectionsCache.getCollectionItems(collectionId, async () => {
+            const query = { collectionId };
+            if (cursor) {
+                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "addedAt", -1));
+            }
+            const items = await this.collectionItemModel
+                .find(query)
+                .sort({ addedAt: -1 })
+                .limit(limit + 1)
+                .populate({
+                path: "quoteId",
+                select: "text author category reactions likes saves requotes createdAt",
+            })
+                .lean();
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, [
+                "addedAt",
+            ]);
+            return {
+                items: data.map((i) => i.quoteId),
+                pagination,
+            };
+        });
     }
     async toggleSave(userId, quoteId, collectionId = null) {
         let targetCollectionId = collectionId;
@@ -102,6 +110,7 @@ let CollectionsService = class CollectionsService {
         if (existing) {
             await this.collectionItemModel.deleteOne({ _id: existing._id });
             await this.quoteModel.findByIdAndUpdate(quoteId, { $inc: { saves: -1 } });
+            this.cacheInvalidation.emitCollectionUpdated(targetCollectionId, userId);
             return { saved: false };
         }
         await this.collectionItemModel.create({
@@ -109,6 +118,7 @@ let CollectionsService = class CollectionsService {
             quoteId,
         });
         await this.quoteModel.findByIdAndUpdate(quoteId, { $inc: { saves: 1 } });
+        this.cacheInvalidation.emitCollectionUpdated(targetCollectionId, userId);
         return { saved: true };
     }
 };
@@ -120,6 +130,8 @@ exports.CollectionsService = CollectionsService = __decorate([
     __param(2, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        collections_cache_1.CollectionsCacheService,
+        cache_invalidation_service_1.CacheInvalidationService])
 ], CollectionsService);
 //# sourceMappingURL=collections.service.js.map

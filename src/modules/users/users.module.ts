@@ -9,6 +9,7 @@ import Follow, { FollowSchema } from "../../models/follow.model";
 import Quote, { QuoteSchema } from "../../models/quote.model";
 import { MediaModule } from "../../infrastructure/media/media.module";
 import { QueuesModule } from "../../shared/queues/queues.module";
+import { CacheModule } from "../../infrastructure/cache/cache.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { QueuesModule } from "../../shared/queues/queues.module";
     ThrottlerModule,
     MediaModule,
     QueuesModule,
+    CacheModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

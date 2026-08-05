@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ThrottlerModule } from "@nestjs/throttler";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 // Import feature modules (will be created during migration)
 import { AuthModule } from "./modules/auth/auth.module";
@@ -42,6 +43,7 @@ import { QueuesModule } from "./shared/queues/queues.module";
         limit: 100,
       },
     ]),
+    EventEmitterModule.forRoot(),
 
     // Infrastructure modules
     KafkaModule,
@@ -66,4 +68,4 @@ import { QueuesModule } from "./shared/queues/queues.module";
     SystemModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

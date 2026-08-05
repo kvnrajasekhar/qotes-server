@@ -23,10 +23,14 @@ const mongoose_3 = __importDefault(require("mongoose"));
 const user_model_1 = __importDefault(require("../../models/user.model"));
 const quote_model_1 = __importDefault(require("../../models/quote.model"));
 const cursor_util_1 = require("../../shared/utils/cursor.util");
+const search_cache_1 = require("../../infrastructure/cache/search.cache");
+const cache_invalidation_service_1 = require("../../infrastructure/cache/cache-invalidation.service");
 let SearchService = class SearchService {
-    constructor(userModel, quoteModel) {
+    constructor(userModel, quoteModel, searchCache, cacheInvalidation) {
         this.userModel = userModel;
         this.quoteModel = quoteModel;
+        this.searchCache = searchCache;
+        this.cacheInvalidation = cacheInvalidation;
     }
     async searchUsers({ query, cursor = null, limit = 20, }) {
         if (!query || !query.trim()) {
@@ -35,106 +39,108 @@ let SearchService = class SearchService {
                 pagination: { nextCursor: null, hasMore: false },
             };
         }
-        const escaped = query.replace(/[*+?^${}()|[\]\\]/g, "\\$&");
-        const exactRegex = new RegExp(`^${escaped}$`, "i");
-        const prefixRegex = new RegExp(`^${escaped}`, "i");
-        const containsRegex = new RegExp(escaped, "i");
-        const pipeline = [
-            {
-                $match: {
-                    $or: [
-                        { username: containsRegex },
-                        { firstName: containsRegex },
-                        { lastName: containsRegex },
-                    ],
-                },
-            },
-            {
-                $addFields: {
-                    score: {
-                        $add: [
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$username", regex: exactRegex } },
-                                    100,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$username", regex: prefixRegex } },
-                                    60,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$firstName", regex: prefixRegex } },
-                                    40,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$lastName", regex: prefixRegex } },
-                                    40,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$username", regex: containsRegex } },
-                                    20,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    {
-                                        $regexMatch: { input: "$firstName", regex: containsRegex },
-                                    },
-                                    10,
-                                    0,
-                                ],
-                            },
-                            {
-                                $cond: [
-                                    { $regexMatch: { input: "$lastName", regex: containsRegex } },
-                                    10,
-                                    0,
-                                ],
-                            },
-                            { $cond: [{ $gt: ["$stats.followerCount", 1000] }, 15, 0] },
+        return await this.searchCache.getUserSearchResults(query, async () => {
+            const escaped = query.replace(/[*+?^${}()|[\]\\]/g, "\\$&");
+            const exactRegex = new RegExp(`^${escaped}$`, "i");
+            const prefixRegex = new RegExp(`^${escaped}`, "i");
+            const containsRegex = new RegExp(escaped, "i");
+            const pipeline = [
+                {
+                    $match: {
+                        $or: [
+                            { username: containsRegex },
+                            { firstName: containsRegex },
+                            { lastName: containsRegex },
                         ],
                     },
                 },
-            },
-            { $match: { score: { $gt: 0 } } },
-        ];
-        if (cursor) {
-            const decoded = (0, cursor_util_1.decodeCursor)(cursor);
-            pipeline.push({
-                $match: {
-                    $or: [
-                        { score: { $lt: decoded.score } },
-                        {
-                            score: decoded.score,
-                            _id: { $gt: new mongoose_3.default.Types.ObjectId(String(decoded.id)) },
+                {
+                    $addFields: {
+                        score: {
+                            $add: [
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$username", regex: exactRegex } },
+                                        100,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$username", regex: prefixRegex } },
+                                        60,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$firstName", regex: prefixRegex } },
+                                        40,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$lastName", regex: prefixRegex } },
+                                        40,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$username", regex: containsRegex } },
+                                        20,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        {
+                                            $regexMatch: { input: "$firstName", regex: containsRegex },
+                                        },
+                                        10,
+                                        0,
+                                    ],
+                                },
+                                {
+                                    $cond: [
+                                        { $regexMatch: { input: "$lastName", regex: containsRegex } },
+                                        10,
+                                        0,
+                                    ],
+                                },
+                                { $cond: [{ $gt: ["$stats.followerCount", 1000] }, 15, 0] },
+                            ],
                         },
-                    ],
+                    },
                 },
-            });
-        }
-        pipeline.push({ $sort: { score: -1, _id: 1 } }, { $limit: limit + 1 }, { $project: { password: 0, __v: 0 } });
-        const users = await this.userModel.aggregate(pipeline);
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, [
-            "score",
-            "_id",
-        ]);
-        return {
-            users: data,
-            pagination,
-        };
+                { $match: { score: { $gt: 0 } } },
+            ];
+            if (cursor) {
+                const decoded = (0, cursor_util_1.decodeCursor)(cursor);
+                pipeline.push({
+                    $match: {
+                        $or: [
+                            { score: { $lt: decoded.score } },
+                            {
+                                score: decoded.score,
+                                _id: { $gt: new mongoose_3.default.Types.ObjectId(String(decoded.id)) },
+                            },
+                        ],
+                    },
+                });
+            }
+            pipeline.push({ $sort: { score: -1, _id: 1 } }, { $limit: limit + 1 }, { $project: { password: 0, __v: 0 } });
+            const users = await this.userModel.aggregate(pipeline);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, [
+                "score",
+                "_id",
+            ]);
+            return {
+                users: data,
+                pagination,
+            };
+        });
     }
     async searchGlobal({ query, type = "all", limit = 20, cursor = {} }) {
         if (!query || !query.trim()) {
@@ -162,36 +168,40 @@ let SearchService = class SearchService {
             nextCursor.users = userResult.pagination.nextCursor;
         }
         if (type === "all" || type === "quotes") {
-            const quoteQuery = {
-                isHiddenBySystem: false,
-                $or: [{ text: containsRegex }, { hashtags: prefixRegex }],
-            };
-            if (cursor?.quotes) {
-                Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, "createdAt", -1));
-            }
-            const quotes = await this.quoteModel
-                .find(quoteQuery)
-                .sort({ createdAt: -1 })
-                .limit(limit + 1)
-                .populate("creator", "username avatarUrl")
-                .lean();
-            const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ["createdAt"]);
-            results.quotes = quoteData;
-            nextCursor.quotes = quotePagination.nextCursor;
+            results.quotes = await this.searchCache.getQuoteSearchResults(query, async () => {
+                const quoteQuery = {
+                    isHiddenBySystem: false,
+                    $or: [{ text: containsRegex }, { hashtags: prefixRegex }],
+                };
+                if (cursor?.quotes) {
+                    Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, "createdAt", -1));
+                }
+                const quotes = await this.quoteModel
+                    .find(quoteQuery)
+                    .sort({ createdAt: -1 })
+                    .limit(limit + 1)
+                    .populate("creator", "username avatarUrl")
+                    .lean();
+                const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ["createdAt"]);
+                nextCursor.quotes = quotePagination.nextCursor;
+                return quoteData;
+            });
         }
         if (type === "all" || type === "hashtags") {
-            const hashtags = await this.quoteModel.aggregate([
-                { $match: { hashtags: prefixRegex } },
-                { $unwind: "$hashtags" },
-                { $match: { hashtags: prefixRegex } },
-                { $group: { _id: "$hashtags", count: { $sum: 1 } } },
-                { $sort: { count: -1 } },
-                { $limit: Math.ceil(limit / 3) },
-            ]);
-            results.hashtags = hashtags.map((h) => ({
-                tag: h._id,
-                usageCount: h.count,
-            }));
+            results.hashtags = await this.searchCache.getHashtagSearchResults(query, async () => {
+                const hashtags = await this.quoteModel.aggregate([
+                    { $match: { hashtags: prefixRegex } },
+                    { $unwind: "$hashtags" },
+                    { $match: { hashtags: prefixRegex } },
+                    { $group: { _id: "$hashtags", count: { $sum: 1 } } },
+                    { $sort: { count: -1 } },
+                    { $limit: Math.ceil(limit / 3) },
+                ]);
+                return hashtags.map((h) => ({
+                    tag: h._id,
+                    usageCount: h.count,
+                }));
+            });
         }
         return {
             results,
@@ -208,6 +218,8 @@ exports.SearchService = SearchService = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
     __param(1, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        search_cache_1.SearchCacheService,
+        cache_invalidation_service_1.CacheInvalidationService])
 ], SearchService);
 //# sourceMappingURL=search.service.js.map

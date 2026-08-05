@@ -8,6 +8,7 @@ import CollectionItem, {
   CollectionItemSchema,
 } from "../../models/collectionItem.model";
 import Quote, { QuoteSchema } from "../../models/quote.model";
+import { CacheModule } from "../../infrastructure/cache/cache.module";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import Quote, { QuoteSchema } from "../../models/quote.model";
       { name: CollectionItem.name, schema: CollectionItemSchema },
       { name: Quote.name, schema: QuoteSchema },
     ]),
+    CacheModule,
   ],
   controllers: [CollectionsController],
   providers: [CollectionsService],

@@ -15,7 +15,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     @InjectModel(User.name) private userModel: Model<IUser>,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -40,7 +40,7 @@ export class AuthGuard implements CanActivate {
       request.user = user;
       request.user.id = user._id.toString();
       request.user.userId = user._id.toString();
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException("Invalid or expired token");
     }
 

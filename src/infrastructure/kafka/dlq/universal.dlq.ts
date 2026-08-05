@@ -55,4 +55,4 @@ const replay = async (dlqTopic: string, targetTopic: string): Promise<void> => {
 };
 
 const [, , source, target] = process.argv;
-replay(source, target);
+void replay(source, target);

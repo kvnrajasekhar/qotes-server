@@ -46,6 +46,7 @@ const search_controller_1 = require("./search.controller");
 const search_service_1 = require("./search.service");
 const quote_model_1 = __importStar(require("../../models/quote.model"));
 const user_model_1 = __importStar(require("../../models/user.model"));
+const cache_module_1 = require("../../infrastructure/cache/cache.module");
 let SearchModule = class SearchModule {
 };
 exports.SearchModule = SearchModule;
@@ -56,6 +57,7 @@ exports.SearchModule = SearchModule = __decorate([
                 { name: quote_model_1.default.name, schema: quote_model_1.QuoteSchema },
                 { name: user_model_1.default.name, schema: user_model_1.UserSchema },
             ]),
+            cache_module_1.CacheModule,
         ],
         controllers: [search_controller_1.SearchController],
         providers: [search_service_1.SearchService],

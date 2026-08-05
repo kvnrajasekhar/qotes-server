@@ -125,7 +125,7 @@ worker.on("error", (error: Error) => {
 const dailyCron = process.env.DAILY_QUOTE_CRON || "0 8 * * *";
 const contentSyncCron = process.env.CONTENT_SYNC_CRON || "0 */6 * * *";
 
-(async () => {
+void (async () => {
   try {
     await addScheduledJob(
       "daily-quote-of-day",

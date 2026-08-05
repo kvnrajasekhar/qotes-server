@@ -42,16 +42,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PreferencesModule = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
+const auth_module_1 = require("../auth/auth.module");
 const preferences_controller_1 = require("./preferences.controller");
 const preferences_service_1 = require("./preferences.service");
-const user_model_1 = __importStar(require("../../models/user.model"));
+const userContentPreference_model_1 = __importStar(require("../../models/userContentPreference.model"));
 let PreferencesModule = class PreferencesModule {
 };
 exports.PreferencesModule = PreferencesModule;
 exports.PreferencesModule = PreferencesModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: user_model_1.default.name, schema: user_model_1.UserSchema }]),
+            auth_module_1.AuthModule,
+            mongoose_1.MongooseModule.forFeature([{ name: userContentPreference_model_1.default.name, schema: userContentPreference_model_1.userContentPreferenceSchema }]),
         ],
         controllers: [preferences_controller_1.PreferencesController],
         providers: [preferences_service_1.PreferencesService],

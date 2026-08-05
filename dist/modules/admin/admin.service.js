@@ -66,8 +66,8 @@ let AdminService = class AdminService {
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)('User')),
-    __param(1, (0, mongoose_1.InjectModel)('Quote')),
+    __param(0, (0, mongoose_1.InjectModel)("User")),
+    __param(1, (0, mongoose_1.InjectModel)("Quote")),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model])
 ], AdminService);
