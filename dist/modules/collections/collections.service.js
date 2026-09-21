@@ -37,17 +37,15 @@ let CollectionsService = class CollectionsService {
         return await this.collectionsCache.getUserCollections(userId, async () => {
             const query = { owner: userId };
             if (cursor) {
-                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
+                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
             }
             const collections = await this.collectionModel
                 .find(query)
-                .select("name isPrivate isDefault createdAt")
+                .select('name isPrivate isDefault createdAt')
                 .sort({ isDefault: -1, createdAt: -1 })
                 .limit(limit + 1)
                 .lean();
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, [
-                "createdAt",
-            ]);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(collections, limit, ['createdAt']);
             return {
                 collections: data,
                 pagination,
@@ -58,20 +56,18 @@ let CollectionsService = class CollectionsService {
         return await this.collectionsCache.getCollectionItems(collectionId, async () => {
             const query = { collectionId };
             if (cursor) {
-                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "addedAt", -1));
+                Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'addedAt', -1));
             }
             const items = await this.collectionItemModel
                 .find(query)
                 .sort({ addedAt: -1 })
                 .limit(limit + 1)
                 .populate({
-                path: "quoteId",
-                select: "text author category reactions likes saves requotes createdAt",
+                path: 'quoteId',
+                select: 'text author category reactions likes saves requotes createdAt',
             })
                 .lean();
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, [
-                "addedAt",
-            ]);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(items, limit, ['addedAt']);
             return {
                 items: data.map((i) => i.quoteId),
                 pagination,
@@ -88,7 +84,7 @@ let CollectionsService = class CollectionsService {
             if (!defaultCollection) {
                 defaultCollection = await this.collectionModel.create({
                     owner: userId,
-                    name: "Saved",
+                    name: 'Saved',
                     isPrivate: true,
                     isDefault: true,
                 });
@@ -101,7 +97,7 @@ let CollectionsService = class CollectionsService {
                 owner: userId,
             });
             if (!isOwner)
-                throw new common_1.UnauthorizedException("Unauthorized");
+                throw new common_1.UnauthorizedException('Unauthorized');
         }
         const existing = await this.collectionItemModel.findOne({
             collectionId: targetCollectionId,

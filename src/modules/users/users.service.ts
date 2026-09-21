@@ -4,21 +4,19 @@ import {
   BadRequestException,
   ConflictException,
   Inject,
-} from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
-import { ConfigService } from "@nestjs/config";
-import { promises as fs } from "fs";
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { FilterQuery, Model } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
+import { promises as fs } from 'fs';
 
-import User, { IUser } from "../../models/user.model";
-import Follow, { IFollow } from "../../models/follow.model";
-import Quote, { IQuote } from "../../models/quote.model";
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from "../../shared/utils/cursor.util";
-import { UserCacheService } from "../../infrastructure/cache/user.cache";
-import { CacheInvalidationService } from "../../infrastructure/cache/cache-invalidation.service";
+import User, { IUser } from '../../models/user.model';
+import Follow, { IFollow } from '../../models/follow.model';
+import Quote, { IQuote } from '../../models/quote.model';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
+import { CloudinaryService } from '../../infrastructure/media/cloudinary.service';
+import { UserCacheService } from '../../infrastructure/cache/user.cache';
+import { CacheInvalidationService } from '../../infrastructure/cache/cache-invalidation.service';
 
 @Injectable()
 export class UsersService {
@@ -27,19 +25,19 @@ export class UsersService {
     @InjectModel(Follow.name) private followModel: Model<IFollow>,
     @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
     private configService: ConfigService,
-    @Inject("CLOUDINARY_SERVICE") private cloudinaryService: any,
+    @Inject('CLOUDINARY_SERVICE') private cloudinaryService: CloudinaryService,
     private readonly userCache: UserCacheService,
-    private readonly cacheInvalidation: CacheInvalidationService,
+    private readonly cacheInvalidation: CacheInvalidationService
   ) { }
 
   private get NOTIFICATIONS_ENABLED(): boolean {
-    return this.configService.get("NOTIFICATIONS_ENABLED") === "true";
+    return this.configService.get('NOTIFICATIONS_ENABLED') === 'true';
   }
 
   async getUserByUsername(username: string, _currentUserId?: string) {
-    const user = await this.userModel.findOne({ username }).select("-password");
+    const user = await this.userModel.findOne({ username }).select('-password');
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException('User not found');
     }
 
     // Cache user profile
@@ -48,11 +46,11 @@ export class UsersService {
     return user;
   }
 
-  async updateUserProfile(userId: string, updateData: any) {
-    const allowedUpdates = ["firstName", "lastName", "bio", "avatarUrl"];
+  async updateUserProfile(userId: string, updateData: Record<string, unknown>) {
+    const allowedUpdates = ['firstName', 'lastName', 'bio', 'avatarUrl'];
 
-    const filteredData: any = {};
-    Object.keys(updateData).forEach((key) => {
+    const filteredData: Record<string, unknown> = {};
+    Object.keys(updateData).forEach(key => {
       if (allowedUpdates.includes(key)) {
         filteredData[key] = updateData[key];
       }
@@ -63,7 +61,7 @@ export class UsersService {
         username: updateData.username,
       });
       if (existing && existing._id.toString() !== userId) {
-        throw new ConflictException("Username already taken");
+        throw new ConflictException('Username already taken');
       }
       filteredData.username = updateData.username;
     }
@@ -75,13 +73,13 @@ export class UsersService {
         {
           new: true,
           runValidators: true,
-          select: "-password",
-        },
+          select: '-password',
+        }
       )
       .lean();
 
     if (!updatedUser) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException('User not found');
     }
 
     // Invalidate user cache after update
@@ -90,22 +88,20 @@ export class UsersService {
     return updatedUser;
   }
 
-  async updateUserAvatar(userId: string, avatarFile: any) {
+  async updateUserAvatar(userId: string, avatarFile: Express.Multer.File) {
     let newAvatarUrl: string;
     const filePath = avatarFile.path;
 
-    const user = await this.userModel.findById(userId).select("avatarUrl");
+    const user = await this.userModel.findById(userId).select('avatarUrl');
     if (!user) {
-      throw new NotFoundException("User not found.");
+      throw new NotFoundException('User not found.');
     }
 
     try {
       newAvatarUrl = await this.cloudinaryService.uploadImage(filePath);
 
       if (user.avatarUrl) {
-        const oldPublicId = this.cloudinaryService.getPublicIdFromUrl(
-          user.avatarUrl,
-        );
+        const oldPublicId = this.cloudinaryService.getPublicIdFromUrl(user.avatarUrl);
 
         if (oldPublicId) {
           await this.cloudinaryService.deleteImage(oldPublicId);
@@ -115,7 +111,7 @@ export class UsersService {
       const updatedUser = await this.userModel.findByIdAndUpdate(
         userId,
         { $set: { avatarUrl: newAvatarUrl } },
-        { new: true, select: "-password" },
+        { new: true, select: '-password' }
       );
 
       await fs.unlink(filePath);
@@ -124,13 +120,17 @@ export class UsersService {
       this.cacheInvalidation.emitUserUpdated(userId);
 
       return updatedUser;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (filePath) {
-        await fs
-          .unlink(filePath)
-          .catch((err) => console.error("Cleanup error:", err));
+        await fs.unlink(filePath).catch(err => console.error('Cleanup error:', err));
       }
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw Object.assign(
+        new Error('An unexpected error occurred while updating user avatar'),
+        { cause: error },
+      );
     }
   }
 
@@ -144,19 +144,16 @@ export class UsersService {
     if (!userId) {
       return await this.userModel
         .find({})
-        .sort({ "stats.followerCount": -1, createdAt: -1 })
+        .sort({ 'stats.followerCount': -1, createdAt: -1 })
         .limit(limit)
-        .select("username firstName lastName avatarUrl bio stats isBanned");
+        .select('username firstName lastName avatarUrl bio stats isBanned');
     }
 
     // Use cache for suggested users
     return await this.userCache.getSuggestedUsers(userId, async () => {
-      const followed = await this.followModel
-        .find({ follower: userId })
-        .select("following")
-        .lean();
+      const followed = await this.followModel.find({ follower: userId }).select('following').lean();
 
-      const followedIds = followed.map((f: any) => f.following);
+      const followedIds = followed.map(f => f.following);
 
       const suggestions = await this.followModel.aggregate([
         {
@@ -166,7 +163,7 @@ export class UsersService {
         },
         {
           $group: {
-            _id: "$following",
+            _id: '$following',
             mutualCount: { $sum: 1 },
           },
         },
@@ -179,20 +176,20 @@ export class UsersService {
         { $limit: limit },
         {
           $lookup: {
-            from: "users",
-            localField: "_id",
-            foreignField: "_id",
-            as: "user",
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'user',
           },
         },
-        { $unwind: "$user" },
+        { $unwind: '$user' },
         {
           $project: {
-            _id: "$user._id",
-            username: "$user.username",
-            firstName: "$user.firstName",
-            lastName: "$user.lastName",
-            avatar: "$user.avatarUrl",
+            _id: '$user._id',
+            username: '$user.username',
+            firstName: '$user.firstName',
+            lastName: '$user.lastName',
+            avatar: '$user.avatarUrl',
             mutualCount: 1,
           },
         },
@@ -204,7 +201,7 @@ export class UsersService {
 
   async toggleFollow(followerId: string, targetId: string) {
     if (followerId === targetId) {
-      throw new BadRequestException("You cannot follow yourself.");
+      throw new BadRequestException('You cannot follow yourself.');
     }
 
     const existingFollow = await this.followModel.findOne({
@@ -216,16 +213,16 @@ export class UsersService {
       await this.followModel.deleteOne({ _id: existingFollow._id });
 
       await this.userModel.findByIdAndUpdate(followerId, {
-        $inc: { "stats.followingCount": -1 },
+        $inc: { 'stats.followingCount': -1 },
       });
       await this.userModel.findByIdAndUpdate(targetId, {
-        $inc: { "stats.followerCount": -1 },
+        $inc: { 'stats.followerCount': -1 },
       });
 
       // Invalidate cache for both users
       this.cacheInvalidation.emitFollowToggled(followerId, targetId);
 
-      return { followed: false, message: "Unfollowed successfully" };
+      return { followed: false, message: 'Unfollowed successfully' };
     } else {
       const newFollow = new this.followModel({
         follower: followerId,
@@ -234,10 +231,10 @@ export class UsersService {
       await newFollow.save();
 
       await this.userModel.findByIdAndUpdate(followerId, {
-        $inc: { "stats.followingCount": 1 },
+        $inc: { 'stats.followingCount': 1 },
       });
       await this.userModel.findByIdAndUpdate(targetId, {
-        $inc: { "stats.followerCount": 1 },
+        $inc: { 'stats.followerCount': 1 },
       });
 
       // Invalidate cache for both users
@@ -246,11 +243,11 @@ export class UsersService {
       if (this.NOTIFICATIONS_ENABLED) {
         // Queue notification job would go here
         process.nextTick(() => {
-          console.log("Notification queued for follow");
+          console.log('Notification queued for follow');
         });
       }
 
-      return { followed: true, message: "Followed successfully" };
+      return { followed: true, message: 'Followed successfully' };
     }
   }
 
@@ -263,14 +260,14 @@ export class UsersService {
     cursor?: string | null;
     limit?: number;
   }) {
-    const query: any = {
+    const query: FilterQuery<IQuote> = {
       creator: userId,
       isRequote: true,
       isHiddenBySystem: false,
     };
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
     }
 
     const quotes = await this.quoteModel
@@ -279,9 +276,7 @@ export class UsersService {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      "_id",
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['_id']);
 
     return {
       quotes: data,
@@ -300,43 +295,38 @@ export class UsersService {
     cursor?: string | null;
     limit?: number;
   }) {
-    const query: any = { following: userId };
+    const query: FilterQuery<IFollow> = { following: userId };
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
     }
 
     const follows = await this.followModel
       .find(query)
       .sort({ _id: -1 })
       .limit(limit + 1)
-      .populate("follower", "username firstName lastName avatarUrl bio stats")
+      .populate('follower', 'username firstName lastName avatarUrl bio stats')
       .lean();
 
-    const { data, pagination } = processPaginatedResults(follows, limit, [
-      "_id",
-    ]);
+    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followerList = data.map((f: any) => f.follower);
-    const followerIds = followerList.map((f: any) => f._id);
+    const followerList = data.map((follow) => follow.follower as unknown as IUser);
+    const followerIds = followerList.map((follower) => String(follower._id));
 
-    let followingStatus: any[] = [];
-    if (currentUserId) {
-      followingStatus = await this.followModel
+    const followingStatus = currentUserId
+      ? await this.followModel
         .find({
           follower: currentUserId,
           following: { $in: followerIds },
         })
-        .select("following")
-        .lean();
-    }
+        .select('following')
+        .lean()
+      : [];
 
-    const followingSet = new Set(
-      followingStatus.map((f: any) => f.following.toString()),
-    );
+    const followingSet = new Set(followingStatus.map((follow) => String(follow.following)));
 
     return {
-      users: followerList.map((user: any) => ({
-        ...user,
+      users: followerList.map(user => ({
+        ...user.toObject?.(),
         isFollowing: followingSet.has(user._id.toString()),
       })),
       pagination,
@@ -354,43 +344,38 @@ export class UsersService {
     cursor?: string | null;
     limit?: number;
   }) {
-    const query: any = { follower: userId };
+    const query: FilterQuery<IFollow> = { follower: userId };
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "_id", -1));
+      Object.assign(query, buildCursorQuery(cursor, '_id', -1));
     }
 
     const follows = await this.followModel
       .find(query)
       .sort({ _id: -1 })
       .limit(limit + 1)
-      .populate("following", "username firstName lastName avatarUrl bio stats")
+      .populate('following', 'username firstName lastName avatarUrl bio stats')
       .lean();
 
-    const { data, pagination } = processPaginatedResults(follows, limit, [
-      "_id",
-    ]);
+    const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followingList = data.map((f: any) => f.following);
-    const followingIds = followingList.map((f: any) => f._id);
+    const followingList = data.map((follow) => follow.following as unknown as IUser);
+    const followingIds = followingList.map((following) => String(following._id));
 
-    let followedByStatus: any[] = [];
-    if (currentUserId) {
-      followedByStatus = await this.followModel
+    const followedByStatus = currentUserId
+      ? await this.followModel
         .find({
           follower: { $in: followingIds },
           following: currentUserId,
         })
-        .select("follower")
-        .lean();
-    }
+        .select('follower')
+        .lean()
+      : [];
 
-    const followedBySet = new Set(
-      followedByStatus.map((f: any) => f.follower.toString()),
-    );
+    const followedBySet = new Set(followedByStatus.map((follow) => String(follow.follower)));
 
     return {
-      following: followingList.map((user: any) => ({
-        ...user,
+      following: followingList.map(user => ({
+        ...user.toObject?.(),
         followsYou: followedBySet.has(user._id.toString()),
       })),
       pagination,

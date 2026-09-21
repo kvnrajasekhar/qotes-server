@@ -1,8 +1,8 @@
-import cloudinary from "../../config/cloudinary.config";
+import cloudinary from '../../config/cloudinary.config';
 
 // unlinkAsync intentionally removed since not used; keep imports minimal
 
-interface CloudinaryService {
+export interface CloudinaryService {
   getPublicIdFromUrl: (imageUrl: string, folderName?: string) => string | null;
   uploadImage: (filePath: string, folderName?: string) => Promise<string>;
   deleteImage: (publicId: string) => Promise<void>;
@@ -15,12 +15,9 @@ const cloudinaryService: CloudinaryService = {
    * @param {string} folderName - The Cloudinary folder (e.g., 'quotes-app/avatars').
    * @returns {string | null} - The Public ID, or null if the URL doesn't match the expected structure.
    */
-  getPublicIdFromUrl: (
-    imageUrl: string,
-    folderName = "quotes-app/avatars",
-  ): string | null => {
-    const folderEscaped = folderName.replace(/[/.]/g, "\\$&");
-    const regex = new RegExp(`${folderEscaped}/([^/]+)\\.`, "i");
+  getPublicIdFromUrl: (imageUrl: string, folderName = 'quotes-app/avatars'): string | null => {
+    const folderEscaped = folderName.replace(/[/.]/g, '\\$&');
+    const regex = new RegExp(`${folderEscaped}/([^/]+)\\.`, 'i');
     const match = imageUrl.match(regex);
     return match ? match[1] : null;
   },
@@ -31,22 +28,17 @@ const cloudinaryService: CloudinaryService = {
    * @param {string} folderName - The Cloudinary folder (e.g., 'qotes-app/avatars').
    * @returns {string}
    */
-  uploadImage: async (
-    filePath: string,
-    folderName = "qotes-app/avatars",
-  ): Promise<string> => {
+  uploadImage: async (filePath: string, folderName = 'qotes-app/avatars'): Promise<string> => {
     try {
       const result = await cloudinary.uploader.upload(filePath, {
         folder: folderName,
-        transformation: [
-          { width: 300, height: 300, crop: "fill", gravity: "face" },
-        ],
-        resource_type: "image",
+        transformation: [{ width: 300, height: 300, crop: 'fill', gravity: 'face' }],
+        resource_type: 'image',
       });
 
       return result.secure_url;
     } catch (error) {
-      console.error("Cloudinary Upload Error:", error);
+      console.error('Cloudinary Upload Error:', error);
       throw error;
     }
   },
@@ -58,10 +50,8 @@ const cloudinaryService: CloudinaryService = {
   deleteImage: async (publicId: string): Promise<void> => {
     try {
       const result = await cloudinary.uploader.destroy(publicId);
-      if (result.result !== "ok") {
-        console.warn(
-          `Cloudinary deletion failed for ID ${publicId}: ${result.result}`,
-        );
+      if (result.result !== 'ok') {
+        console.warn(`Cloudinary deletion failed for ID ${publicId}: ${result.result}`);
       }
     } catch (error) {
       console.error(`Cloudinary deletion error for ID ${publicId}:`, error);

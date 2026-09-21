@@ -43,14 +43,14 @@ const updateUserProfile = async (userId, updateData) => {
 const updateUserAvatar = async (userId, avatarFile) => {
     let newAvatarUrl;
     const filePath = avatarFile.path;
-    const user = (await user_model_1.default.findById(userId).select('avatar'));
+    const user = await user_model_1.default.findById(userId).select('avatarUrl');
     if (!user) {
         throw new Error('User not found.');
     }
     try {
         newAvatarUrl = await cloudinary_service_1.default.uploadImage(filePath);
-        if (user.avatar) {
-            const oldPublicId = cloudinary_service_1.default.getPublicIdFromUrl(user.avatar);
+        if (user.avatarUrl) {
+            const oldPublicId = cloudinary_service_1.default.getPublicIdFromUrl(user.avatarUrl);
             if (oldPublicId) {
                 await cloudinary_service_1.default.deleteImage(oldPublicId);
             }
@@ -74,7 +74,7 @@ const getSuggestedUsers = async ({ userId = null, limit = 8, }) => {
             .select('username firstName lastName avatarUrl bio stats isBanned');
     }
     const followed = await follow_model_1.default.find({ follower: userId }).select('following').lean();
-    const followedIds = followed.map(f => f.following.toString());
+    const followedIds = followed.map(f => String(f.following));
     const suggestions = await follow_model_1.default.aggregate([
         {
             $match: {
@@ -109,7 +109,7 @@ const getSuggestedUsers = async ({ userId = null, limit = 8, }) => {
                 username: '$user.username',
                 firstName: '$user.firstName',
                 lastName: '$user.lastName',
-                avatar: '$user.avatar',
+                avatarUrl: '$user.avatarUrl',
                 mutualCount: 1,
             },
         },
@@ -202,7 +202,7 @@ const getFollowers = async ({ userId, currentUserId, cursor = null, limit = 20, 
             .select('following')
             .lean();
     }
-    const followingSet = new Set(followingStatus.map(f => f.following.toString()));
+    const followingSet = new Set(followingStatus.map(f => String(f.following)));
     return {
         users: followerList.map(user => ({
             ...user,
@@ -233,7 +233,7 @@ const getFollowing = async ({ userId, currentUserId, cursor = null, limit = 20, 
             .select('follower')
             .lean();
     }
-    const followedBySet = new Set(followedByStatus.map(f => f.follower.toString()));
+    const followedBySet = new Set(followedByStatus.map(f => String(f.follower)));
     return {
         following: followingList.map(user => ({
             ...user,

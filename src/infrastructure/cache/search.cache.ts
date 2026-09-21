@@ -11,56 +11,52 @@ export class SearchCacheService {
   /**
    * Cache search results for users
    */
-  async getUserSearchResults<T = any>(query: string, factory: () => Promise<T>): Promise<T> {
+  async getUserSearchResults<T = unknown>(query: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.searchResults(query, 'users'),
       factory,
-      CacheTTL.SHORT,
+      CacheTTL.SHORT
     );
   }
 
   /**
    * Cache search results for quotes
    */
-  async getQuoteSearchResults<T = any>(query: string, factory: () => Promise<T>): Promise<T> {
+  async getQuoteSearchResults<T = unknown>(query: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.searchResults(query, 'quotes'),
       factory,
-      CacheTTL.SHORT,
+      CacheTTL.SHORT
     );
   }
 
   /**
    * Cache search results for hashtags
    */
-  async getHashtagSearchResults<T = any>(query: string, factory: () => Promise<T>): Promise<T> {
+  async getHashtagSearchResults<T = unknown>(query: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.searchResults(query, 'hashtags'),
       factory,
-      CacheTTL.SHORT,
+      CacheTTL.SHORT
     );
   }
 
   /**
    * Cache global search results
    */
-  async getGlobalSearchResults<T = any>(query: string, factory: () => Promise<T>): Promise<T> {
+  async getGlobalSearchResults<T = unknown>(query: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.searchResults(query, 'global'),
       factory,
-      CacheTTL.SHORT,
+      CacheTTL.SHORT
     );
   }
 
   /**
    * Cache trending hashtags
    */
-  async getTrendingHashtags(factory: () => Promise<any[]>): Promise<any[]> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.trendingHashtags(),
-      factory,
-      CacheTTL.MEDIUM_SHORT,
-    );
+  async getTrendingHashtags(factory: () => Promise<unknown[]>): Promise<unknown[]> {
+    return this.cacheManager.getOrSet(RedisKeys.trendingHashtags(), factory, CacheTTL.MEDIUM_SHORT);
   }
 
   /**
@@ -90,7 +86,7 @@ export class SearchCacheService {
   /**
    * Warm up trending hashtags cache
    */
-  async warmUpTrendingHashtags(hashtags: any[]): Promise<void> {
+  async warmUpTrendingHashtags(hashtags: unknown[]): Promise<void> {
     await this.cacheManager.set(RedisKeys.trendingHashtags(), hashtags, CacheTTL.MEDIUM_SHORT);
     this.logger.debug('Warmed up trending hashtags cache');
   }

@@ -17,8 +17,8 @@ let HttpExceptionFilter = class HttpExceptionFilter {
         const errorResponse = {
             success: false,
             statusCode: status,
-            message: exception.message || "An error occurred",
-            errors: typeof exceptionResponse === "object" && "message" in exceptionResponse
+            message: exception.message || 'An error occurred',
+            errors: typeof exceptionResponse === 'object' && 'message' in exceptionResponse
                 ? exceptionResponse.message
                 : [],
         };

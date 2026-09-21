@@ -1,21 +1,21 @@
-import { Controller, Get } from "@nestjs/common";
-import { SystemService } from "./system.service";
+import { Controller, Get } from '@nestjs/common';
+import { SystemService } from './system.service';
 
-@Controller("system")
+@Controller('system')
 export class SystemController {
-  constructor(private systemService: SystemService) { }
+  constructor(private systemService: SystemService) {}
 
-  @Get("health")
+  @Get('health')
   healthCheck() {
     return this.systemService.healthCheck();
   }
 
-  @Get("ready")
+  @Get('ready')
   readyCheck() {
     return this.systemService.readyCheck();
   }
 
-  @Get("metrics")
+  @Get('metrics')
   metrics() {
     return this.systemService.getMetrics();
   }

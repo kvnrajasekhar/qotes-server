@@ -24,7 +24,7 @@ let PreferencesService = class PreferencesService {
     constructor(preferenceModel) {
         this.preferenceModel = preferenceModel;
     }
-    async savePreference({ userId, type, targetId, reason }) {
+    async savePreference({ userId, type, targetId, reason, }) {
         if (!['QUOTE', 'AUTHOR', 'TAG'].includes(type)) {
             throw new common_1.BadRequestException('Invalid type');
         }

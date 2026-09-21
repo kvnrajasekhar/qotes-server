@@ -1,45 +1,40 @@
-import Quote from "../../models/quote.model";
-import Follow from "../../models/follow.model";
-import Block from "../../models/block.model";
-import UserContentPreference from "../../models/userContentPreference.model";
+import { FilterQuery } from 'mongoose';
+import Quote, { IQuote } from '../../models/quote.model';
+import Follow, { IFollow } from '../../models/follow.model';
+import Block, { IUserBlock } from '../../models/block.model';
+import UserContentPreference from '../../models/userContentPreference.model';
 import {
   buildCursorQuery,
   buildCompoundCursorQuery,
   processPaginatedResults,
+} from '../../shared/utils/cursor.util';
 
-} from "../../shared/utils/cursor.util";
+type FeedQuery = FilterQuery<IQuote>;
+
 const quoteService = {
-  getGlobalFeed: async ({ userId, cursor = null, limit = 10 }) => {
-    const query: any = { isHiddenBySystem: { $ne: true } }; // Only show safe content
+  getGlobalFeed: async ({ userId, cursor = null, limit = 10 }: { userId?: string | null; cursor?: string | null; limit?: number }) => {
+    const query: FeedQuery = { isHiddenBySystem: { $ne: true } }; // Only show safe content
 
     if (userId) {
       // 1. Fetch Blocked User IDs (Both ways)
       const blocks = await Block.find({
         $or: [{ blocker: userId }, { blocked: userId }],
-      }).lean();
+      }).lean() as unknown as Array<IUserBlock>;
 
-      const blockedUserIds = blocks.map((b) =>
-        b.blocker.toString() === userId.toString() ? b.blocked : b.blocker,
+      const blockedUserIds = blocks.map(b =>
+        b.blocker.toString() === userId.toString() ? b.blocked : b.blocker
       );
 
       // 2. Fetch User Preferences (Not Interested)
       const preferences = await UserContentPreference.find({ userId }).lean();
 
-      const excludedQuoteIds = preferences
-        .filter((p) => p.type === "QUOTE")
-        .map((p) => p.targetId);
-      const excludedAuthors = preferences
-        .filter((p) => p.type === "AUTHOR")
-        .map((p) => p.targetId);
-      const excludedTags = preferences
-        .filter((p) => p.type === "TAG")
-        .map((p) => p.targetId);
+      const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+      const excludedAuthors = preferences.filter(p => p.type === 'AUTHOR').map(p => p.targetId);
+      const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
 
       // 3. Build the exclusion query
       // Combine blocked users and "not interested" authors
-      const finalExcludedAuthors = [
-        ...new Set([...blockedUserIds, ...excludedAuthors]),
-      ];
+      const finalExcludedAuthors = [...new Set([...blockedUserIds, ...excludedAuthors])];
 
       query._id = { $nin: excludedQuoteIds };
       query.authorId = { $nin: finalExcludedAuthors };
@@ -47,7 +42,7 @@ const quoteService = {
     }
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const quotes = await Quote.find(query)
@@ -55,9 +50,7 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      "createdAt",
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
       quotes: data,
@@ -65,14 +58,9 @@ const quoteService = {
     };
   },
 
-  getUserQuotes: async ({
-    targetUserId,
-    viewerId = null,
-    cursor = null,
-    limit = 10,
-  }) => {
+  getUserQuotes: async ({ targetUserId, viewerId = null, cursor = null, limit = 10 }: { targetUserId: string; viewerId?: string | null; cursor?: string | null; limit?: number }) => {
     // 1. Initial Query: Only show content that belongs to the user and is safe
-    const query: any = {
+    const query: FeedQuery = {
       creator: targetUserId,
       isHiddenBySystem: { $ne: true },
     };
@@ -99,7 +87,7 @@ const quoteService = {
 
     // 3. Pagination Logic
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const quotes = await Quote.find(query)
@@ -107,9 +95,7 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      "createdAt",
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
       quotes: data,
@@ -117,13 +103,11 @@ const quoteService = {
     };
   },
 
-  getFollowingFeed: async ({ userId, cursor = null, limit = 10 }) => {
+  getFollowingFeed: async ({ userId, cursor = null, limit = 10 }: { userId: string; cursor?: string | null; limit?: number }) => {
     // 1. Get the list of people the user follows
-    const follows = await Follow.find({ follower: userId })
-      .select("following")
-      .lean();
+    const follows = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
 
-    let followedUserIds = follows.map((f) => f.following);
+    let followedUserIds = follows.map(f => String(f.following));
 
     if (!followedUserIds.length) {
       return { quotes: [], pagination: { nextCursor: null, hasMore: false } };
@@ -135,32 +119,24 @@ const quoteService = {
       $or: [{ blocker: userId }, { blocked: userId }],
     }).lean();
 
-    const blockedIds = blocks.map((b) =>
-      b.blocker.toString() === userId.toString()
-        ? b.blocked.toString()
-        : b.blocker.toString(),
+    const blockedIds = blocks.map(b =>
+      b.blocker.toString() === userId.toString() ? b.blocked.toString() : b.blocker.toString()
     );
 
     // Filter the following list to remove blocked entities
-    followedUserIds = followedUserIds.filter(
-      (id) => !blockedIds.includes(id.toString()),
-    );
+    followedUserIds = followedUserIds.filter(id => !blockedIds.includes(id.toString()));
 
     // 3. USER PREFERENCES (Not Interested)
     // Even if I follow someone, I might have flagged a specific quote or tag as "Not Interested"
     const preferences = await UserContentPreference.find({ userId }).lean();
 
-    const excludedQuoteIds = preferences
-      .filter((p) => p.type === "QUOTE")
-      .map((p) => p.targetId);
-    const excludedTags = preferences
-      .filter((p) => p.type === "TAG")
-      .map((p) => p.targetId);
+    const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+    const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
     // Note: We don't filter excludedAuthors here because the user is explicitly following them,
     // but you could add that logic if "Muting" is a separate feature.
 
     // 4. CONSTRUCT THE MASTER QUERY
-    const query: any = {
+    const query: FeedQuery = {
       author: { $in: followedUserIds },
       _id: { $nin: excludedQuoteIds },
       tags: { $nin: excludedTags },
@@ -169,10 +145,7 @@ const quoteService = {
 
     // 5. PAGINATION (Tie-breaker cursor logic)
     if (cursor) {
-      Object.assign(
-        query,
-        buildCompoundCursorQuery(cursor, ["createdAt", "_id"], [-1, -1]),
-      );
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1]));
     }
 
     const quotes = await Quote.find(query)
@@ -180,10 +153,7 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      "createdAt",
-      "_id",
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
 
     return {
       quotes: data,
@@ -192,47 +162,39 @@ const quoteService = {
   },
 
   // Discovery feed = popular + recent quotes from outside the user’s network.
-  getDiscoverFeed: async ({ userId, cursor = null, limit = 20 }) => {
+  getDiscoverFeed: async ({ userId, cursor = null, limit = 20 }: { userId?: string | null; cursor?: string | null; limit?: number }) => {
     // 1. Core Discovery Logic: Exclude self
-    const query: any = {
+    const query: FeedQuery = {
       creator: { $ne: userId },
       isHiddenBySystem: { $ne: true }, // Safety: Hide reported content
     };
 
     if (userId) {
       // 2. Fetch people user already follows (don't show them in discover)
-      const follows = await Follow.find({ follower: userId })
-        .select("following")
-        .lean();
-      const followedUserIds = follows.map((f) => f.following);
+      const follows = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
+      const followedUserIds = follows.map(f => f.following);
 
       // 3. Fetch Blocks (Two-way)
       const blocks = await Block.find({
         $or: [{ blocker: userId }, { blocked: userId }],
       }).lean();
-      const blockedIds = blocks.map((b) =>
-        b.blocker.toString() === userId.toString() ? b.blocked : b.blocker,
+      const blockedIds = blocks.map(b =>
+        b.blocker.toString() === userId.toString() ? b.blocked : b.blocker
       );
 
       // 4. Fetch User Preferences (Not Interested)
       const preferences = await UserContentPreference.find({ userId }).lean();
 
-      const excludedQuoteIds = preferences
-        .filter((p) => p.type === "QUOTE")
-        .map((p) => p.targetId);
-      const excludedAuthors = preferences
-        .filter((p) => p.type === "AUTHOR")
-        .map((p) => p.targetId);
-      const excludedTags = preferences
-        .filter((p) => p.type === "TAG")
-        .map((p) => p.targetId);
+      const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+      const excludedAuthors = preferences.filter(p => p.type === 'AUTHOR').map(p => p.targetId);
+      const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
 
       // 5. Combine all Author exclusions: (Following + Blocked + Not Interested Authors)
       const totalExcludedAuthors = [
         ...new Set([
-          ...followedUserIds.map((id) => id.toString()),
-          ...blockedIds.map((id) => id.toString()),
-          ...excludedAuthors.map((id) => id.toString()),
+          ...followedUserIds.map(id => id.toString()),
+          ...blockedIds.map(id => id.toString()),
+          ...excludedAuthors.map(id => id.toString()),
           userId.toString(),
         ]),
       ];
@@ -245,7 +207,7 @@ const quoteService = {
 
     // 7. Pagination
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const quotes = await Quote.find(query)
@@ -253,9 +215,7 @@ const quoteService = {
       .limit(limit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      "createdAt",
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt']);
 
     return {
       quotes: data,

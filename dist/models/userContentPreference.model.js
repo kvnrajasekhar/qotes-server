@@ -38,12 +38,12 @@ const mongoose_1 = __importStar(require("mongoose"));
 const userContentPreferenceSchema = new mongoose_1.Schema({
     userId: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
         required: true,
     },
     type: {
         type: String,
-        enum: ["QUOTE", "AUTHOR", "TAG"],
+        enum: ['QUOTE', 'AUTHOR', 'TAG'],
         required: true,
     },
     targetId: {
@@ -53,13 +53,13 @@ const userContentPreferenceSchema = new mongoose_1.Schema({
     reason: {
         type: String,
         enum: [
-            "NOT_INTERESTED",
-            "SEEN_TOO_MUCH",
-            "SENSITIVE_TOPIC",
-            "OFFENSIVE",
-            "NOT_INSPIRATIONAL",
+            'NOT_INTERESTED',
+            'SEEN_TOO_MUCH',
+            'SENSITIVE_TOPIC',
+            'OFFENSIVE',
+            'NOT_INSPIRATIONAL',
         ],
-        default: "NOT_INTERESTED",
+        default: 'NOT_INTERESTED',
     },
 }, { timestamps: true });
 exports.userContentPreferenceSchema = userContentPreferenceSchema;
@@ -67,5 +67,5 @@ userContentPreferenceSchema.index({ userId: 1, type: 1, targetId: 1 }, { unique:
 userContentPreferenceSchema.index({ userId: 1 });
 userContentPreferenceSchema.index({ userId: 1, type: 1, createdAt: -1 });
 userContentPreferenceSchema.index({ type: 1, targetId: 1 });
-exports.default = mongoose_1.default.model("UserContentPreference", userContentPreferenceSchema);
+exports.default = mongoose_1.default.model('UserContentPreference', userContentPreferenceSchema);
 //# sourceMappingURL=userContentPreference.model.js.map

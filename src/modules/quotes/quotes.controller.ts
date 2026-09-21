@@ -1,16 +1,29 @@
-import { Controller, UseInterceptors, Get, Post, Patch, Delete, Param, Query, UseGuards, Request, Body } from '@nestjs/common';
+import {
+  Controller,
+  UseInterceptors,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  Body,
+} from '@nestjs/common';
 import { QuotesService } from './quotes.service';
 import { ResponseInterceptor } from '../../shared/interceptors/response.interceptor';
 import { AuthGuard } from '../../shared/guards/auth.guard';
+import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-request.interface';
 
 @Controller('quote')
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class QuotesController {
-  constructor(private quotesService: QuotesService) {}
+  constructor(private quotesService: QuotesService) { }
 
   @Post()
-  async createQuote(@Request() req: any, @Body() body: any) {
+  async createQuote(@Request() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
     const {
       text,
       author,
@@ -20,7 +33,16 @@ export class QuotesController {
       isRequote = false,
       parentQuoteId = null,
       isHiddenBySystem = false,
-    } = body;
+    } = body as {
+      text?: string;
+      author?: string;
+      category?: string;
+      hashtags?: string[];
+      taggedUsers?: string[];
+      isRequote?: boolean;
+      parentQuoteId?: string | null;
+      isHiddenBySystem?: boolean;
+    };
 
     if (!isRequote && !text) {
       throw new Error('Quote text is required');
@@ -80,7 +102,7 @@ export class QuotesController {
   }
 
   @Patch(':id')
-  async updateQuote(@Param('id') quoteId: string, @Body() updateData: any) {
+  async updateQuote(@Param('id') quoteId: string, @Body() updateData: Partial<Record<string, unknown>>) {
     const updatedQuote = await this.quotesService.updateQuote(quoteId, updateData);
     if (!updatedQuote) {
       throw new Error('Quote not found or update failed');
@@ -108,7 +130,11 @@ export class QuotesController {
   }
 
   @Get('me')
-  async getQuotesByUser(@Request() req: any, @Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+  async getQuotesByUser(
+    @Request() req: AuthenticatedRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string
+  ) {
     const userId = req.user.id;
     const userQuotes = await this.quotesService.getQuotesByUser({
       userId,

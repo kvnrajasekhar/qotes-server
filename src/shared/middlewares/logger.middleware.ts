@@ -1,35 +1,25 @@
-import { createLogger, withTraceId } from "../logging/logger";
-import { errorResponse } from "../utils/responseFormatter.util";
-import { Request, Response, NextFunction } from "express";
+import { createLogger, withTraceId } from '../logging/logger';
+import { errorResponse } from '../utils/responseFormatter.util';
+import { Request, Response, NextFunction } from 'express';
 
-const logger = createLogger("request-logger");
-
-/* eslint-disable @typescript-eslint/no-namespace */
-declare global {
-  namespace Express {
-    interface Request {
-      traceId?: string;
-      user?: any;
-    }
-  }
-}
+const logger = createLogger('request-logger');
 
 const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const startAt = process.hrtime.bigint();
-  const userId = req.user?.id || req.user?._id || "anonymous";
+  const userId = req.user?.id || req.user?._id || 'anonymous';
 
   const traceId =
-    (req.headers["x-correlation-id"] as string) ||
-    (req.headers["x-trace-id"] as string) ||
+    (req.headers['x-correlation-id'] as string) ||
+    (req.headers['x-trace-id'] as string) ||
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   req.traceId = traceId;
-  res.setHeader("X-Correlation-ID", traceId);
+  res.setHeader('X-Correlation-ID', traceId);
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const durationMs = Number(process.hrtime.bigint() - startAt) / 1e6;
 
     withTraceId(traceId, () => {
-      logger.info("HTTP request completed", {
+      logger.info('HTTP request completed', {
         method: req.method,
         url: req.originalUrl,
         statusCode: res.statusCode,
@@ -37,16 +27,16 @@ const requestLogger = (req: Request, res: Response, next: NextFunction) => {
         userId,
         route: req.route?.path || req.originalUrl,
         ip: req.ip,
-        userAgent: req.headers["user-agent"],
+        userAgent: req.headers['user-agent'],
         referer: req.headers.referer || req.headers.referrer,
       });
     });
   });
 
-  res.on("close", () => {
+  res.on('close', () => {
     if (!res.writableEnded) {
       withTraceId(traceId, () => {
-        logger.warn("HTTP request closed before response finished", {
+        logger.warn('HTTP request closed before response finished', {
           method: req.method,
           url: req.originalUrl,
           userId,
@@ -62,40 +52,32 @@ const requestLogger = (req: Request, res: Response, next: NextFunction) => {
 };
 
 const notFoundHandler = (req: Request, res: Response) => {
-  return errorResponse(res, 404, "Route not found");
+  return errorResponse(res, 404, 'Route not found');
 };
 
-const errorHandler = (
-  err: any,
-  req: Request,
-  res: Response,
-  _next: NextFunction,
-) => {
-  const status = err.status || 500;
-  const userId = req.user?.id || req.user?._id || "anonymous";
+const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const error = err instanceof Error ? err : new Error(String(err));
+  const status =
+    typeof err === 'object' && err !== null && 'status' in err && typeof err.status === 'number'
+      ? err.status
+      : 500;
+  const userId = req.user?.id || req.user?._id || 'anonymous';
 
-  const traceId = req.traceId || "no-trace";
+  const traceId = req.traceId || 'no-trace';
   withTraceId(traceId, () => {
-    logger.error("Unhandled request error", {
+    logger.error('Unhandled request error', {
       status,
       method: req.method,
       path: req.originalUrl,
       userId,
-      error: err,
+      error,
     });
   });
 
   const errors =
-    process.env.NODE_ENV === "production"
-      ? []
-      : [{ message: err.message, stack: err.stack }];
+    process.env.NODE_ENV === 'production' ? [] : [{ message: error.message, stack: error.stack }];
 
-  return errorResponse(
-    res,
-    status,
-    err.message || "Internal server error",
-    errors,
-  );
+  return errorResponse(res, status, error.message || 'Internal server error', errors);
 };
 
 export { requestLogger, notFoundHandler, errorHandler };

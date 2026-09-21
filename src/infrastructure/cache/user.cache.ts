@@ -13,66 +13,46 @@ export class UserCacheService {
    * Cache user profile data
    */
   async getUserProfile(userId: string, factory: () => Promise<IUser>): Promise<IUser> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.userProfile(userId),
-      factory,
-      CacheTTL.MEDIUM_LONG,
-    );
+    return this.cacheManager.getOrSet(RedisKeys.userProfile(userId), factory, CacheTTL.MEDIUM_LONG);
   }
 
   /**
    * Cache user statistics
    */
-  async getUserStats(userId: string, factory: () => Promise<any>): Promise<any> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.userStats(userId),
-      factory,
-      CacheTTL.MEDIUM_SHORT,
-    );
+  async getUserStats(userId: string, factory: () => Promise<unknown>): Promise<unknown> {
+    return this.cacheManager.getOrSet(RedisKeys.userStats(userId), factory, CacheTTL.MEDIUM_SHORT);
   }
 
   /**
    * Cache user's followers list
    */
   async getUserFollowers(userId: string, factory: () => Promise<string[]>): Promise<string[]> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.userFollowers(userId),
-      factory,
-      CacheTTL.LONG,
-    );
+    return this.cacheManager.getOrSet(RedisKeys.userFollowers(userId), factory, CacheTTL.LONG);
   }
 
   /**
    * Cache user's following list
    */
   async getUserFollowing(userId: string, factory: () => Promise<string[]>): Promise<string[]> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.userFollowing(userId),
-      factory,
-      CacheTTL.LONG,
-    );
+    return this.cacheManager.getOrSet(RedisKeys.userFollowing(userId), factory, CacheTTL.LONG);
   }
 
   /**
    * Cache user preferences
    */
-  async getUserPreferences(userId: string, factory: () => Promise<any>): Promise<any> {
+  async getUserPreferences(userId: string, factory: () => Promise<unknown>): Promise<unknown> {
     return this.cacheManager.getOrSet(
       RedisKeys.userPreferences(userId),
       factory,
-      CacheTTL.VERY_LONG,
+      CacheTTL.VERY_LONG
     );
   }
 
   /**
    * Cache suggested users for a user
    */
-  async getSuggestedUsers(userId: string, factory: () => Promise<any[]>): Promise<any[]> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.suggestedUsers(userId),
-      factory,
-      CacheTTL.MEDIUM,
-    );
+  async getSuggestedUsers(userId: string, factory: () => Promise<unknown[]>): Promise<unknown[]> {
+    return this.cacheManager.getOrSet(RedisKeys.suggestedUsers(userId), factory, CacheTTL.MEDIUM);
   }
 
   /**
@@ -86,13 +66,16 @@ export class UserCacheService {
   /**
    * Warm up user cache on login
    */
-  async warmUpUserCache(userId: string, data: {
-    profile?: IUser;
-    stats?: any;
-    followers?: string[];
-    following?: string[];
-  }): Promise<void> {
-    const promises: Promise<any>[] = [];
+  async warmUpUserCache(
+    userId: string,
+    data: {
+      profile?: IUser;
+      stats?: any;
+      followers?: string[];
+      following?: string[];
+    }
+  ): Promise<void> {
+    const promises: Promise<boolean>[] = [];
 
     if (data.profile) {
       promises.push(

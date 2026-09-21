@@ -9,38 +9,38 @@ import {
   HttpCode,
   HttpStatus,
   UseInterceptors,
-} from "@nestjs/common";
-import { Response } from "express";
-import { Throttle } from "@nestjs/throttler";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
-import { extname } from "path";
-import { AuthService } from "./auth.service";
-import { AuthenticatedRequest } from "../../shared/interfaces/authenticated-request.interface";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { ResponseInterceptor } from "../../shared/interceptors/response.interceptor";
-import bcrypt from "bcryptjs";
+} from '@nestjs/common';
+import { Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { AuthService } from './auth.service';
+import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-request.interface';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { ResponseInterceptor } from '../../shared/interceptors/response.interceptor';
+import bcrypt from 'bcryptjs';
 
 // Multer configuration for file uploads
 const multerConfig = {
   storage: diskStorage({
-    destination: "./uploads",
-    filename: (req: any, file: any, cb: any) => {
+    destination: './uploads',
+    filename: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
       const randomName = Array(32)
         .fill(null)
         .map(() => Math.round(Math.random() * 16).toString(16))
-        .join("");
+        .join('');
       cb(null, `${randomName}${extname(file.originalname)}`);
     },
   }),
 };
 
-@Controller("auth")
+@Controller('auth')
 @UseInterceptors(ResponseInterceptor)
 export class AuthController {
   constructor(private authService: AuthService) { }
 
-  @Post("login")
+  @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   async login(@Req() req: AuthenticatedRequest, @Res() res: Response) {
@@ -49,19 +49,19 @@ export class AuthController {
     const result = await this.authService.login(identifier, password);
 
     if (!result) {
-      throw new Error("Invalid credentials");
+      throw new Error('Invalid credentials');
     }
 
-    res.cookie("refreshToken", result.refreshToken, {
+    res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(HttpStatus.OK).json({
       success: true,
       statusCode: HttpStatus.OK,
-      message: "Login successful",
+      message: 'Login successful',
       data: {
         accessToken: result.accessToken,
         userId: result.userId,
@@ -69,18 +69,17 @@ export class AuthController {
     });
   }
 
-  @Post("signup")
+  @Post('signup')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @UseInterceptors(FileInterceptor("avatar", multerConfig))
+  @UseInterceptors(FileInterceptor('avatar', multerConfig))
   async signup(@Req() req: AuthenticatedRequest) {
     const { username, email, password, firstName, lastName, bio } = req.body;
     const avatarFile = req.file || null;
 
-    const existingUser =
-      await this.authService.findUserByUsernameOrEmail(username);
+    const existingUser = await this.authService.findUserByUsernameOrEmail(username);
 
     if (existingUser) {
-      throw new Error("Username already exists");
+      throw new Error('Username already exists');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -92,18 +91,18 @@ export class AuthController {
       firstName,
       lastName,
       bio,
-      avatarFile,
+      avatarFile
     );
 
     return {
       success: true,
       statusCode: HttpStatus.CREATED,
-      message: "User registered successfully",
+      message: 'User registered successfully',
       data: {},
     };
   }
 
-  @Post("logout")
+  @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: AuthenticatedRequest, @Res() res: Response) {
     const refreshToken = req.cookies.refreshToken;
@@ -112,37 +111,36 @@ export class AuthController {
       await this.authService.deleteRefreshToken(refreshToken);
     }
 
-    res.clearCookie("refreshToken");
+    res.clearCookie('refreshToken');
     return res.status(HttpStatus.OK).json({
       success: true,
       statusCode: HttpStatus.OK,
-      message: "Logged out successfully",
+      message: 'Logged out successfully',
       data: {},
     });
   }
 
-  @Post("refresh")
+  @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: AuthenticatedRequest) {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
-      throw new Error("Refresh token not found");
+      throw new Error('Refresh token not found');
     }
 
-    const { accessToken } =
-      await this.authService.refreshAccessToken(refreshToken);
+    const { accessToken } = await this.authService.refreshAccessToken(refreshToken);
 
     return {
       success: true,
       statusCode: HttpStatus.OK,
-      message: "Token refreshed successfully",
+      message: 'Token refreshed successfully',
       data: { accessToken },
     };
   }
 
-  @Post("forgot-password")
+  @Post('forgot-password')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() body: { email: string }) {
@@ -157,20 +155,20 @@ export class AuthController {
     };
   }
 
-  @Post("forgotpassword/:userId/:token")
+  @Post('forgotpassword/:userId/:token')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   async resetPassword(
-    @Param("userId") userId: string,
-    @Param("token") token: string,
-    @Body() body: { newPassword: string; cnfPassword: string },
+    @Param('userId') userId: string,
+    @Param('token') token: string,
+    @Body() body: { newPassword: string; cnfPassword: string }
   ) {
     const { newPassword, cnfPassword } = body;
     const result = await this.authService.resetPasswordWithToken(
       userId,
       token,
       newPassword,
-      cnfPassword,
+      cnfPassword
     );
 
     return {
@@ -181,7 +179,7 @@ export class AuthController {
     };
   }
 
-  @Post("update-password")
+  @Post('update-password')
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
@@ -189,7 +187,7 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
     @Res() res: Response,
     @Body()
-    body: { oldPassword: string; newPassword: string; confirmPassword: string },
+    body: { oldPassword: string; newPassword: string; confirmPassword: string }
   ) {
     const userId = req.user?.userId;
     const { oldPassword, newPassword, confirmPassword } = body;
@@ -198,10 +196,10 @@ export class AuthController {
       userId,
       oldPassword,
       newPassword,
-      confirmPassword,
+      confirmPassword
     );
 
-    res.clearCookie("refreshToken");
+    res.clearCookie('refreshToken');
 
     return res.status(HttpStatus.OK).json({
       success: true,

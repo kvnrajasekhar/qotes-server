@@ -84,8 +84,12 @@ let SafetyService = class SafetyService {
             return stats;
         }
         catch (err) {
-            if (err.code === 11000)
+            if (typeof err === 'object' &&
+                err !== null &&
+                'code' in err &&
+                err.code === 11000) {
                 throw new common_1.ConflictException("Already reported.");
+            }
             throw err;
         }
     }

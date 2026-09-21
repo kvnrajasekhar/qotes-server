@@ -1,11 +1,6 @@
-import mongoose from "mongoose";
-import {
-  redis,
-  RedisKeys,
-  cacheGet,
-  cacheHGetAll,
-} from "../../shared/utils/redis.utils";
-import Reaction from "../../models/reaction.model";
+import mongoose from 'mongoose';
+import { redis, RedisKeys, cacheGet, cacheHGetAll } from '../../shared/utils/redis.utils';
+import Reaction from '../../models/reaction.model';
 
 const CACHE_TTL_SECONDS = 3600;
 
@@ -14,9 +9,7 @@ interface ReactionBreakdown {
   total: number;
 }
 
-async function getReactionBreakdown(
-  quoteId: string,
-): Promise<ReactionBreakdown> {
+async function getReactionBreakdown(quoteId: string): Promise<ReactionBreakdown> {
   try {
     const [breakdown, total] = await Promise.all([
       cacheHGetAll(RedisKeys.reactionBreakdown(quoteId)),
@@ -26,7 +19,7 @@ async function getReactionBreakdown(
     if (!total || Object.keys(breakdown).length === 0) {
       const agg = await Reaction.aggregate([
         { $match: { quoteId: new mongoose.Types.ObjectId(quoteId) } },
-        { $group: { _id: "$type", count: { $sum: 1 } } },
+        { $group: { _id: '$type', count: { $sum: 1 } } },
       ]);
 
       const repairedBreakdown: Record<string, number> = {};
@@ -62,7 +55,7 @@ async function atomicUpdateCache(
   quoteId: string,
   type: string,
   delta: number,
-  oldType?: string,
+  oldType?: string
 ): Promise<any> {
   try {
     return await (redis as any).updateReaction(
@@ -70,7 +63,7 @@ async function atomicUpdateCache(
       RedisKeys.reactionTotal(quoteId),
       type,
       delta,
-      oldType || "none",
+      oldType || 'none'
     );
   } catch {
     return null;

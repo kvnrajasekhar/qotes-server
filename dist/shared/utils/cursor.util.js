@@ -8,16 +8,11 @@ exports.getNextCursor = getNextCursor;
 exports.processPaginatedResults = processPaginatedResults;
 function encodeCursor(data) {
     const jsonString = JSON.stringify(data);
-    return Buffer.from(jsonString).toString("base64");
+    return Buffer.from(jsonString).toString('base64');
 }
 function decodeCursor(cursor) {
-    try {
-        const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
-        return JSON.parse(jsonString);
-    }
-    catch (error) {
-        throw new Error("Invalid cursor format");
-    }
+    const jsonString = Buffer.from(cursor, 'base64').toString('utf-8');
+    return JSON.parse(jsonString);
 }
 function buildCursorQuery(cursor, field, direction = -1) {
     if (!cursor)
@@ -44,27 +39,22 @@ function buildCompoundCursorQuery(cursor, fields, directions) {
         for (let j = 0; j < i; j++) {
             condition[fields[j]] = decoded[fields[j]];
         }
-        if (direction === -1) {
-            condition[field] = { $lt: value };
-        }
-        else {
-            condition[field] = { $gt: value };
-        }
+        condition[field] = direction === -1 ? { $lt: value } : { $gt: value };
         query.$or.push(condition);
     }
     return query;
 }
-function getNextCursor(results, limit, fields = ["createdAt"]) {
+function getNextCursor(results, limit, fields = ['createdAt']) {
     if (results.length <= limit)
         return null;
     const lastItem = results[results.length - 1];
     const cursorData = {};
-    fields.forEach((field) => {
+    fields.forEach(field => {
         cursorData[field] = lastItem[field];
     });
     return encodeCursor(cursorData);
 }
-function processPaginatedResults(results, limit, cursorFields = ["createdAt"]) {
+function processPaginatedResults(results, limit, cursorFields = ['createdAt']) {
     const hasMore = results.length > limit;
     const data = hasMore ? results.slice(0, limit) : results;
     return {
@@ -72,7 +62,8 @@ function processPaginatedResults(results, limit, cursorFields = ["createdAt"]) {
         pagination: {
             nextCursor: hasMore && data.length > 0
                 ? encodeCursor(cursorFields.reduce((acc, field) => {
-                    acc[field] = data[data.length - 1][field];
+                    const item = data[data.length - 1];
+                    acc[field] = item[field];
                     return acc;
                 }, {}))
                 : null,

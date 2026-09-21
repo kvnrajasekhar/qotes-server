@@ -14,7 +14,7 @@ export interface CursorData {
  */
 export function encodeCursor(data: CursorData): string {
   const jsonString = JSON.stringify(data);
-  return Buffer.from(jsonString).toString("base64");
+  return Buffer.from(jsonString).toString('base64');
 }
 
 /**
@@ -23,7 +23,7 @@ export function encodeCursor(data: CursorData): string {
  * @returns Decoded cursor data object
  */
 export function decodeCursor(cursor: string): CursorData {
-  const jsonString = Buffer.from(cursor, "base64").toString("utf-8");
+  const jsonString = Buffer.from(cursor, 'base64').toString('utf-8');
   return JSON.parse(jsonString);
 }
 
@@ -34,11 +34,13 @@ export function decodeCursor(cursor: string): CursorData {
  * @param direction - Sort direction: -1 for descending, 1 for ascending
  * @returns MongoDB query object
  */
+export type CursorQuery = Record<string, unknown>;
+
 export function buildCursorQuery(
   cursor: string | null,
   field: string,
-  direction: -1 | 1 = -1,
-): any {
+  direction: -1 | 1 = -1
+): CursorQuery {
   if (!cursor) return {};
 
   const decoded = decodeCursor(cursor);
@@ -61,12 +63,12 @@ export function buildCursorQuery(
 export function buildCompoundCursorQuery(
   cursor: string | null,
   fields: string[],
-  directions: (-1 | 1)[],
-): any {
+  directions: (-1 | 1)[]
+): CursorQuery {
   if (!cursor) return {};
 
   const decoded = decodeCursor(cursor);
-  const query: any = { $or: [] };
+  const query: CursorQuery = { $or: [] };
 
   // Build compound query for tie-breaking
   for (let i = 0; i < fields.length; i++) {
@@ -74,7 +76,7 @@ export function buildCompoundCursorQuery(
     const direction = directions[i];
     const value = decoded[field];
 
-    const condition: any = {};
+    const condition: CursorQuery = {};
 
     // Add equality conditions for all previous fields
     for (let j = 0; j < i; j++) {
@@ -82,13 +84,9 @@ export function buildCompoundCursorQuery(
     }
 
     // Add inequality condition for current field
-    if (direction === -1) {
-      condition[field] = { $lt: value };
-    } else {
-      condition[field] = { $gt: value };
-    }
+    condition[field] = direction === -1 ? { $lt: value } : { $gt: value };
 
-    query.$or.push(condition);
+    (query.$or as unknown[]).push(condition);
   }
 
   return query;
@@ -102,16 +100,16 @@ export function buildCompoundCursorQuery(
  * @returns Next cursor string or null
  */
 export function getNextCursor(
-  results: any[],
+  results: unknown[],
   limit: number,
-  fields: string[] = ["createdAt"],
+  fields: string[] = ['createdAt']
 ): string | null {
   if (results.length <= limit) return null;
 
-  const lastItem = results[results.length - 1];
+  const lastItem = results[results.length - 1] as Record<string, CursorData[string]>;
   const cursorData: CursorData = {};
 
-  fields.forEach((field) => {
+  fields.forEach(field => {
     cursorData[field] = lastItem[field];
   });
 
@@ -136,7 +134,7 @@ export interface PaginationResponse {
 export function processPaginatedResults<T>(
   results: T[],
   limit: number,
-  cursorFields: string[] = ["createdAt"],
+  cursorFields: string[] = ['createdAt']
 ): { data: T[]; pagination: PaginationResponse } {
   const hasMore = results.length > limit;
   const data = hasMore ? results.slice(0, limit) : results;
@@ -148,9 +146,10 @@ export function processPaginatedResults<T>(
         hasMore && data.length > 0
           ? encodeCursor(
             cursorFields.reduce((acc, field) => {
-              acc[field] = (data[data.length - 1] as any)[field];
+              const item = data[data.length - 1] as unknown as Record<string, unknown>;
+              acc[field] = item[field] as string | number | Date;
               return acc;
-            }, {} as CursorData),
+            }, {} as CursorData)
           )
           : null,
       hasMore,

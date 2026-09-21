@@ -25,7 +25,7 @@ import { AuthenticatedRequest } from "../../shared/interfaces/authenticated-requ
 const multerConfig = {
   storage: diskStorage({
     destination: "./uploads",
-    filename: (req: any, file: any, cb: any) => {
+    filename: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename?: string) => void) => {
       const randomName = Array(32)
         .fill(null)
         .map(() => Math.round(Math.random() * 16).toString(16))
@@ -38,7 +38,7 @@ const multerConfig = {
 @Controller("user")
 @UseInterceptors(ResponseInterceptor)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private usersService: UsersService) { }
 
   @Get("suggested")
   @UseGuards(JwtAuthGuard)
@@ -107,7 +107,10 @@ export class UsersController {
 
   @Patch("profile/me")
   @UseGuards(JwtAuthGuard)
-  async updateProfile(@Req() req: AuthenticatedRequest, @Body() body: any) {
+  async updateProfile(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Partial<{ firstName?: string; lastName?: string; email?: string }>
+  ) {
     const userId = req.user.id;
     const { firstName, lastName, email } = body;
     const updateUserProfile = await this.usersService.updateUserProfile(
@@ -131,7 +134,7 @@ export class UsersController {
   @UseInterceptors(FileInterceptor("avatar", multerConfig))
   async updateAvatar(
     @Req() req: AuthenticatedRequest,
-    @UploadedFile() avatarFile: any,
+    @UploadedFile() avatarFile: Express.Multer.File,
   ) {
     const userId = req.user.userId;
 

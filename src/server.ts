@@ -1,17 +1,16 @@
-import dotenv from "dotenv";
-
-import logger from "./shared/utils/logger.util";
-import app from "./app";
-import { connectToDatabase } from "./config/database";
-import { connectKafka } from "./infrastructure/kafka/config/kafka.config";
-import initTopics from "./infrastructure/kafka/initTopics";
-import { initializeSocket } from "./modules/notifications/notification.socket";
+import dotenv from 'dotenv';
+import logger from './shared/utils/logger.util';
+import app from './app';
+import { connectToDatabase } from './config/database';
+import { connectKafka } from './infrastructure/kafka/config/kafka.config';
+import initTopics from './infrastructure/kafka/initTopics';
+import { initializeSocket } from './modules/notifications/notification.socket';
 
 dotenv.config();
 
 const port = process.env.PORT || 3030;
 
-declare module "express" {
+declare module 'express' {
   interface Application {
     locals: {
       kafkaReady?: boolean;
@@ -20,33 +19,40 @@ declare module "express" {
   }
 }
 
-process.on("unhandledRejection", (reason: unknown) => {
-  logger.error("Unhandled promise rejection", { reason });
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error('Unhandled promise rejection', { reason });
 });
 
-process.on("uncaughtException", (error: Error) => {
-  logger.error("Uncaught exception", { error });
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught exception', { error });
   process.exit(1);
 });
 
 const startOptionalMessaging = async (): Promise<void> => {
+  if (process.env.ENABLE_KAFKA !== 'true') {
+    app.locals.kafkaReady = false;
+    app.locals.kafkaStatus = 'disabled';
+    logger.info('Kafka messaging skipped; set ENABLE_KAFKA=true to enable it', {
+      service: 'kafka',
+      env: process.env.NODE_ENV || 'development',
+    });
+    return;
+  }
+
   try {
-    logger.info("Starting optional Kafka messaging", { service: "kafka" });
+    logger.info('Starting optional Kafka messaging', { service: 'kafka' });
     await connectKafka();
     await initTopics();
     app.locals.kafkaReady = true;
-    app.locals.kafkaStatus = "ready";
-    logger.info("Kafka messaging is ready", { service: "kafka" });
+    app.locals.kafkaStatus = 'ready';
+    logger.info('Kafka messaging is ready', { service: 'kafka' });
   } catch (err) {
     app.locals.kafkaReady = false;
-    app.locals.kafkaStatus = "unavailable";
-    logger.error(
-      "Kafka is unavailable; API will continue without async messaging",
-      {
-        service: "kafka",
-        error: err,
-      },
-    );
+    app.locals.kafkaStatus = 'unavailable';
+    logger.error('Kafka is unavailable; API will continue without async messaging', {
+      service: 'kafka',
+      error: err,
+    });
   }
 };
 
@@ -54,9 +60,9 @@ const startServer = async (): Promise<void> => {
   await connectToDatabase();
 
   const server = app.listen(port, () => {
-    logger.info("HTTP server started", {
+    logger.info('HTTP server started', {
       port,
-      env: process.env.NODE_ENV || "development",
+      env: process.env.NODE_ENV || 'development',
     });
   });
 
@@ -67,6 +73,6 @@ const startServer = async (): Promise<void> => {
 };
 
 startServer().catch((err: Error) => {
-  logger.error("Failed to start API server", { error: err });
+  logger.error('Failed to start API server', { error: err });
   process.exit(1);
 });

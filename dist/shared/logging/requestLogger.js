@@ -1,62 +1,71 @@
-const { v4: uuidv4 } = require("uuid");
-const { createLogger, withTraceId } = require("./logger");
-const logger = createLogger("request-logger");
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.setCorrelationId = exports.asyncRequestLoggerMiddleware = exports.requestLoggerMiddleware = void 0;
+const uuid_1 = require("uuid");
+const logger_1 = require("./logger");
+const logger = (0, logger_1.createLogger)('request-logger');
 const requestLoggerMiddleware = (req, res, next) => {
-    let traceId = req.headers["x-correlation-id"] || req.headers["x-trace-id"];
-    if (!traceId) {
-        traceId = `${Date.now()}-${uuidv4()}`;
-    }
+    const headerId = Array.isArray(req.headers['x-correlation-id'])
+        ? req.headers['x-correlation-id'][0]
+        : req.headers['x-correlation-id'];
+    const headerTrace = Array.isArray(req.headers['x-trace-id'])
+        ? req.headers['x-trace-id'][0]
+        : req.headers['x-trace-id'];
+    let traceId = headerId || headerTrace || `${Date.now()}-${(0, uuid_1.v4)()}`;
     req.traceId = traceId;
     req.correlationId = traceId;
-    res.setHeader("X-Correlation-ID", traceId);
-    res.setHeader("X-Trace-ID", traceId);
+    res.setHeader('X-Correlation-ID', traceId);
+    res.setHeader('X-Trace-ID', traceId);
     const requestStart = Date.now();
-    const originalEnd = res.end;
+    const originalEnd = res.end.bind(res);
     res.end = function (...args) {
         const responseTime = Date.now() - requestStart;
-        originalEnd.apply(res, args);
-        withTraceId(traceId, () => {
+        const ret = originalEnd(...args);
+        (0, logger_1.withTraceId)(traceId, () => {
             const logData = {
                 method: req.method,
                 url: req.originalUrl || req.url,
                 statusCode: res.statusCode,
                 responseTime: `${responseTime}ms`,
                 ip: req.ip || req.connection.remoteAddress,
-                userAgent: req.get("user-agent"),
+                userAgent: req.get('user-agent'),
                 correlationId: traceId,
             };
             if (res.statusCode >= 500) {
-                logger.error("HTTP Request", {
+                logger.error('HTTP Request', {
                     ...logData,
                     errorStatus: true,
                 });
             }
             else if (res.statusCode >= 400) {
-                logger.warn("HTTP Request", {
+                logger.warn('HTTP Request', {
                     ...logData,
                     clientError: true,
                 });
             }
             else {
-                logger.info("HTTP Request", logData);
+                logger.info('HTTP Request', logData);
             }
         });
+        return ret;
     };
-    withTraceId(traceId, () => {
-        next();
-    });
+    (0, logger_1.withTraceId)(traceId, () => next());
 };
+exports.requestLoggerMiddleware = requestLoggerMiddleware;
 const asyncRequestLoggerMiddleware = (req, res, next) => {
-    const traceId = req.headers["x-correlation-id"] || `${Date.now()}-${uuidv4()}`;
+    const headerId = Array.isArray(req.headers['x-correlation-id'])
+        ? req.headers['x-correlation-id'][0]
+        : req.headers['x-correlation-id'];
+    const traceId = headerId || `${Date.now()}-${(0, uuid_1.v4)()}`;
     req.traceId = traceId;
     req.correlationId = traceId;
-    res.setHeader("X-Correlation-ID", traceId);
+    res.setHeader('X-Correlation-ID', traceId);
     const requestStart = Date.now();
-    const originalEnd = res.end;
+    const originalEnd = res.end.bind(res);
     res.end = function (...args) {
         const responseTime = Date.now() - requestStart;
-        originalEnd.apply(res, args);
-        withTraceId(traceId, () => {
+        const ret = originalEnd(...args);
+        (0, logger_1.withTraceId)(traceId, () => {
             const logData = {
                 method: req.method,
                 url: req.originalUrl || req.url,
@@ -65,27 +74,25 @@ const asyncRequestLoggerMiddleware = (req, res, next) => {
                 correlationId: traceId,
             };
             if (res.statusCode >= 500) {
-                logger.error("HTTP Request Error", logData);
+                logger.error('HTTP Request Error', logData);
             }
             else if (res.statusCode >= 400) {
-                logger.warn("HTTP Request Warning", logData);
+                logger.warn('HTTP Request Warning', logData);
             }
             else {
-                logger.info("HTTP Request Success", logData);
+                logger.info('HTTP Request Success', logData);
             }
         });
+        return ret;
     };
-    withTraceId(traceId, () => next());
+    (0, logger_1.withTraceId)(traceId, () => next());
 };
+exports.asyncRequestLoggerMiddleware = asyncRequestLoggerMiddleware;
 const setCorrelationId = (req, res, next) => {
-    const traceId = req.headers["x-correlation-id"] || `${Date.now()}-${uuidv4()}`;
+    const traceId = req.headers['x-correlation-id'] || `${Date.now()}-${(0, uuid_1.v4)()}`;
     req.traceId = traceId;
-    res.setHeader("X-Correlation-ID", traceId);
+    res.setHeader('X-Correlation-ID', traceId);
     next();
 };
-module.exports = {
-    requestLoggerMiddleware,
-    asyncRequestLoggerMiddleware,
-    setCorrelationId,
-};
+exports.setCorrelationId = setCorrelationId;
 //# sourceMappingURL=requestLogger.js.map

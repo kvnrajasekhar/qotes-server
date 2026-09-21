@@ -38,9 +38,9 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
-                envFilePath: ".env",
+                envFilePath: '.env',
             }),
-            mongoose_1.MongooseModule.forRoot(process.env.MONGO_URI || "mongodb://localhost:27017/qotes"),
+            mongoose_1.MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/qotes'),
             throttler_1.ThrottlerModule.forRoot([
                 {
                     ttl: 60000,

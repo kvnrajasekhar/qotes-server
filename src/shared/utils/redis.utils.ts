@@ -1,49 +1,91 @@
-import Redis from "ioredis";
-import dotenv from "dotenv";
-import logger from "./logger.util";
+import Redis from 'ioredis';
+import dotenv from 'dotenv';
+import logger from './logger.util';
 
 dotenv.config();
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || "127.0.0.1",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  maxRetriesPerRequest: null,
+export interface RedisWithCustomCommands extends Redis {
+  updateReaction(
+    breakdownKey: string,
+    totalKey: string,
+    type: string,
+    delta: number,
+    oldType: string,
+  ): Promise<number>;
+  slidingWindowRateLimit(
+    burstKey: string,
+    sustainedKey: string,
+    now: number,
+    burstWindowMs: number,
+    burstLimit: number,
+    sustainedWindowMs: number,
+    sustainedLimit: number,
+  ): Promise<number>;
+}
+
+const rawRedisUrl = process.env.REDIS_URL;
+
+if (!rawRedisUrl) {
+  throw new Error('REDIS_URL environment variable is required');
+}
+
+// Ensure the protocol is rediss:// for Upstash managed TLS
+const formattedRedisUrl = rawRedisUrl.startsWith('redis://')
+  ? rawRedisUrl.replace('redis://', 'rediss://')
+  : rawRedisUrl;
+
+const isTlsRequired = formattedRedisUrl.startsWith('rediss://');
+
+const redis = new Redis(formattedRedisUrl, {
+  // Required for TLS handshakes with Upstash SNI
+  tls: isTlsRequired
+    ? {
+        rejectUnauthorized: false, // Prevents self-signed or intermediate chain rejections
+      }
+    : undefined,
+  family: 4, // Force IPv4 to prevent hanging on dual-stack cloud networks
+  maxRetriesPerRequest: 3, // Fail fast so calling functions can fall back instead of hanging
   enableReadyCheck: true,
+  keepAlive: 30000,
+  connectTimeout: 10000, // 10s connection timeout
   retryStrategy(times: number) {
-    return Math.min(times * 50, 2000);
+    if (times > 10) {
+      logger.error('Redis max retry attempts reached', { service: 'redis', attempts: times });
+      return null; // Stop infinite reconnect loops
+    }
+    return Math.min(times * 100, 3000);
   },
-});
+}) as RedisWithCustomCommands;
 
-redis.on("connect", () => {
-  logger.info("Redis connected", {
-    service: "redis",
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: process.env.REDIS_PORT || 6379,
+redis.on('connect', () => {
+  logger.info('Redis connected via socket', {
+    service: 'redis',
   });
 });
 
-redis.on("ready", () => {
-  logger.info("Redis ready to accept commands", {
-    service: "redis",
+redis.on('ready', () => {
+  logger.info('Redis ready to accept commands from Upstash', {
+    service: 'redis',
   });
 });
 
-redis.on("error", (error: Error) => {
-  logger.error("Redis connection error", {
-    service: "redis",
-    error,
+redis.on('error', (error: Error) => {
+  logger.error('Redis connection error', {
+    service: 'redis',
+    error: error.message,
+    stack: error.stack,
   });
 });
 
-redis.on("reconnecting", (delay: number) => {
-  logger.warn("Redis reconnecting", {
-    service: "redis",
+redis.on('reconnecting', (delay: number) => {
+  logger.warn('Redis reconnecting', {
+    service: 'redis',
     delay,
   });
 });
 
 // Serialization helpers
-const serialize = (value: any): string => {
+const serialize = (value: unknown): string => {
   if (typeof value === 'string') return value;
   return JSON.stringify(value);
 };
@@ -61,17 +103,17 @@ const deserialize = <T>(value: string | null): T | null => {
 const cacheGetTyped = async <T>(key: string): Promise<T | null> => {
   try {
     const value = await redis.get(key);
-    logger.debug("Redis cache lookup", {
-      service: "redis",
-      operation: "getTyped",
+    logger.debug('Redis cache lookup', {
+      service: 'redis',
+      operation: 'getTyped',
       key,
       hit: value !== null,
     });
     return deserialize<T>(value);
   } catch (error) {
-    logger.error("Redis cache get typed failed", {
-      service: "redis",
-      operation: "getTyped",
+    logger.error('Redis cache get typed failed', {
+      service: 'redis',
+      operation: 'getTyped',
       key,
       error,
     });
@@ -79,28 +121,24 @@ const cacheGetTyped = async <T>(key: string): Promise<T | null> => {
   }
 };
 
-const cacheSetTyped = async <T>(
-  key: string,
-  value: T,
-  ttlSeconds?: number,
-): Promise<boolean> => {
+const cacheSetTyped = async <T>(key: string, value: T, ttlSeconds?: number): Promise<boolean> => {
   try {
     const serialized = serialize(value);
     const result = ttlSeconds
-      ? await redis.set(key, serialized, "EX", ttlSeconds)
+      ? await redis.set(key, serialized, 'EX', ttlSeconds)
       : await redis.set(key, serialized);
-    logger.debug("Redis cache write", {
-      service: "redis",
-      operation: "setTyped",
+    logger.debug('Redis cache write', {
+      service: 'redis',
+      operation: 'setTyped',
       key,
       ttlSeconds,
       result,
     });
-    return result === "OK";
+    return result === 'OK';
   } catch (error) {
-    logger.error("Redis cache set typed failed", {
-      service: "redis",
-      operation: "setTyped",
+    logger.error('Redis cache set typed failed', {
+      service: 'redis',
+      operation: 'setTyped',
       key,
       ttlSeconds,
       error,
@@ -112,21 +150,21 @@ const cacheSetTyped = async <T>(
 const cacheGetOrSet = async <T>(
   key: string,
   factory: () => Promise<T>,
-  ttlSeconds?: number,
+  ttlSeconds?: number
 ): Promise<T> => {
   try {
     const cached = await cacheGetTyped<T>(key);
     if (cached !== null) {
       return cached;
     }
-    
+
     const value = await factory();
     await cacheSetTyped(key, value, ttlSeconds);
     return value;
   } catch (error) {
-    logger.error("Redis cache getOrSet failed", {
-      service: "redis",
-      operation: "getOrSet",
+    logger.error('Redis cache getOrSet failed', {
+      service: 'redis',
+      operation: 'getOrSet',
       key,
       error,
     });
@@ -139,20 +177,20 @@ const cacheDelPattern = async (pattern: string): Promise<number> => {
   try {
     const keys = await redis.keys(pattern);
     if (keys.length === 0) return 0;
-    
+
     const result = await redis.del(...keys);
-    logger.debug("Redis cache pattern delete", {
-      service: "redis",
-      operation: "delPattern",
+    logger.debug('Redis cache pattern delete', {
+      service: 'redis',
+      operation: 'delPattern',
       pattern,
       keysCount: keys.length,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache del pattern failed", {
-      service: "redis",
-      operation: "delPattern",
+    logger.error('Redis cache del pattern failed', {
+      service: 'redis',
+      operation: 'delPattern',
       pattern,
       error,
     });
@@ -163,18 +201,18 @@ const cacheDelPattern = async (pattern: string): Promise<number> => {
 const cacheExpire = async (key: string, ttlSeconds: number): Promise<boolean> => {
   try {
     const result = await redis.expire(key, ttlSeconds);
-    logger.debug("Redis cache expire", {
-      service: "redis",
-      operation: "expire",
+    logger.debug('Redis cache expire', {
+      service: 'redis',
+      operation: 'expire',
       key,
       ttlSeconds,
       result,
     });
     return result === 1;
   } catch (error) {
-    logger.error("Redis cache expire failed", {
-      service: "redis",
-      operation: "expire",
+    logger.error('Redis cache expire failed', {
+      service: 'redis',
+      operation: 'expire',
       key,
       ttlSeconds,
       error,
@@ -186,17 +224,17 @@ const cacheExpire = async (key: string, ttlSeconds: number): Promise<boolean> =>
 const cacheTTL = async (key: string): Promise<number> => {
   try {
     const ttl = await redis.ttl(key);
-    logger.debug("Redis cache TTL check", {
-      service: "redis",
-      operation: "ttl",
+    logger.debug('Redis cache TTL check', {
+      service: 'redis',
+      operation: 'ttl',
       key,
       ttl,
     });
     return ttl;
   } catch (error) {
-    logger.error("Redis cache TTL check failed", {
-      service: "redis",
-      operation: "ttl",
+    logger.error('Redis cache TTL check failed', {
+      service: 'redis',
+      operation: 'ttl',
       key,
       error,
     });
@@ -208,18 +246,18 @@ const cacheTTL = async (key: string): Promise<number> => {
 const cacheHGetTyped = async <T>(key: string, field: string): Promise<T | null> => {
   try {
     const value = await redis.hget(key, field);
-    logger.debug("Redis cache hget", {
-      service: "redis",
-      operation: "hgetTyped",
+    logger.debug('Redis cache hget', {
+      service: 'redis',
+      operation: 'hgetTyped',
       key,
       field,
       hit: value !== null,
     });
     return deserialize<T>(value);
   } catch (error) {
-    logger.error("Redis cache hget typed failed", {
-      service: "redis",
-      operation: "hgetTyped",
+    logger.error('Redis cache hget typed failed', {
+      service: 'redis',
+      operation: 'hgetTyped',
       key,
       field,
       error,
@@ -232,18 +270,18 @@ const cacheHSetTyped = async <T>(key: string, field: string, value: T): Promise<
   try {
     const serialized = serialize(value);
     const result = await redis.hset(key, field, serialized);
-    logger.debug("Redis cache hset", {
-      service: "redis",
-      operation: "hsetTyped",
+    logger.debug('Redis cache hset', {
+      service: 'redis',
+      operation: 'hsetTyped',
       key,
       field,
       result,
     });
     return result >= 0;
   } catch (error) {
-    logger.error("Redis cache hset typed failed", {
-      service: "redis",
-      operation: "hsetTyped",
+    logger.error('Redis cache hset typed failed', {
+      service: 'redis',
+      operation: 'hsetTyped',
       key,
       field,
       error,
@@ -256,23 +294,23 @@ const cacheHGetAllTyped = async <T>(key: string): Promise<Record<string, T>> => 
   try {
     const value = await redis.hgetall(key);
     const result: Record<string, T> = {};
-    
+
     for (const [field, val] of Object.entries(value)) {
       result[field] = deserialize<T>(val);
     }
-    
+
     const hit = Object.keys(result).length > 0;
-    logger.debug("Redis cache hgetall", {
-      service: "redis",
-      operation: "hgetallTyped",
+    logger.debug('Redis cache hgetall', {
+      service: 'redis',
+      operation: 'hgetallTyped',
       key,
       hit,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache hgetall typed failed", {
-      service: "redis",
-      operation: "hgetallTyped",
+    logger.error('Redis cache hgetall typed failed', {
+      service: 'redis',
+      operation: 'hgetallTyped',
       key,
       error,
     });
@@ -283,18 +321,18 @@ const cacheHGetAllTyped = async <T>(key: string): Promise<Record<string, T>> => 
 const cacheHDel = async (key: string, ...fields: string[]): Promise<number> => {
   try {
     const result = await redis.hdel(key, ...fields);
-    logger.debug("Redis cache hdel", {
-      service: "redis",
-      operation: "hdel",
+    logger.debug('Redis cache hdel', {
+      service: 'redis',
+      operation: 'hdel',
       key,
       fields,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache hdel failed", {
-      service: "redis",
-      operation: "hdel",
+    logger.error('Redis cache hdel failed', {
+      service: 'redis',
+      operation: 'hdel',
       key,
       fields,
       error,
@@ -307,18 +345,18 @@ const cacheHDel = async (key: string, ...fields: string[]): Promise<number> => {
 const cacheSAdd = async (key: string, ...members: string[]): Promise<number> => {
   try {
     const result = await redis.sadd(key, ...members);
-    logger.debug("Redis cache sadd", {
-      service: "redis",
-      operation: "sadd",
+    logger.debug('Redis cache sadd', {
+      service: 'redis',
+      operation: 'sadd',
       key,
       membersCount: members.length,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache sadd failed", {
-      service: "redis",
-      operation: "sadd",
+    logger.error('Redis cache sadd failed', {
+      service: 'redis',
+      operation: 'sadd',
       key,
       error,
     });
@@ -329,18 +367,18 @@ const cacheSAdd = async (key: string, ...members: string[]): Promise<number> => 
 const cacheSRem = async (key: string, ...members: string[]): Promise<number> => {
   try {
     const result = await redis.srem(key, ...members);
-    logger.debug("Redis cache srem", {
-      service: "redis",
-      operation: "srem",
+    logger.debug('Redis cache srem', {
+      service: 'redis',
+      operation: 'srem',
       key,
       membersCount: members.length,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache srem failed", {
-      service: "redis",
-      operation: "srem",
+    logger.error('Redis cache srem failed', {
+      service: 'redis',
+      operation: 'srem',
       key,
       error,
     });
@@ -351,17 +389,17 @@ const cacheSRem = async (key: string, ...members: string[]): Promise<number> => 
 const cacheSMembers = async (key: string): Promise<string[]> => {
   try {
     const result = await redis.smembers(key);
-    logger.debug("Redis cache smembers", {
-      service: "redis",
-      operation: "smembers",
+    logger.debug('Redis cache smembers', {
+      service: 'redis',
+      operation: 'smembers',
       key,
       count: result.length,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache smembers failed", {
-      service: "redis",
-      operation: "smembers",
+    logger.error('Redis cache smembers failed', {
+      service: 'redis',
+      operation: 'smembers',
       key,
       error,
     });
@@ -372,18 +410,18 @@ const cacheSMembers = async (key: string): Promise<string[]> => {
 const cacheSIsMember = async (key: string, member: string): Promise<boolean> => {
   try {
     const result = await redis.sismember(key, member);
-    logger.debug("Redis cache sismember", {
-      service: "redis",
-      operation: "sismember",
+    logger.debug('Redis cache sismember', {
+      service: 'redis',
+      operation: 'sismember',
       key,
       member,
       isMember: result === 1,
     });
     return result === 1;
   } catch (error) {
-    logger.error("Redis cache sismember failed", {
-      service: "redis",
-      operation: "sismember",
+    logger.error('Redis cache sismember failed', {
+      service: 'redis',
+      operation: 'sismember',
       key,
       member,
       error,
@@ -396,9 +434,9 @@ const cacheSIsMember = async (key: string, member: string): Promise<boolean> => 
 const cacheZAdd = async (key: string, score: number, member: string): Promise<number> => {
   try {
     const result = await redis.zadd(key, score, member);
-    logger.debug("Redis cache zadd", {
-      service: "redis",
-      operation: "zadd",
+    logger.debug('Redis cache zadd', {
+      service: 'redis',
+      operation: 'zadd',
       key,
       score,
       member,
@@ -406,9 +444,9 @@ const cacheZAdd = async (key: string, score: number, member: string): Promise<nu
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache zadd failed", {
-      service: "redis",
-      operation: "zadd",
+    logger.error('Redis cache zadd failed', {
+      service: 'redis',
+      operation: 'zadd',
       key,
       error,
     });
@@ -419,18 +457,18 @@ const cacheZAdd = async (key: string, score: number, member: string): Promise<nu
 const cacheZRem = async (key: string, ...members: string[]): Promise<number> => {
   try {
     const result = await redis.zrem(key, ...members);
-    logger.debug("Redis cache zrem", {
-      service: "redis",
-      operation: "zrem",
+    logger.debug('Redis cache zrem', {
+      service: 'redis',
+      operation: 'zrem',
       key,
       membersCount: members.length,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache zrem failed", {
-      service: "redis",
-      operation: "zrem",
+    logger.error('Redis cache zrem failed', {
+      service: 'redis',
+      operation: 'zrem',
       key,
       error,
     });
@@ -441,9 +479,9 @@ const cacheZRem = async (key: string, ...members: string[]): Promise<number> => 
 const cacheZRange = async (key: string, start: number, end: number): Promise<string[]> => {
   try {
     const result = await redis.zrange(key, start, end);
-    logger.debug("Redis cache zrange", {
-      service: "redis",
-      operation: "zrange",
+    logger.debug('Redis cache zrange', {
+      service: 'redis',
+      operation: 'zrange',
       key,
       start,
       end,
@@ -451,9 +489,9 @@ const cacheZRange = async (key: string, start: number, end: number): Promise<str
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache zrange failed", {
-      service: "redis",
-      operation: "zrange",
+    logger.error('Redis cache zrange failed', {
+      service: 'redis',
+      operation: 'zrange',
       key,
       error,
     });
@@ -464,9 +502,9 @@ const cacheZRange = async (key: string, start: number, end: number): Promise<str
 const cacheZRevRange = async (key: string, start: number, end: number): Promise<string[]> => {
   try {
     const result = await redis.zrevrange(key, start, end);
-    logger.debug("Redis cache zrevrange", {
-      service: "redis",
-      operation: "zrevrange",
+    logger.debug('Redis cache zrevrange', {
+      service: 'redis',
+      operation: 'zrevrange',
       key,
       start,
       end,
@@ -474,9 +512,9 @@ const cacheZRevRange = async (key: string, start: number, end: number): Promise<
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache zrevrange failed", {
-      service: "redis",
-      operation: "zrevrange",
+    logger.error('Redis cache zrevrange failed', {
+      service: 'redis',
+      operation: 'zrevrange',
       key,
       error,
     });
@@ -486,30 +524,30 @@ const cacheZRevRange = async (key: string, start: number, end: number): Promise<
 
 // TTL configuration constants
 const CacheTTL = {
-  VERY_SHORT: 60,        // 1 minute
-  SHORT: 120,            // 2 minutes
-  MEDIUM_SHORT: 300,     // 5 minutes
-  MEDIUM: 600,           // 10 minutes
-  MEDIUM_LONG: 900,      // 15 minutes
-  LONG: 1800,            // 30 minutes
-  VERY_LONG: 3600,       // 1 hour
-  EXTENDED: 86400,       // 24 hours
+  VERY_SHORT: 60, // 1 minute
+  SHORT: 120, // 2 minutes
+  MEDIUM_SHORT: 300, // 5 minutes
+  MEDIUM: 600, // 10 minutes
+  MEDIUM_LONG: 900, // 15 minutes
+  LONG: 1800, // 30 minutes
+  VERY_LONG: 3600, // 1 hour
+  EXTENDED: 86400, // 24 hours
 } as const;
 
 const cacheGet = async (key: string): Promise<string | null> => {
   try {
     const value = await redis.get(key);
-    logger.debug("Redis cache lookup", {
-      service: "redis",
-      operation: "get",
+    logger.debug('Redis cache lookup', {
+      service: 'redis',
+      operation: 'get',
       key,
       hit: value !== null,
     });
     return value;
   } catch (error) {
-    logger.error("Redis cache get failed", {
-      service: "redis",
-      operation: "get",
+    logger.error('Redis cache get failed', {
+      service: 'redis',
+      operation: 'get',
       key,
       error,
     });
@@ -517,27 +555,23 @@ const cacheGet = async (key: string): Promise<string | null> => {
   }
 };
 
-const cacheSet = async (
-  key: string,
-  value: string,
-  ttlSeconds?: number,
-): Promise<"OK" | null> => {
+const cacheSet = async (key: string, value: string, ttlSeconds?: number): Promise<'OK' | null> => {
   try {
     const result = ttlSeconds
-      ? await redis.set(key, value, "EX", ttlSeconds)
+      ? await redis.set(key, value, 'EX', ttlSeconds)
       : await redis.set(key, value);
-    logger.debug("Redis cache write", {
-      service: "redis",
-      operation: "set",
+    logger.debug('Redis cache write', {
+      service: 'redis',
+      operation: 'set',
       key,
       ttlSeconds,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache set failed", {
-      service: "redis",
-      operation: "set",
+    logger.error('Redis cache set failed', {
+      service: 'redis',
+      operation: 'set',
       key,
       ttlSeconds,
       error,
@@ -550,17 +584,17 @@ const cacheHGetAll = async (key: string): Promise<Record<string, string>> => {
   try {
     const value = await redis.hgetall(key);
     const hit = Object.keys(value || {}).length > 0;
-    logger.debug("Redis cache lookup", {
-      service: "redis",
-      operation: "hgetall",
+    logger.debug('Redis cache lookup', {
+      service: 'redis',
+      operation: 'hgetall',
       key,
       hit,
     });
     return value;
   } catch (error) {
-    logger.error("Redis cache hgetall failed", {
-      service: "redis",
-      operation: "hgetall",
+    logger.error('Redis cache hgetall failed', {
+      service: 'redis',
+      operation: 'hgetall',
       key,
       error,
     });
@@ -571,17 +605,17 @@ const cacheHGetAll = async (key: string): Promise<Record<string, string>> => {
 const cacheDel = async (key: string): Promise<number | null> => {
   try {
     const result = await redis.del(key);
-    logger.debug("Redis cache delete", {
-      service: "redis",
-      operation: "del",
+    logger.debug('Redis cache delete', {
+      service: 'redis',
+      operation: 'del',
       key,
       result,
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache delete failed", {
-      service: "redis",
-      operation: "del",
+    logger.error('Redis cache delete failed', {
+      service: 'redis',
+      operation: 'del',
       key,
       error,
     });
@@ -592,17 +626,17 @@ const cacheDel = async (key: string): Promise<number | null> => {
 const cacheExists = async (key: string): Promise<number> => {
   try {
     const result = await redis.exists(key);
-    logger.debug("Redis cache exists check", {
-      service: "redis",
-      operation: "exists",
+    logger.debug('Redis cache exists check', {
+      service: 'redis',
+      operation: 'exists',
       key,
       exists: Boolean(result),
     });
     return result;
   } catch (error) {
-    logger.error("Redis cache exists check failed", {
-      service: "redis",
-      operation: "exists",
+    logger.error('Redis cache exists check failed', {
+      service: 'redis',
+      operation: 'exists',
       key,
       error,
     });
@@ -613,43 +647,42 @@ const cacheExists = async (key: string): Promise<number> => {
 const RedisKeys = {
   reactionBreakdown: (id: string) => `qotes:reaction:breakdown:${id}`,
   reactionTotal: (id: string) => `qotes:reaction:total:${id}`,
-  reactionState: (userId: string, quoteId: string) =>
-    `qotes:reaction:state:${userId}:${quoteId}`,
+  reactionState: (userId: string, quoteId: string) => `qotes:reaction:state:${userId}:${quoteId}`,
   rateLimitBurst: (userId: string) => `qotes:ratelimit:burst:${userId}`,
   rateLimitSustain: (userId: string) => `qotes:ratelimit:sustain:${userId}`,
   userFollowing: (userId: string) => `qotes:social:following:${userId}`,
   firstPageReactions: (quoteId: string, viewerId: string) =>
     `qotes:cache:reactions:p1:${quoteId}:${viewerId}`,
-  
+
   // User related keys
   user: (userId: string) => `qotes:user:${userId}`,
   userProfile: (userId: string) => `qotes:user:profile:${userId}`,
   userStats: (userId: string) => `qotes:user:stats:${userId}`,
   userFollowers: (userId: string) => `qotes:user:followers:${userId}`,
   userPreferences: (userId: string) => `qotes:user:preferences:${userId}`,
-  
+
   // Quote related keys
   quote: (quoteId: string) => `qotes:quote:${quoteId}`,
   quoteStats: (quoteId: string) => `qotes:quote:stats:${quoteId}`,
   userQuotes: (userId: string, page: number) => `qotes:user:quotes:${userId}:${page}`,
-  
+
   // Feed related keys
   globalFeed: (page: number) => `qotes:feed:global:${page}`,
   followingFeed: (userId: string, page: number) => `qotes:feed:following:${userId}:${page}`,
   discoverFeed: (page: number) => `qotes:feed:discover:${page}`,
-  
+
   // Social related keys
   comments: (quoteId: string) => `qotes:comments:${quoteId}`,
   suggestedUsers: (userId: string) => `qotes:social:suggested:${userId}`,
-  
+
   // Search related keys
   searchResults: (query: string, type: string) => `qotes:search:${type}:${hashString(query)}`,
   trendingHashtags: () => `qotes:trending:hashtags`,
-  
+
   // Collection related keys
   userCollections: (userId: string) => `qotes:collections:user:${userId}`,
   collectionItems: (collectionId: string) => `qotes:collections:items:${collectionId}`,
-  
+
   // Notification related keys
   notificationCount: (userId: string) => `qotes:notifications:count:${userId}`,
   recentNotifications: (userId: string) => `qotes:notifications:recent:${userId}`,
@@ -660,13 +693,13 @@ function hashString(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash).toString(16);
 }
 
-redis.defineCommand("updateReaction", {
+redis.defineCommand('updateReaction', {
   numberOfKeys: 2,
   lua: `
     local breakdownKey = KEYS[1]
@@ -684,7 +717,7 @@ redis.defineCommand("updateReaction", {
   `,
 });
 
-redis.defineCommand("slidingWindowRateLimit", {
+redis.defineCommand('slidingWindowRateLimit', {
   numberOfKeys: 2,
   lua: `
     local now = tonumber(ARGV[1])

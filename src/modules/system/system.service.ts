@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import mongoose from "mongoose";
-import { redis } from "../../shared/utils/redis.utils";
-import { getMetricsSnapshot } from "../../shared/observability/metrics";
-import { isKafkaConnected } from "../../infrastructure/kafka/config/kafka.config";
+import { Injectable } from '@nestjs/common';
+import mongoose from 'mongoose';
+import { redis } from '../../shared/utils/redis.utils';
+import { getMetricsSnapshot } from '../../shared/observability/metrics';
+import { isKafkaConnected } from '../../infrastructure/kafka/config/kafka.config';
 
 @Injectable()
 export class SystemService {
@@ -10,9 +10,9 @@ export class SystemService {
     return {
       success: true,
       statusCode: 200,
-      message: "System is healthy",
+      message: 'System is healthy',
       data: {
-        status: "ok",
+        status: 'ok',
         timestamp: new Date().toISOString(),
       },
     };
@@ -20,12 +20,12 @@ export class SystemService {
 
   readyCheck() {
     const mongoReady = mongoose.connection.readyState === 1;
-    const redisReady = redis.status === "ready";
+    const redisReady = redis.status === 'ready';
     const kafkaReady = isKafkaConnected();
 
     const readiness = {
       ready: mongoReady,
-      service: "qotes-api",
+      service: 'qotes-api',
       dependencies: {
         mongodb: {
           required: true,
@@ -40,7 +40,7 @@ export class SystemService {
         kafka: {
           required: false,
           ready: kafkaReady,
-          state: kafkaReady ? "ready" : "unavailable",
+          state: kafkaReady ? 'ready' : 'unavailable',
         },
       },
     };
@@ -49,7 +49,7 @@ export class SystemService {
       return {
         success: false,
         statusCode: 503,
-        message: "Service is not ready",
+        message: 'Service is not ready',
         data: readiness,
       };
     }
@@ -57,7 +57,7 @@ export class SystemService {
     return {
       success: true,
       statusCode: 200,
-      message: "Service is ready",
+      message: 'Service is ready',
       data: readiness,
     };
   }

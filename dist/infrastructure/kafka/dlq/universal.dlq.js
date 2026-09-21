@@ -3,11 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const kafka_config_1 = require("../config/kafka.config");
 const producer = kafka_config_1.kafka.producer();
 const consumer = kafka_config_1.kafka.consumer({
-    groupId: "universal-dlq-replayer",
+    groupId: 'universal-dlq-replayer',
 });
 const replay = async (dlqTopic, targetTopic) => {
     if (!dlqTopic || !targetTopic) {
-        console.error("❌ Usage: node universal-replayer.js <dlqTopic> <targetTopic>");
+        console.error('❌ Usage: node universal-replayer.js <dlqTopic> <targetTopic>');
         process.exit(1);
     }
     try {
@@ -41,9 +41,9 @@ const replay = async (dlqTopic, targetTopic) => {
         });
     }
     catch (err) {
-        console.error("❌ Replayer Crash:", err.message);
+        console.error('❌ Replayer Crash:', err.message);
     }
 };
 const [, , source, target] = process.argv;
-replay(source, target);
+void replay(source, target);
 //# sourceMappingURL=universal.dlq.js.map

@@ -5,10 +5,7 @@ import { Model } from 'mongoose';
 import Notification, { INotification } from '../../models/notification.model';
 import { NOTIFICATION_CONFIG } from './notification.constants';
 import { getIO } from './notification.socket';
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from '../../shared/utils/cursor.util';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
 declare global {
   var userSocketMap: Map<string, Set<string>> | undefined;
@@ -21,7 +18,7 @@ interface CreateNotificationData {
   message: string;
   referenceId?: string;
   referenceType?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface GetNotificationsOptions {
@@ -32,9 +29,7 @@ interface GetNotificationsOptions {
 
 @Injectable()
 export class NotificationsService {
-  constructor(
-    @InjectModel(Notification.name) private notificationModel: Model<INotification>,
-  ) {}
+  constructor(@InjectModel(Notification.name) private notificationModel: Model<INotification>) { }
 
   async createNotification({
     recipient,
@@ -65,7 +60,7 @@ export class NotificationsService {
     }
   }
 
-  async sendRealtimeNotification(recipientId: string, notification: any) {
+  async sendRealtimeNotification(recipientId: string, notification: INotification) {
     try {
       const io = getIO();
       if (!io) {
@@ -77,7 +72,7 @@ export class NotificationsService {
       const socketIds = userSocketMap.get(recipientId);
 
       if (socketIds && socketIds.size > 0) {
-        socketIds.forEach((socketId) => {
+        socketIds.forEach(socketId => {
           io.to(socketId).emit('notification:new', notification);
         });
         return true;
@@ -126,12 +121,12 @@ export class NotificationsService {
       cursor = null,
       limit = NOTIFICATION_CONFIG.DEFAULT_PAGE_SIZE,
       unreadOnly = false,
-    }: GetNotificationsOptions = {},
+    }: GetNotificationsOptions = {}
   ) {
     try {
       const sanitizedLimit = Math.min(limit, NOTIFICATION_CONFIG.MAX_PAGE_SIZE);
 
-      const query: any = {
+      const query: Record<string, unknown> = {
         recipient: userId,
         isDeleted: false,
       };
@@ -151,11 +146,9 @@ export class NotificationsService {
         .limit(sanitizedLimit + 1)
         .lean();
 
-      const { data, pagination } = processPaginatedResults(
-        notifications,
-        sanitizedLimit,
-        ['createdAt'],
-      );
+      const { data, pagination } = processPaginatedResults(notifications, sanitizedLimit, [
+        'createdAt',
+      ]);
 
       return {
         notifications: data,
@@ -203,7 +196,7 @@ export class NotificationsService {
           isRead: false,
           isDeleted: false,
         },
-        { isRead: true },
+        { isRead: true }
       );
 
       await this.emitUnreadCount(userId);
@@ -243,7 +236,7 @@ export class NotificationsService {
       const socketIds = userSocketMap.get(userId);
 
       if (socketIds && socketIds.size > 0) {
-        socketIds.forEach((socketId) => {
+        socketIds.forEach(socketId => {
           io.to(socketId).emit('notification:count', { unreadCount });
         });
       }

@@ -23,7 +23,7 @@ export class SafetyService {
     @InjectModel("Follow") private readonly followModel: Model<IFollow>,
     @InjectModel("ReportStats")
     private readonly reportStatsModel: Model<IReportStats>,
-  ) {}
+  ) { }
 
   async toggleBlockUser(blockerId: string, blockedId: string) {
     if (blockerId.toString() === blockedId.toString()) {
@@ -102,8 +102,15 @@ export class SafetyService {
       }
 
       return stats;
-    } catch (err: any) {
-      if (err.code === 11000) throw new ConflictException("Already reported.");
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: number }).code === 11000
+      ) {
+        throw new ConflictException("Already reported.");
+      }
       throw err;
     }
   }

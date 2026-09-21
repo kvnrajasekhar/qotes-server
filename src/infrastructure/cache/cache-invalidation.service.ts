@@ -36,7 +36,7 @@ export class CacheInvalidationService {
     private readonly quoteCache: QuoteCacheService,
     private readonly searchCache: SearchCacheService,
     private readonly collectionsCache: CollectionsCacheService,
-    private readonly notificationsCache: NotificationsCacheService,
+    private readonly notificationsCache: NotificationsCacheService
   ) {
     this.setupEventListeners();
   }
@@ -52,22 +52,31 @@ export class CacheInvalidationService {
     });
 
     // Quote events
-    this.eventEmitter.on(CacheInvalidationEvent.QUOTE_CREATED, async (data: { quoteId: string, creatorId: string }) => {
-      await this.handleQuoteCreate(data);
-    });
+    this.eventEmitter.on(
+      CacheInvalidationEvent.QUOTE_CREATED,
+      async (data: { quoteId: string; creatorId: string }) => {
+        await this.handleQuoteCreate(data);
+      }
+    );
 
     this.eventEmitter.on(CacheInvalidationEvent.QUOTE_UPDATED, async (quoteId: string) => {
       await this.handleQuoteUpdate(quoteId);
     });
 
-    this.eventEmitter.on(CacheInvalidationEvent.QUOTE_DELETED, async (data: { quoteId: string, creatorId: string }) => {
-      await this.handleQuoteDelete(data);
-    });
+    this.eventEmitter.on(
+      CacheInvalidationEvent.QUOTE_DELETED,
+      async (data: { quoteId: string; creatorId: string }) => {
+        await this.handleQuoteDelete(data);
+      }
+    );
 
     // Social events
-    this.eventEmitter.on(CacheInvalidationEvent.FOLLOW_TOGGLED, async (data: { followerId: string, targetId: string }) => {
-      await this.handleFollowToggle(data);
-    });
+    this.eventEmitter.on(
+      CacheInvalidationEvent.FOLLOW_TOGGLED,
+      async (data: { followerId: string; targetId: string }) => {
+        await this.handleFollowToggle(data);
+      }
+    );
 
     this.eventEmitter.on(CacheInvalidationEvent.REACTION_UPDATED, async (quoteId: string) => {
       await this.handleReactionUpdate(quoteId);
@@ -91,13 +100,19 @@ export class CacheInvalidationService {
       await this.handleCollectionCreate(userId);
     });
 
-    this.eventEmitter.on(CacheInvalidationEvent.COLLECTION_UPDATED, async (data: { collectionId: string, userId: string }) => {
-      await this.handleCollectionUpdate(data);
-    });
+    this.eventEmitter.on(
+      CacheInvalidationEvent.COLLECTION_UPDATED,
+      async (data: { collectionId: string; userId: string }) => {
+        await this.handleCollectionUpdate(data);
+      }
+    );
 
-    this.eventEmitter.on(CacheInvalidationEvent.COLLECTION_DELETED, async (data: { collectionId: string, userId: string }) => {
-      await this.handleCollectionDelete(data);
-    });
+    this.eventEmitter.on(
+      CacheInvalidationEvent.COLLECTION_DELETED,
+      async (data: { collectionId: string; userId: string }) => {
+        await this.handleCollectionDelete(data);
+      }
+    );
 
     // Notification events
     this.eventEmitter.on(CacheInvalidationEvent.NOTIFICATION_CREATED, async (userId: string) => {
@@ -133,7 +148,7 @@ export class CacheInvalidationService {
     }
   }
 
-  private async handleQuoteCreate(data: { quoteId: string, creatorId: string }): Promise<void> {
+  private async handleQuoteCreate(data: { quoteId: string; creatorId: string }): Promise<void> {
     try {
       await this.quoteCache.invalidateUserQuotesCache(data.creatorId);
       await this.quoteCache.invalidateFeedCaches();
@@ -154,7 +169,7 @@ export class CacheInvalidationService {
     }
   }
 
-  private async handleQuoteDelete(data: { quoteId: string, creatorId: string }): Promise<void> {
+  private async handleQuoteDelete(data: { quoteId: string; creatorId: string }): Promise<void> {
     try {
       await this.quoteCache.invalidateQuoteCache(data.quoteId);
       await this.quoteCache.invalidateUserQuotesCache(data.creatorId);
@@ -166,13 +181,15 @@ export class CacheInvalidationService {
     }
   }
 
-  private async handleFollowToggle(data: { followerId: string, targetId: string }): Promise<void> {
+  private async handleFollowToggle(data: { followerId: string; targetId: string }): Promise<void> {
     try {
       await this.userCache.invalidateUserCache(data.followerId);
       await this.userCache.invalidateUserCache(data.targetId);
       await this.quoteCache.invalidateFollowingFeed(data.followerId);
       await this.cacheManager.invalidateSocialCache(data.followerId);
-      this.logger.debug(`Invalidated cache for follow toggle: ${data.followerId} -> ${data.targetId}`);
+      this.logger.debug(
+        `Invalidated cache for follow toggle: ${data.followerId} -> ${data.targetId}`
+      );
     } catch (error) {
       this.logger.error(`Failed to invalidate cache for follow toggle`, error);
     }
@@ -223,23 +240,35 @@ export class CacheInvalidationService {
     }
   }
 
-  private async handleCollectionUpdate(data: { collectionId: string, userId: string }): Promise<void> {
+  private async handleCollectionUpdate(data: {
+    collectionId: string;
+    userId: string;
+  }): Promise<void> {
     try {
       await this.collectionsCache.invalidateUserCollectionsCache(data.userId);
       await this.collectionsCache.invalidateCollectionItemsCache(data.collectionId);
       this.logger.debug(`Invalidated cache for collection update: ${data.collectionId}`);
     } catch (error) {
-      this.logger.error(`Failed to invalidate cache for collection update: ${data.collectionId}`, error);
+      this.logger.error(
+        `Failed to invalidate cache for collection update: ${data.collectionId}`,
+        error
+      );
     }
   }
 
-  private async handleCollectionDelete(data: { collectionId: string, userId: string }): Promise<void> {
+  private async handleCollectionDelete(data: {
+    collectionId: string;
+    userId: string;
+  }): Promise<void> {
     try {
       await this.collectionsCache.invalidateUserCollectionsCache(data.userId);
       await this.collectionsCache.invalidateCollectionItemsCache(data.collectionId);
       this.logger.debug(`Invalidated cache for collection deletion: ${data.collectionId}`);
     } catch (error) {
-      this.logger.error(`Failed to invalidate cache for collection deletion: ${data.collectionId}`, error);
+      this.logger.error(
+        `Failed to invalidate cache for collection deletion: ${data.collectionId}`,
+        error
+      );
     }
   }
 

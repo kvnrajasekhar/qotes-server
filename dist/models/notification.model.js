@@ -6,25 +6,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationSchema = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const mongoose_2 = require("mongoose");
-const { NOTIFICATION_TYPES, REFERENCE_TYPES, } = require("../modules/notifications/notification.constants");
+const notification_constants_1 = require("../modules/notifications/notification.constants");
 const NotificationSchema = new mongoose_2.Schema({
     _id: { type: mongoose_2.Schema.Types.ObjectId, auto: true },
     recipient: {
         type: mongoose_2.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
         required: true,
         index: true,
     },
     sender: {
         type: mongoose_2.Schema.Types.ObjectId,
-        ref: "User",
+        ref: 'User',
         required: true,
         index: true,
     },
     type: {
         type: String,
         required: true,
-        enum: Object.values(NOTIFICATION_TYPES),
+        enum: Object.values(notification_constants_1.NOTIFICATION_TYPES),
         index: true,
     },
     message: {
@@ -38,7 +38,7 @@ const NotificationSchema = new mongoose_2.Schema({
     },
     referenceType: {
         type: String,
-        enum: Object.values(REFERENCE_TYPES),
+        enum: Object.values(notification_constants_1.REFERENCE_TYPES),
         index: true,
     },
     metadata: {
@@ -69,25 +69,17 @@ const NotificationSchema = new mongoose_2.Schema({
     timestamps: true,
 });
 exports.NotificationSchema = NotificationSchema;
-NotificationSchema.index({ recipient: 1 });
-NotificationSchema.index({ sender: 1 });
-NotificationSchema.index({ type: 1 });
-NotificationSchema.index({ referenceId: 1 });
-NotificationSchema.index({ referenceType: 1 });
-NotificationSchema.index({ isRead: 1 });
-NotificationSchema.index({ isDeleted: 1 });
-NotificationSchema.index({ createdAt: 1 });
 NotificationSchema.index({ recipient: 1, createdAt: -1 });
 NotificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 NotificationSchema.index({ recipient: 1, isDeleted: 1, createdAt: -1 });
-NotificationSchema.pre("save", function (next) {
+NotificationSchema.pre('save', function (next) {
     this.updatedAt = new Date();
     next();
 });
-NotificationSchema.pre("findOneAndUpdate", function (next) {
+NotificationSchema.pre('findOneAndUpdate', function (next) {
     this.set({ updatedAt: new Date() });
     next();
 });
-const Notification = mongoose_1.default.model("Notification", NotificationSchema);
+const Notification = mongoose_1.default.model('Notification', NotificationSchema);
 exports.default = Notification;
 //# sourceMappingURL=notification.model.js.map

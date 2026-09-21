@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SystemController = void 0;
 const common_1 = require("@nestjs/common");
 const system_service_1 = require("./system.service");
-const response_interceptor_1 = require("../../shared/interceptors/response.interceptor");
 let SystemController = class SystemController {
     constructor(systemService) {
         this.systemService = systemService;
@@ -20,17 +19,34 @@ let SystemController = class SystemController {
     healthCheck() {
         return this.systemService.healthCheck();
     }
+    readyCheck() {
+        return this.systemService.readyCheck();
+    }
+    metrics() {
+        return this.systemService.getMetrics();
+    }
 };
 exports.SystemController = SystemController;
 __decorate([
-    (0, common_1.Get)("health"),
+    (0, common_1.Get)('health'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], SystemController.prototype, "healthCheck", null);
+__decorate([
+    (0, common_1.Get)('ready'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], SystemController.prototype, "readyCheck", null);
+__decorate([
+    (0, common_1.Get)('metrics'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], SystemController.prototype, "metrics", null);
 exports.SystemController = SystemController = __decorate([
-    (0, common_1.Controller)("system"),
-    (0, common_1.UseInterceptors)(response_interceptor_1.ResponseInterceptor),
+    (0, common_1.Controller)('system'),
     __metadata("design:paramtypes", [system_service_1.SystemService])
 ], SystemController);
 //# sourceMappingURL=system.controller.js.map

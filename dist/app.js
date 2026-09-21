@@ -12,28 +12,28 @@ const metrics_1 = require("./shared/observability/metrics");
 const logger_middleware_1 = require("./shared/middlewares/logger.middleware");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
 }));
 app.use(express_1.default.json());
 app.use(logger_middleware_1.requestLogger);
 app.use(metrics_1.observeRequest);
-app.get("/", (req, res) => {
-    return (0, responseFormatter_util_1.successResponse)(res, 200, "API is running");
+app.get('/', (req, res) => {
+    return (0, responseFormatter_util_1.successResponse)(res, 200, 'API is running');
 });
-app.get("/health", (req, res) => {
-    return (0, responseFormatter_util_1.successResponse)(res, 200, "Service is healthy", {
-        service: "qotes-api",
+app.get('/health', (req, res) => {
+    return (0, responseFormatter_util_1.successResponse)(res, 200, 'Service is healthy', {
+        service: 'qotes-api',
         uptime: process.uptime(),
     });
 });
-app.get("/ready", (req, res) => {
+app.get('/ready', (req, res) => {
     const mongoReady = mongoose_1.default.connection.readyState === 1;
-    const redisReady = redis_utils_1.redis.status === "ready";
+    const redisReady = redis_utils_1.redis.status === 'ready';
     const kafkaReady = req.app.locals.kafkaReady === true;
     const readiness = {
         ready: mongoReady,
-        service: "qotes-api",
+        service: 'qotes-api',
         dependencies: {
             mongodb: {
                 required: true,
@@ -48,18 +48,18 @@ app.get("/ready", (req, res) => {
             kafka: {
                 required: false,
                 ready: kafkaReady,
-                state: req.app.locals.kafkaStatus || "unknown",
+                state: req.app.locals.kafkaStatus || 'unknown',
             },
         },
     };
     if (!readiness.ready) {
-        return (0, responseFormatter_util_1.errorResponse)(res, 503, "Service is not ready", readiness);
+        return (0, responseFormatter_util_1.errorResponse)(res, 503, 'Service is not ready', readiness);
     }
-    return (0, responseFormatter_util_1.successResponse)(res, 200, "Service is ready", readiness);
+    return (0, responseFormatter_util_1.successResponse)(res, 200, 'Service is ready', readiness);
 });
-app.get("/metrics", (req, res) => {
+app.get('/metrics', (req, res) => {
     const snapshot = (0, metrics_1.getMetricsSnapshot)();
-    res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     return res.status(200).send((0, metrics_1.toPrometheus)(snapshot));
 });
 app.use(logger_middleware_1.notFoundHandler);

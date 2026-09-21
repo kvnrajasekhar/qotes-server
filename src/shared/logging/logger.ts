@@ -21,7 +21,7 @@ const productionFormat = winston.format.combine(
   winston.format.splat(),
   winston.format.printf(
     ({ timestamp, level, message, service, stack, ...meta }) => {
-      const logObj: any = {
+      const logObj: Record<string, unknown> = {
         timestamp,
         level,
         service: service || "unknown-service",

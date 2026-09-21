@@ -9,8 +9,8 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const logger_util_1 = __importDefault(require("./logger.util"));
 dotenv_1.default.config();
 const redis = new ioredis_1.default({
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    port: parseInt(process.env.REDIS_PORT || "6379"),
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
     retryStrategy(times) {
@@ -18,27 +18,27 @@ const redis = new ioredis_1.default({
     },
 });
 exports.redis = redis;
-redis.on("connect", () => {
-    logger_util_1.default.info("Redis connected", {
-        service: "redis",
-        host: process.env.REDIS_HOST || "127.0.0.1",
+redis.on('connect', () => {
+    logger_util_1.default.info('Redis connected', {
+        service: 'redis',
+        host: process.env.REDIS_HOST || '127.0.0.1',
         port: process.env.REDIS_PORT || 6379,
     });
 });
-redis.on("ready", () => {
-    logger_util_1.default.info("Redis ready to accept commands", {
-        service: "redis",
+redis.on('ready', () => {
+    logger_util_1.default.info('Redis ready to accept commands', {
+        service: 'redis',
     });
 });
-redis.on("error", (error) => {
-    logger_util_1.default.error("Redis connection error", {
-        service: "redis",
+redis.on('error', (error) => {
+    logger_util_1.default.error('Redis connection error', {
+        service: 'redis',
         error,
     });
 });
-redis.on("reconnecting", (delay) => {
-    logger_util_1.default.warn("Redis reconnecting", {
-        service: "redis",
+redis.on('reconnecting', (delay) => {
+    logger_util_1.default.warn('Redis reconnecting', {
+        service: 'redis',
         delay,
     });
 });
@@ -60,18 +60,18 @@ const deserialize = (value) => {
 const cacheGetTyped = async (key) => {
     try {
         const value = await redis.get(key);
-        logger_util_1.default.debug("Redis cache lookup", {
-            service: "redis",
-            operation: "getTyped",
+        logger_util_1.default.debug('Redis cache lookup', {
+            service: 'redis',
+            operation: 'getTyped',
             key,
             hit: value !== null,
         });
         return deserialize(value);
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache get typed failed", {
-            service: "redis",
-            operation: "getTyped",
+        logger_util_1.default.error('Redis cache get typed failed', {
+            service: 'redis',
+            operation: 'getTyped',
             key,
             error,
         });
@@ -83,21 +83,21 @@ const cacheSetTyped = async (key, value, ttlSeconds) => {
     try {
         const serialized = serialize(value);
         const result = ttlSeconds
-            ? await redis.set(key, serialized, "EX", ttlSeconds)
+            ? await redis.set(key, serialized, 'EX', ttlSeconds)
             : await redis.set(key, serialized);
-        logger_util_1.default.debug("Redis cache write", {
-            service: "redis",
-            operation: "setTyped",
+        logger_util_1.default.debug('Redis cache write', {
+            service: 'redis',
+            operation: 'setTyped',
             key,
             ttlSeconds,
             result,
         });
-        return result === "OK";
+        return result === 'OK';
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache set typed failed", {
-            service: "redis",
-            operation: "setTyped",
+        logger_util_1.default.error('Redis cache set typed failed', {
+            service: 'redis',
+            operation: 'setTyped',
             key,
             ttlSeconds,
             error,
@@ -117,9 +117,9 @@ const cacheGetOrSet = async (key, factory, ttlSeconds) => {
         return value;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache getOrSet failed", {
-            service: "redis",
-            operation: "getOrSet",
+        logger_util_1.default.error('Redis cache getOrSet failed', {
+            service: 'redis',
+            operation: 'getOrSet',
             key,
             error,
         });
@@ -133,9 +133,9 @@ const cacheDelPattern = async (pattern) => {
         if (keys.length === 0)
             return 0;
         const result = await redis.del(...keys);
-        logger_util_1.default.debug("Redis cache pattern delete", {
-            service: "redis",
-            operation: "delPattern",
+        logger_util_1.default.debug('Redis cache pattern delete', {
+            service: 'redis',
+            operation: 'delPattern',
             pattern,
             keysCount: keys.length,
             result,
@@ -143,9 +143,9 @@ const cacheDelPattern = async (pattern) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache del pattern failed", {
-            service: "redis",
-            operation: "delPattern",
+        logger_util_1.default.error('Redis cache del pattern failed', {
+            service: 'redis',
+            operation: 'delPattern',
             pattern,
             error,
         });
@@ -156,9 +156,9 @@ exports.cacheDelPattern = cacheDelPattern;
 const cacheExpire = async (key, ttlSeconds) => {
     try {
         const result = await redis.expire(key, ttlSeconds);
-        logger_util_1.default.debug("Redis cache expire", {
-            service: "redis",
-            operation: "expire",
+        logger_util_1.default.debug('Redis cache expire', {
+            service: 'redis',
+            operation: 'expire',
             key,
             ttlSeconds,
             result,
@@ -166,9 +166,9 @@ const cacheExpire = async (key, ttlSeconds) => {
         return result === 1;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache expire failed", {
-            service: "redis",
-            operation: "expire",
+        logger_util_1.default.error('Redis cache expire failed', {
+            service: 'redis',
+            operation: 'expire',
             key,
             ttlSeconds,
             error,
@@ -180,18 +180,18 @@ exports.cacheExpire = cacheExpire;
 const cacheTTL = async (key) => {
     try {
         const ttl = await redis.ttl(key);
-        logger_util_1.default.debug("Redis cache TTL check", {
-            service: "redis",
-            operation: "ttl",
+        logger_util_1.default.debug('Redis cache TTL check', {
+            service: 'redis',
+            operation: 'ttl',
             key,
             ttl,
         });
         return ttl;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache TTL check failed", {
-            service: "redis",
-            operation: "ttl",
+        logger_util_1.default.error('Redis cache TTL check failed', {
+            service: 'redis',
+            operation: 'ttl',
             key,
             error,
         });
@@ -202,9 +202,9 @@ exports.cacheTTL = cacheTTL;
 const cacheHGetTyped = async (key, field) => {
     try {
         const value = await redis.hget(key, field);
-        logger_util_1.default.debug("Redis cache hget", {
-            service: "redis",
-            operation: "hgetTyped",
+        logger_util_1.default.debug('Redis cache hget', {
+            service: 'redis',
+            operation: 'hgetTyped',
             key,
             field,
             hit: value !== null,
@@ -212,9 +212,9 @@ const cacheHGetTyped = async (key, field) => {
         return deserialize(value);
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache hget typed failed", {
-            service: "redis",
-            operation: "hgetTyped",
+        logger_util_1.default.error('Redis cache hget typed failed', {
+            service: 'redis',
+            operation: 'hgetTyped',
             key,
             field,
             error,
@@ -227,9 +227,9 @@ const cacheHSetTyped = async (key, field, value) => {
     try {
         const serialized = serialize(value);
         const result = await redis.hset(key, field, serialized);
-        logger_util_1.default.debug("Redis cache hset", {
-            service: "redis",
-            operation: "hsetTyped",
+        logger_util_1.default.debug('Redis cache hset', {
+            service: 'redis',
+            operation: 'hsetTyped',
             key,
             field,
             result,
@@ -237,9 +237,9 @@ const cacheHSetTyped = async (key, field, value) => {
         return result >= 0;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache hset typed failed", {
-            service: "redis",
-            operation: "hsetTyped",
+        logger_util_1.default.error('Redis cache hset typed failed', {
+            service: 'redis',
+            operation: 'hsetTyped',
             key,
             field,
             error,
@@ -256,18 +256,18 @@ const cacheHGetAllTyped = async (key) => {
             result[field] = deserialize(val);
         }
         const hit = Object.keys(result).length > 0;
-        logger_util_1.default.debug("Redis cache hgetall", {
-            service: "redis",
-            operation: "hgetallTyped",
+        logger_util_1.default.debug('Redis cache hgetall', {
+            service: 'redis',
+            operation: 'hgetallTyped',
             key,
             hit,
         });
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache hgetall typed failed", {
-            service: "redis",
-            operation: "hgetallTyped",
+        logger_util_1.default.error('Redis cache hgetall typed failed', {
+            service: 'redis',
+            operation: 'hgetallTyped',
             key,
             error,
         });
@@ -278,9 +278,9 @@ exports.cacheHGetAllTyped = cacheHGetAllTyped;
 const cacheHDel = async (key, ...fields) => {
     try {
         const result = await redis.hdel(key, ...fields);
-        logger_util_1.default.debug("Redis cache hdel", {
-            service: "redis",
-            operation: "hdel",
+        logger_util_1.default.debug('Redis cache hdel', {
+            service: 'redis',
+            operation: 'hdel',
             key,
             fields,
             result,
@@ -288,9 +288,9 @@ const cacheHDel = async (key, ...fields) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache hdel failed", {
-            service: "redis",
-            operation: "hdel",
+        logger_util_1.default.error('Redis cache hdel failed', {
+            service: 'redis',
+            operation: 'hdel',
             key,
             fields,
             error,
@@ -302,9 +302,9 @@ exports.cacheHDel = cacheHDel;
 const cacheSAdd = async (key, ...members) => {
     try {
         const result = await redis.sadd(key, ...members);
-        logger_util_1.default.debug("Redis cache sadd", {
-            service: "redis",
-            operation: "sadd",
+        logger_util_1.default.debug('Redis cache sadd', {
+            service: 'redis',
+            operation: 'sadd',
             key,
             membersCount: members.length,
             result,
@@ -312,9 +312,9 @@ const cacheSAdd = async (key, ...members) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache sadd failed", {
-            service: "redis",
-            operation: "sadd",
+        logger_util_1.default.error('Redis cache sadd failed', {
+            service: 'redis',
+            operation: 'sadd',
             key,
             error,
         });
@@ -325,9 +325,9 @@ exports.cacheSAdd = cacheSAdd;
 const cacheSRem = async (key, ...members) => {
     try {
         const result = await redis.srem(key, ...members);
-        logger_util_1.default.debug("Redis cache srem", {
-            service: "redis",
-            operation: "srem",
+        logger_util_1.default.debug('Redis cache srem', {
+            service: 'redis',
+            operation: 'srem',
             key,
             membersCount: members.length,
             result,
@@ -335,9 +335,9 @@ const cacheSRem = async (key, ...members) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache srem failed", {
-            service: "redis",
-            operation: "srem",
+        logger_util_1.default.error('Redis cache srem failed', {
+            service: 'redis',
+            operation: 'srem',
             key,
             error,
         });
@@ -348,18 +348,18 @@ exports.cacheSRem = cacheSRem;
 const cacheSMembers = async (key) => {
     try {
         const result = await redis.smembers(key);
-        logger_util_1.default.debug("Redis cache smembers", {
-            service: "redis",
-            operation: "smembers",
+        logger_util_1.default.debug('Redis cache smembers', {
+            service: 'redis',
+            operation: 'smembers',
             key,
             count: result.length,
         });
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache smembers failed", {
-            service: "redis",
-            operation: "smembers",
+        logger_util_1.default.error('Redis cache smembers failed', {
+            service: 'redis',
+            operation: 'smembers',
             key,
             error,
         });
@@ -370,9 +370,9 @@ exports.cacheSMembers = cacheSMembers;
 const cacheSIsMember = async (key, member) => {
     try {
         const result = await redis.sismember(key, member);
-        logger_util_1.default.debug("Redis cache sismember", {
-            service: "redis",
-            operation: "sismember",
+        logger_util_1.default.debug('Redis cache sismember', {
+            service: 'redis',
+            operation: 'sismember',
             key,
             member,
             isMember: result === 1,
@@ -380,9 +380,9 @@ const cacheSIsMember = async (key, member) => {
         return result === 1;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache sismember failed", {
-            service: "redis",
-            operation: "sismember",
+        logger_util_1.default.error('Redis cache sismember failed', {
+            service: 'redis',
+            operation: 'sismember',
             key,
             member,
             error,
@@ -394,9 +394,9 @@ exports.cacheSIsMember = cacheSIsMember;
 const cacheZAdd = async (key, score, member) => {
     try {
         const result = await redis.zadd(key, score, member);
-        logger_util_1.default.debug("Redis cache zadd", {
-            service: "redis",
-            operation: "zadd",
+        logger_util_1.default.debug('Redis cache zadd', {
+            service: 'redis',
+            operation: 'zadd',
             key,
             score,
             member,
@@ -405,9 +405,9 @@ const cacheZAdd = async (key, score, member) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache zadd failed", {
-            service: "redis",
-            operation: "zadd",
+        logger_util_1.default.error('Redis cache zadd failed', {
+            service: 'redis',
+            operation: 'zadd',
             key,
             error,
         });
@@ -418,9 +418,9 @@ exports.cacheZAdd = cacheZAdd;
 const cacheZRem = async (key, ...members) => {
     try {
         const result = await redis.zrem(key, ...members);
-        logger_util_1.default.debug("Redis cache zrem", {
-            service: "redis",
-            operation: "zrem",
+        logger_util_1.default.debug('Redis cache zrem', {
+            service: 'redis',
+            operation: 'zrem',
             key,
             membersCount: members.length,
             result,
@@ -428,9 +428,9 @@ const cacheZRem = async (key, ...members) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache zrem failed", {
-            service: "redis",
-            operation: "zrem",
+        logger_util_1.default.error('Redis cache zrem failed', {
+            service: 'redis',
+            operation: 'zrem',
             key,
             error,
         });
@@ -441,9 +441,9 @@ exports.cacheZRem = cacheZRem;
 const cacheZRange = async (key, start, end) => {
     try {
         const result = await redis.zrange(key, start, end);
-        logger_util_1.default.debug("Redis cache zrange", {
-            service: "redis",
-            operation: "zrange",
+        logger_util_1.default.debug('Redis cache zrange', {
+            service: 'redis',
+            operation: 'zrange',
             key,
             start,
             end,
@@ -452,9 +452,9 @@ const cacheZRange = async (key, start, end) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache zrange failed", {
-            service: "redis",
-            operation: "zrange",
+        logger_util_1.default.error('Redis cache zrange failed', {
+            service: 'redis',
+            operation: 'zrange',
             key,
             error,
         });
@@ -465,9 +465,9 @@ exports.cacheZRange = cacheZRange;
 const cacheZRevRange = async (key, start, end) => {
     try {
         const result = await redis.zrevrange(key, start, end);
-        logger_util_1.default.debug("Redis cache zrevrange", {
-            service: "redis",
-            operation: "zrevrange",
+        logger_util_1.default.debug('Redis cache zrevrange', {
+            service: 'redis',
+            operation: 'zrevrange',
             key,
             start,
             end,
@@ -476,9 +476,9 @@ const cacheZRevRange = async (key, start, end) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache zrevrange failed", {
-            service: "redis",
-            operation: "zrevrange",
+        logger_util_1.default.error('Redis cache zrevrange failed', {
+            service: 'redis',
+            operation: 'zrevrange',
             key,
             error,
         });
@@ -500,18 +500,18 @@ exports.CacheTTL = CacheTTL;
 const cacheGet = async (key) => {
     try {
         const value = await redis.get(key);
-        logger_util_1.default.debug("Redis cache lookup", {
-            service: "redis",
-            operation: "get",
+        logger_util_1.default.debug('Redis cache lookup', {
+            service: 'redis',
+            operation: 'get',
             key,
             hit: value !== null,
         });
         return value;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache get failed", {
-            service: "redis",
-            operation: "get",
+        logger_util_1.default.error('Redis cache get failed', {
+            service: 'redis',
+            operation: 'get',
             key,
             error,
         });
@@ -522,11 +522,11 @@ exports.cacheGet = cacheGet;
 const cacheSet = async (key, value, ttlSeconds) => {
     try {
         const result = ttlSeconds
-            ? await redis.set(key, value, "EX", ttlSeconds)
+            ? await redis.set(key, value, 'EX', ttlSeconds)
             : await redis.set(key, value);
-        logger_util_1.default.debug("Redis cache write", {
-            service: "redis",
-            operation: "set",
+        logger_util_1.default.debug('Redis cache write', {
+            service: 'redis',
+            operation: 'set',
             key,
             ttlSeconds,
             result,
@@ -534,9 +534,9 @@ const cacheSet = async (key, value, ttlSeconds) => {
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache set failed", {
-            service: "redis",
-            operation: "set",
+        logger_util_1.default.error('Redis cache set failed', {
+            service: 'redis',
+            operation: 'set',
             key,
             ttlSeconds,
             error,
@@ -549,18 +549,18 @@ const cacheHGetAll = async (key) => {
     try {
         const value = await redis.hgetall(key);
         const hit = Object.keys(value || {}).length > 0;
-        logger_util_1.default.debug("Redis cache lookup", {
-            service: "redis",
-            operation: "hgetall",
+        logger_util_1.default.debug('Redis cache lookup', {
+            service: 'redis',
+            operation: 'hgetall',
             key,
             hit,
         });
         return value;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache hgetall failed", {
-            service: "redis",
-            operation: "hgetall",
+        logger_util_1.default.error('Redis cache hgetall failed', {
+            service: 'redis',
+            operation: 'hgetall',
             key,
             error,
         });
@@ -571,18 +571,18 @@ exports.cacheHGetAll = cacheHGetAll;
 const cacheDel = async (key) => {
     try {
         const result = await redis.del(key);
-        logger_util_1.default.debug("Redis cache delete", {
-            service: "redis",
-            operation: "del",
+        logger_util_1.default.debug('Redis cache delete', {
+            service: 'redis',
+            operation: 'del',
             key,
             result,
         });
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache delete failed", {
-            service: "redis",
-            operation: "del",
+        logger_util_1.default.error('Redis cache delete failed', {
+            service: 'redis',
+            operation: 'del',
             key,
             error,
         });
@@ -593,18 +593,18 @@ exports.cacheDel = cacheDel;
 const cacheExists = async (key) => {
     try {
         const result = await redis.exists(key);
-        logger_util_1.default.debug("Redis cache exists check", {
-            service: "redis",
-            operation: "exists",
+        logger_util_1.default.debug('Redis cache exists check', {
+            service: 'redis',
+            operation: 'exists',
             key,
             exists: Boolean(result),
         });
         return result;
     }
     catch (error) {
-        logger_util_1.default.error("Redis cache exists check failed", {
-            service: "redis",
-            operation: "exists",
+        logger_util_1.default.error('Redis cache exists check failed', {
+            service: 'redis',
+            operation: 'exists',
             key,
             error,
         });
@@ -645,12 +645,12 @@ function hashString(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
+        hash = (hash << 5) - hash + char;
         hash = hash & hash;
     }
     return Math.abs(hash).toString(16);
 }
-redis.defineCommand("updateReaction", {
+redis.defineCommand('updateReaction', {
     numberOfKeys: 2,
     lua: `
     local breakdownKey = KEYS[1]
@@ -667,7 +667,7 @@ redis.defineCommand("updateReaction", {
     return redis.call("HINCRBY", breakdownKey, type, delta)
   `,
 });
-redis.defineCommand("slidingWindowRateLimit", {
+redis.defineCommand('slidingWindowRateLimit', {
     numberOfKeys: 2,
     lua: `
     local now = tonumber(ARGV[1])

@@ -42,7 +42,7 @@ let AuthService = class AuthService {
             .findOne({
             $or: [{ username: identifier }, { email: identifier }],
         })
-            .select("+password");
+            .select('+password');
     }
     async login(identifier, password) {
         const user = await this.findUserByUsernameOrEmail(identifier);
@@ -51,30 +51,29 @@ let AuthService = class AuthService {
         const isValidPassword = await bcryptjs_1.default.compare(password, user.password);
         if (!isValidPassword)
             return null;
-        const JWT_SECRET = this.configService.get("JWT_SECRET");
-        const REFRESH_SECRET = this.configService.get("REFRESH_SECRET");
+        const REFRESH_SECRET = this.configService.get('REFRESH_SECRET');
         const payload = {
             userId: user._id,
             username: user.username,
         };
-        const accessToken = this.jwtService.sign(payload, { expiresIn: "25m" });
-        const refreshToken = jsonwebtoken_1.default.sign({ userId: user._id }, REFRESH_SECRET || "", {
-            expiresIn: "7d",
+        const accessToken = this.jwtService.sign(payload, { expiresIn: '25m' });
+        const refreshToken = jsonwebtoken_1.default.sign({ userId: user._id }, REFRESH_SECRET || '', {
+            expiresIn: '7d',
         });
         await this.saveRefreshToken(user._id.toString(), refreshToken);
         try {
             await this.kafkaProducer.send({
-                topic: "auth-events",
+                topic: 'auth-events',
                 messages: [
                     {
                         key: user._id.toString(),
-                        value: JSON.stringify({ userId: user._id, action: "login_warmup" }),
+                        value: JSON.stringify({ userId: user._id, action: 'login_warmup' }),
                     },
                 ],
             });
         }
         catch (kafkaErr) {
-            console.error("Cache warm-up trigger failed:", kafkaErr);
+            console.error('Cache warm-up trigger failed:', kafkaErr);
         }
         return {
             accessToken,
@@ -107,9 +106,12 @@ let AuthService = class AuthService {
             if (filePath) {
                 await fs_1.promises
                     .unlink(filePath)
-                    .catch((err) => console.error("Cleanup error after service failure:", err));
+                    .catch(err => console.error('Cleanup error after service failure:', err));
             }
-            throw error;
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error('An unexpected error occurred while saving the user');
         }
     }
     async saveRefreshToken(userId, token) {
@@ -132,95 +134,99 @@ let AuthService = class AuthService {
         return await this.tokenModel.findOne({ refreshToken: token });
     }
     async findUserById(userId) {
-        return await this.userModel.findById(userId).select("+password");
+        return await this.userModel.findById(userId).select('+password');
     }
     async refreshAccessToken(refreshToken) {
         let decoded;
-        const REFRESH_SECRET = this.configService.get("REFRESH_SECRET");
+        const REFRESH_SECRET = this.configService.get('REFRESH_SECRET');
         try {
-            decoded = jsonwebtoken_1.default.verify(refreshToken, REFRESH_SECRET || "");
+            decoded = jsonwebtoken_1.default.verify(refreshToken, REFRESH_SECRET || '');
         }
-        catch (err) {
-            throw new common_1.UnauthorizedException("Expired or invalid refresh token");
+        catch {
+            throw new common_1.UnauthorizedException('Expired or invalid refresh token');
         }
-        const userId = decoded.userId;
+        const userId = typeof decoded === 'object' && decoded && 'userId' in decoded ? decoded.userId : undefined;
+        if (!userId || typeof userId !== 'string') {
+            throw new common_1.UnauthorizedException('Invalid refresh token payload');
+        }
         const tokenRecord = await this.findToken(refreshToken);
         if (!tokenRecord || tokenRecord.userId.toString() !== userId) {
-            throw new common_1.UnauthorizedException("Invalid refresh token state");
+            throw new common_1.UnauthorizedException('Invalid refresh token state');
         }
         const user = await this.findUserById(userId);
         if (!user) {
-            throw new common_1.UnauthorizedException("User not found");
+            throw new common_1.UnauthorizedException('User not found');
         }
-        const newAccessToken = this.jwtService.sign({ userId: user._id, username: user.username }, { expiresIn: "15m" });
+        const newAccessToken = this.jwtService.sign({ userId: user._id, username: user.username }, { expiresIn: '15m' });
         return { accessToken: newAccessToken };
     }
     async generateResetTokenAndSendEmail(email) {
-        const user = await this.userModel.findOne({ email }).select("+password");
+        const user = await this.userModel.findOne({ email }).select('+password');
         if (!user) {
-            return { success: true, message: "If account exists, email sent" };
+            return { success: true, message: 'If account exists, email sent' };
         }
-        const JWT_SECRET = this.configService.get("JWT_SECRET");
-        const LOCALHOST = this.configService.get("LOCALHOST") || "http://localhost:3030";
+        const JWT_SECRET = this.configService.get('JWT_SECRET');
+        const LOCALHOST = this.configService.get('LOCALHOST') || 'http://localhost:3030';
         const secret = JWT_SECRET + user.password;
         const payload = {
             email: user.email,
             id: user._id,
         };
         const token = jsonwebtoken_1.default.sign(payload, secret, {
-            expiresIn: "15m",
+            expiresIn: '15m',
         });
         const link = `${LOCALHOST}/forgotpassword/${user._id}/${token}`;
-        (0, forgotPasswordMailer_1.forgotPasswordLink)(user.email, link);
+        await (0, forgotPasswordMailer_1.forgotPasswordLink)(user.email, link);
         return {
             success: true,
-            message: "A password reset link has been sent to your email",
+            message: 'A password reset link has been sent to your email',
         };
     }
     async resetPasswordWithToken(userId, token, newPassword, cnfPassword) {
         if (newPassword !== cnfPassword) {
             throw new common_1.BadRequestException("Passwords didn't match");
         }
-        const validUser = await this.userModel
-            .findOne({ _id: userId })
-            .select("+password");
+        const validUser = await this.userModel.findOne({ _id: userId }).select('+password');
         if (!validUser) {
-            throw new common_1.NotFoundException("Invalid reset link. User not found.");
+            throw new common_1.NotFoundException('Invalid reset link. User not found.');
         }
-        const JWT_SECRET = this.configService.get("JWT_SECRET");
+        const JWT_SECRET = this.configService.get('JWT_SECRET');
         const secret = JWT_SECRET + validUser.password;
         let payload;
         try {
             payload = jsonwebtoken_1.default.verify(token, secret);
         }
-        catch (error) {
-            throw new common_1.BadRequestException("Password reset link is invalid or has expired");
+        catch {
+            throw new common_1.BadRequestException('Password reset link is invalid or has expired');
         }
         const hashPassword = await bcryptjs_1.default.hash(newPassword, 10);
+        if (typeof payload !== 'object' || payload === null || !('id' in payload) || !('email' in payload)) {
+            throw new common_1.BadRequestException('Password reset token payload is invalid');
+        }
         const user = await this.userModel.findOneAndUpdate({ _id: payload.id, email: payload.email }, { password: hashPassword }, { new: true });
         if (!user) {
-            throw new common_1.NotFoundException("User not found during update");
+            throw new common_1.NotFoundException('User not found during update');
         }
-        return { success: true, message: "Password updated successfully" };
+        return { success: true, message: 'Password updated successfully' };
     }
     async updateUserPassword(userId, oldPassword, newPassword, confirmPassword) {
-        const user = await this.userModel.findById(userId).select("+password");
+        const user = await this.userModel.findById(userId).select('+password');
         if (!user) {
-            throw new common_1.NotFoundException("User account not found.");
+            throw new common_1.NotFoundException('User account not found.');
         }
         const isMatch = await bcryptjs_1.default.compare(oldPassword, user.password);
         if (!isMatch) {
-            throw new common_1.BadRequestException("Current password incorrect.");
+            throw new common_1.BadRequestException('Current password incorrect.');
         }
         if (newPassword !== confirmPassword) {
-            throw new common_1.BadRequestException("New passwords do not match.");
+            throw new common_1.BadRequestException('New passwords do not match.');
         }
         const hashedNewPassword = await bcryptjs_1.default.hash(newPassword, 10);
         await this.userModel.findByIdAndUpdate(userId, { $set: { password: hashedNewPassword } }, { new: true });
         await this.tokenModel.deleteMany({ userId: userId });
         return {
             success: true,
-            message: "Password updated successfully. Please log in again.",
+            message: 'Password updated successfully. Please log in again.',
         };
     }
 };
@@ -229,8 +235,8 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
     __param(1, (0, mongoose_1.InjectModel)(token_model_1.default.name)),
-    __param(4, (0, common_2.Inject)("CLOUDINARY_SERVICE")),
-    __param(5, (0, common_2.Inject)("KAFKA_PRODUCER")),
+    __param(4, (0, common_2.Inject)('CLOUDINARY_SERVICE')),
+    __param(5, (0, common_2.Inject)('KAFKA_PRODUCER')),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         jwt_1.JwtService,

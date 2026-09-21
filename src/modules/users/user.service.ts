@@ -1,5 +1,5 @@
-import User from '../../models/user.model';
-import Follow from '../../models/follow.model';
+import User, { IUser } from '../../models/user.model';
+import Follow, { IFollow } from '../../models/follow.model';
 import Quote from '../../models/quote.model';
 import { enqueueNotificationJob } from '../../shared/queues/quoteNotifications.queue';
 import cloudinaryService from '../../infrastructure/media/cloudinary.service';
@@ -64,7 +64,7 @@ const updateUserAvatar = async (userId: string, avatarFile: AvatarFile) => {
   let newAvatarUrl: string;
   const filePath = avatarFile.path;
 
-  const user = (await User.findById(userId).select('avatar')) as any;
+  const user = await User.findById(userId).select('avatarUrl');
   if (!user) {
     throw new Error('User not found.');
   }
@@ -72,8 +72,8 @@ const updateUserAvatar = async (userId: string, avatarFile: AvatarFile) => {
   try {
     newAvatarUrl = await cloudinaryService.uploadImage(filePath);
 
-    if (user.avatar) {
-      const oldPublicId = cloudinaryService.getPublicIdFromUrl(user.avatar);
+    if (user.avatarUrl) {
+      const oldPublicId = cloudinaryService.getPublicIdFromUrl(user.avatarUrl);
 
       if (oldPublicId) {
         await cloudinaryService.deleteImage(oldPublicId);
@@ -111,9 +111,9 @@ const getSuggestedUsers = async ({
       .select('username firstName lastName avatarUrl bio stats isBanned');
   }
 
-  const followed = await Follow.find({ follower: userId }).select('following').lean();
+  const followed = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
 
-  const followedIds = followed.map(f => (f.following as any).toString());
+  const followedIds = followed.map(f => String(f.following));
 
   const suggestions = await Follow.aggregate([
     {
@@ -149,7 +149,7 @@ const getSuggestedUsers = async ({
         username: '$user.username',
         firstName: '$user.firstName',
         lastName: '$user.lastName',
-        avatar: '$user.avatar',
+        avatarUrl: '$user.avatarUrl',
         mutualCount: 1,
       },
     },
@@ -266,20 +266,20 @@ const getFollowers = async ({
 
   const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-  const followerList = data.map(f => f.follower as any);
+  const followerList = data.map(f => f.follower as unknown as IUser);
   const followerIds = followerList.map(f => f._id.toString());
 
-  let followingStatus = [];
+  let followingStatus: Array<Pick<IFollow, 'following'>> = [];
   if (currentUserId) {
     followingStatus = await Follow.find({
       follower: currentUserId,
       following: { $in: followerIds },
     })
       .select('following')
-      .lean();
+      .lean() as Array<Pick<IFollow, 'following'>>;
   }
 
-  const followingSet = new Set(followingStatus.map(f => (f.following as any).toString()));
+  const followingSet = new Set(followingStatus.map(f => String(f.following)));
 
   return {
     users: followerList.map(user => ({
@@ -314,20 +314,20 @@ const getFollowing = async ({
 
   const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-  const followingList = data.map(f => f.following as any);
+  const followingList = data.map(f => f.following as unknown as IUser);
   const followingIds = followingList.map(f => f._id.toString());
 
-  let followedByStatus = [];
+  let followedByStatus: Array<Pick<IFollow, 'follower'>> = [];
   if (currentUserId) {
     followedByStatus = await Follow.find({
       follower: { $in: followingIds },
       following: currentUserId,
     })
       .select('follower')
-      .lean();
+      .lean() as Array<Pick<IFollow, 'follower'>>;
   }
 
-  const followedBySet = new Set(followedByStatus.map(f => (f.follower as any).toString()));
+  const followedBySet = new Set(followedByStatus.map(f => String(f.follower)));
 
   return {
     following: followingList.map(user => ({

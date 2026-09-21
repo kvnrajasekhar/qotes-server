@@ -17,15 +17,17 @@ exports.KafkaModule = KafkaModule = __decorate([
     (0, common_1.Module)({
         providers: [
             {
-                provide: "KAFKA_PRODUCER",
-                useFactory: async (configService) => {
-                    await (0, kafka_config_1.connectKafka)();
+                provide: 'KAFKA_PRODUCER',
+                useFactory: async (_configService) => {
+                    if (process.env.ENABLE_KAFKA !== 'true') {
+                        return null;
+                    }
                     return kafka_config_1.producer;
                 },
                 inject: [config_1.ConfigService],
             },
         ],
-        exports: ["KAFKA_PRODUCER"],
+        exports: ['KAFKA_PRODUCER'],
     })
 ], KafkaModule);
 //# sourceMappingURL=kafka.module.js.map

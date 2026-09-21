@@ -1,4 +1,4 @@
-import UserContentPreference from "../../models/userContentPreference.model";
+import UserContentPreference from '../../models/userContentPreference.model';
 
 type SavePreferenceArgs = {
   userId: string;
@@ -16,7 +16,7 @@ const preferenceService = {
         $set: { reason, updatedAt: new Date() },
         $setOnInsert: { createdAt: new Date() }, // Only sets on new record creation
       },
-      { upsert: true },
+      { upsert: true }
     );
   },
 };

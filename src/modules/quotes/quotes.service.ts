@@ -2,8 +2,8 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
-import Quote, { IQuote } from '../../models/quote.model';
-import User, { IUser } from '../../models/user.model';
+import { IQuote } from '../../models/quote.model';
+import  { IUser } from '../../models/user.model';
 import { addImageGenerationJob } from '../../shared/queues/imageGeneration.queue';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NOTIFICATION_TYPES, REFERENCE_TYPES } from '../notifications/notification.constants';
@@ -17,12 +17,12 @@ const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 @Injectable()
 export class QuotesService {
   constructor(
-    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
-    @InjectModel(User.name) private userModel: Model<IUser>,
+    @InjectModel("Quote") private quoteModel: Model<IQuote>,
+    @InjectModel("User") private userModel: Model<IUser>,
     private notificationsService: NotificationsService,
     private readonly quoteCache: QuoteCacheService,
-    private readonly cacheInvalidation: CacheInvalidationService,
-  ) {}
+    private readonly cacheInvalidation: CacheInvalidationService
+  ) { }
 
   async createQuote({
     text,
@@ -54,19 +54,23 @@ export class QuotesService {
           throw new BadRequestException('parentQuoteId is required for requote');
         }
 
-        const parentQuote = await this.quoteModel.findOne({
-          _id: parentQuoteId,
-          isHiddenBySystem: false,
-        }).session(session);
+        const parentQuote = await this.quoteModel
+          .findOne({
+            _id: parentQuoteId,
+            isHiddenBySystem: false,
+          })
+          .session(session);
 
         if (!parentQuote) {
           throw new NotFoundException('Parent quote not found or hidden');
         }
 
-        const alreadyRequoted = await this.quoteModel.exists({
-          creator,
-          parentQuoteId,
-        }).session(session);
+        const alreadyRequoted = await this.quoteModel
+          .exists({
+            creator,
+            parentQuoteId,
+          })
+          .session(session);
 
         if (alreadyRequoted) {
           throw new BadRequestException('Already requoted');
@@ -91,12 +95,17 @@ export class QuotesService {
       );
 
       if (isRequote) {
-        await this.quoteModel.updateOne({ _id: parentQuoteId }, { $inc: { requotes: 1 } }, { session });
+        await this.quoteModel.updateOne(
+          { _id: parentQuoteId },
+          { $inc: { requotes: 1 } },
+          { session }
+        );
 
         if (NOTIFICATIONS_ENABLED) {
           void process.nextTick(async () => {
             try {
-              const parentQuote = await this.quoteModel.findById(parentQuoteId)
+              const parentQuote = await this.quoteModel
+                .findById(parentQuoteId)
                 .select('creator text author')
                 .lean();
               const requoter = await this.userModel.findById(creator).lean();
@@ -128,13 +137,13 @@ export class QuotesService {
       void session.endSession();
 
       const savedQuote = newQuote[0];
-      
+
       // Warm up cache for new quote
       await this.quoteCache.warmUpQuoteCache(savedQuote);
-      
+
       // Invalidate user quotes cache and feeds
       this.cacheInvalidation.emitQuoteCreated(savedQuote._id.toString(), creator);
-      
+
       if (IMAGE_GENERATION_ENABLED) {
         void process.nextTick(() => {
           addImageGenerationJob({ quoteId: savedQuote._id.toString() }).catch(err => {
@@ -164,7 +173,7 @@ export class QuotesService {
     return await this.quoteModel.find();
   }
 
-  async updateQuote(id: string, updateData: any) {
+  async updateQuote(id: string, updateData: Partial<Record<string, unknown>>) {
     const updatedQuote = await this.quoteModel.findByIdAndUpdate(id, updateData, { new: true });
     if (updatedQuote) {
       // Invalidate quote cache
@@ -186,14 +195,23 @@ export class QuotesService {
     return null;
   }
 
-  async getQuotesByUser({ userId, cursor = null, limit = 20 }: { userId: string; cursor?: string | null; limit?: number }) {
+  async getQuotesByUser({
+    userId,
+    cursor = null,
+    limit = 20,
+  }: {
+    userId: string;
+    cursor?: string | null;
+    limit?: number;
+  }) {
     const query = { creator: userId };
 
     if (cursor) {
       Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
-    const quotes = await this.quoteModel.find(query)
+    const quotes = await this.quoteModel
+      .find(query)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean();

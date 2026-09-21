@@ -1,21 +1,13 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
-import Collection, { ICollection } from "../../models/collections.model";
-import CollectionItem, {
-  ICollectionItem,
-} from "../../models/collectionItem.model";
-import Quote, { IQuote } from "../../models/quote.model";
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from "../../shared/utils/cursor.util";
-import { CollectionsCacheService } from "../../infrastructure/cache/collections.cache";
-import { CacheInvalidationService } from "../../infrastructure/cache/cache-invalidation.service";
+import Collection, { ICollection } from '../../models/collections.model';
+import CollectionItem, { ICollectionItem } from '../../models/collectionItem.model';
+import Quote, { IQuote } from '../../models/quote.model';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
+import { CollectionsCacheService } from '../../infrastructure/cache/collections.cache';
+import { CacheInvalidationService } from '../../infrastructure/cache/cache-invalidation.service';
 
 @Injectable()
 export class CollectionsService {
@@ -25,8 +17,8 @@ export class CollectionsService {
     private collectionItemModel: Model<ICollectionItem>,
     @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
     private readonly collectionsCache: CollectionsCacheService,
-    private readonly cacheInvalidation: CacheInvalidationService,
-  ) {}
+    private readonly cacheInvalidation: CacheInvalidationService
+  ) { }
 
   async getUserCollections({
     userId,
@@ -39,22 +31,20 @@ export class CollectionsService {
   }) {
     // Use cache for user collections
     return await this.collectionsCache.getUserCollections(userId, async () => {
-      const query: any = { owner: userId };
+      const query: Record<string, unknown> = { owner: userId };
 
       if (cursor) {
-        Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+        Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
       }
 
       const collections = await this.collectionModel
         .find(query)
-        .select("name isPrivate isDefault createdAt")
+        .select('name isPrivate isDefault createdAt')
         .sort({ isDefault: -1, createdAt: -1 })
         .limit(limit + 1)
         .lean();
 
-      const { data, pagination } = processPaginatedResults(collections, limit, [
-        "createdAt",
-      ]);
+      const { data, pagination } = processPaginatedResults(collections, limit, ['createdAt']);
 
       return {
         collections: data,
@@ -74,10 +64,10 @@ export class CollectionsService {
   }) {
     // Use cache for collection items
     return await this.collectionsCache.getCollectionItems(collectionId, async () => {
-      const query: any = { collectionId };
+      const query: Record<string, unknown> = { collectionId };
 
       if (cursor) {
-        Object.assign(query, buildCursorQuery(cursor, "addedAt", -1));
+        Object.assign(query, buildCursorQuery(cursor, 'addedAt', -1));
       }
 
       const items = await this.collectionItemModel
@@ -85,27 +75,21 @@ export class CollectionsService {
         .sort({ addedAt: -1 })
         .limit(limit + 1)
         .populate({
-          path: "quoteId",
-          select: "text author category reactions likes saves requotes createdAt",
+          path: 'quoteId',
+          select: 'text author category reactions likes saves requotes createdAt',
         })
         .lean();
 
-      const { data, pagination } = processPaginatedResults(items, limit, [
-        "addedAt",
-      ]);
+      const { data, pagination } = processPaginatedResults(items, limit, ['addedAt']);
 
       return {
-        items: data.map((i: any) => i.quoteId),
+        items: data.map((i: { quoteId: unknown }) => i.quoteId),
         pagination,
       };
     });
   }
 
-  async toggleSave(
-    userId: string,
-    quoteId: string,
-    collectionId: string | null = null,
-  ) {
+  async toggleSave(userId: string, quoteId: string, collectionId: string | null = null) {
     let targetCollectionId = collectionId;
 
     if (!targetCollectionId) {
@@ -116,7 +100,7 @@ export class CollectionsService {
       if (!defaultCollection) {
         defaultCollection = await this.collectionModel.create({
           owner: userId,
-          name: "Saved",
+          name: 'Saved',
           isPrivate: true,
           isDefault: true,
         });
@@ -127,7 +111,7 @@ export class CollectionsService {
         _id: targetCollectionId,
         owner: userId,
       });
-      if (!isOwner) throw new UnauthorizedException("Unauthorized");
+      if (!isOwner) throw new UnauthorizedException('Unauthorized');
     }
 
     const existing = await this.collectionItemModel.findOne({
@@ -138,10 +122,10 @@ export class CollectionsService {
     if (existing) {
       await this.collectionItemModel.deleteOne({ _id: existing._id });
       await this.quoteModel.findByIdAndUpdate(quoteId, { $inc: { saves: -1 } });
-      
+
       // Invalidate cache
       this.cacheInvalidation.emitCollectionUpdated(targetCollectionId, userId);
-      
+
       return { saved: false };
     }
 

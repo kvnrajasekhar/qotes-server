@@ -22,7 +22,7 @@ const createNotification = async ({ recipient, sender, type, message, referenceI
         return notification;
     }
     catch (error) {
-        console.error("Error creating notification:", error);
+        console.error('Error creating notification:', error);
         throw error;
     }
 };
@@ -30,21 +30,21 @@ const sendRealtimeNotification = async (recipientId, notification) => {
     try {
         const io = (0, notification_socket_1.getIO)();
         if (!io) {
-            console.warn("Socket.IO not initialized, skipping real-time delivery");
+            console.warn('Socket.IO not initialized, skipping real-time delivery');
             return false;
         }
         const userSocketMap = getUserSocketMap();
         const socketIds = userSocketMap.get(recipientId);
         if (socketIds && socketIds.size > 0) {
-            socketIds.forEach((socketId) => {
-                io.to(socketId).emit("notification:new", notification);
+            socketIds.forEach(socketId => {
+                io.to(socketId).emit('notification:new', notification);
             });
             return true;
         }
         return false;
     }
     catch (error) {
-        console.error("Error sending real-time notification:", error);
+        console.error('Error sending real-time notification:', error);
         return false;
     }
 };
@@ -85,21 +85,23 @@ const getNotifications = async (userId, { cursor = null, limit = notification_co
             query.isRead = false;
         }
         if (cursor) {
-            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, "createdAt", -1));
+            Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
         }
         const notifications = await notification_model_1.default.find(query)
-            .populate("sender", "username name avatar")
+            .populate('sender', 'username name avatar')
             .sort({ createdAt: -1 })
             .limit(sanitizedLimit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, ["createdAt"]);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, [
+            'createdAt',
+        ]);
         return {
             notifications: data,
             pagination,
         };
     }
     catch (error) {
-        console.error("Error getting notifications:", error);
+        console.error('Error getting notifications:', error);
         throw error;
     }
 };
@@ -111,7 +113,7 @@ const markAsRead = async (notificationId, userId) => {
             isDeleted: false,
         });
         if (!notification) {
-            throw new Error("Notification not found");
+            throw new Error('Notification not found');
         }
         if (notification.isRead) {
             return notification;
@@ -122,7 +124,7 @@ const markAsRead = async (notificationId, userId) => {
         return notification;
     }
     catch (error) {
-        console.error("Error marking notification as read:", error);
+        console.error('Error marking notification as read:', error);
         throw error;
     }
 };
@@ -139,7 +141,7 @@ const markAllAsRead = async (userId) => {
         };
     }
     catch (error) {
-        console.error("Error marking all notifications as read:", error);
+        console.error('Error marking all notifications as read:', error);
         throw error;
     }
 };
@@ -153,7 +155,7 @@ const getUnreadCount = async (userId) => {
         return count;
     }
     catch (error) {
-        console.error("Error getting unread count:", error);
+        console.error('Error getting unread count:', error);
         throw error;
     }
 };
@@ -167,13 +169,13 @@ const emitUnreadCount = async (userId) => {
         const userSocketMap = getUserSocketMap();
         const socketIds = userSocketMap.get(userId);
         if (socketIds && socketIds.size > 0) {
-            socketIds.forEach((socketId) => {
-                io.to(socketId).emit("notification:count", { unreadCount });
+            socketIds.forEach(socketId => {
+                io.to(socketId).emit('notification:count', { unreadCount });
             });
         }
     }
     catch (error) {
-        console.error("Error emitting unread count:", error);
+        console.error('Error emitting unread count:', error);
     }
 };
 const deleteNotification = async (notificationId, userId) => {
@@ -183,14 +185,14 @@ const deleteNotification = async (notificationId, userId) => {
             recipient: userId,
         });
         if (!notification) {
-            throw new Error("Notification not found");
+            throw new Error('Notification not found');
         }
         notification.isDeleted = true;
         await notification.save();
         return notification;
     }
     catch (error) {
-        console.error("Error deleting notification:", error);
+        console.error('Error deleting notification:', error);
         throw error;
     }
 };

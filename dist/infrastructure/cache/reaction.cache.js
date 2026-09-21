@@ -18,7 +18,7 @@ async function getReactionBreakdown(quoteId) {
         if (!total || Object.keys(breakdown).length === 0) {
             const agg = await reaction_model_1.default.aggregate([
                 { $match: { quoteId: new mongoose_1.default.Types.ObjectId(quoteId) } },
-                { $group: { _id: "$type", count: { $sum: 1 } } },
+                { $group: { _id: '$type', count: { $sum: 1 } } },
             ]);
             const repairedBreakdown = {};
             let repairedTotal = 0;
@@ -42,15 +42,15 @@ async function getReactionBreakdown(quoteId) {
             total: Number(total || 0),
         };
     }
-    catch (error) {
+    catch {
         return { breakdown: {}, total: 0 };
     }
 }
 async function atomicUpdateCache(quoteId, type, delta, oldType) {
     try {
-        return await redis_utils_1.redis.updateReaction(redis_utils_1.RedisKeys.reactionBreakdown(quoteId), redis_utils_1.RedisKeys.reactionTotal(quoteId), type, delta, oldType || "none");
+        return await redis_utils_1.redis.updateReaction(redis_utils_1.RedisKeys.reactionBreakdown(quoteId), redis_utils_1.RedisKeys.reactionTotal(quoteId), type, delta, oldType || 'none');
     }
-    catch (error) {
+    catch {
         return null;
     }
 }

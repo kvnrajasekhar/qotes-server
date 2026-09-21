@@ -30,30 +30,34 @@ let AuthGuard = class AuthGuard {
         const request = context.switchToHttp().getRequest();
         const token = this.extractTokenFromHeader(request);
         if (!token) {
-            throw new common_1.UnauthorizedException("Access token is required");
+            throw new common_1.UnauthorizedException('Access token is required');
         }
         try {
             const payload = await this.jwtService.verifyAsync(token, {
                 secret: process.env.JWT_SECRET,
             });
-            const user = await this.userModel
-                .findById(payload.userId)
-                .select("-password");
+            const user = await this.userModel.findById(payload.userId).select('-password');
             if (!user) {
-                throw new common_1.UnauthorizedException("User not found");
+                throw new common_1.UnauthorizedException('User not found');
             }
-            request.user = user;
-            request.user.id = user._id.toString();
-            request.user.userId = user._id.toString();
+            const userId = typeof user._id !== 'undefined' ? String(user._id) : undefined;
+            const authenticatedUser = {
+                userId,
+                id: userId,
+                _id: userId,
+                username: user.username,
+                email: user.email,
+            };
+            request.user = authenticatedUser;
         }
-        catch (error) {
-            throw new common_1.UnauthorizedException("Invalid or expired token");
+        catch {
+            throw new common_1.UnauthorizedException('Invalid or expired token');
         }
         return true;
     }
     extractTokenFromHeader(request) {
-        const [type, token] = request.headers.authorization?.split(" ") ?? [];
-        return type === "Bearer" ? token : undefined;
+        const [type, token] = request.headers.authorization?.split(' ') ?? [];
+        return type === 'Bearer' ? token : undefined;
     }
 };
 exports.AuthGuard = AuthGuard;

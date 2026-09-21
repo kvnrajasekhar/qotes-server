@@ -2,15 +2,19 @@ import { Controller, UseInterceptors, Post, UseGuards, Request, Body } from '@ne
 import { PreferencesService } from './preferences.service';
 import { ResponseInterceptor } from '../../shared/interceptors/response.interceptor';
 import { AuthGuard } from '../../shared/guards/auth.guard';
+import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-request.interface';
 
 @Controller('preferences')
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class PreferencesController {
-  constructor(private preferencesService: PreferencesService) {}
+  constructor(private preferencesService: PreferencesService) { }
 
   @Post('not-interested')
-  async saveNotInterested(@Request() req: any, @Body() body: { type: string; targetId: string; reason?: string }) {
+  async saveNotInterested(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { type: string; targetId: string; reason?: string }
+  ) {
     const { type, targetId, reason } = body;
     const userId = req.user?.id;
 

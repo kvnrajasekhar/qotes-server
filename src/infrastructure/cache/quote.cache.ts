@@ -13,66 +13,58 @@ export class QuoteCacheService {
    * Cache single quote by ID
    */
   async getQuote(quoteId: string, factory: () => Promise<IQuote>): Promise<IQuote> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.quote(quoteId),
-      factory,
-      CacheTTL.LONG,
-    );
+    return this.cacheManager.getOrSet(RedisKeys.quote(quoteId), factory, CacheTTL.LONG);
   }
 
   /**
    * Cache quote statistics
    */
-  async getQuoteStats(quoteId: string, factory: () => Promise<any>): Promise<any> {
+  async getQuoteStats(quoteId: string, factory: () => Promise<unknown>): Promise<unknown> {
     return this.cacheManager.getOrSet(
       RedisKeys.quoteStats(quoteId),
       factory,
-      CacheTTL.MEDIUM_SHORT,
+      CacheTTL.MEDIUM_SHORT
     );
   }
 
   /**
    * Cache user's quotes with pagination
    */
-  async getUserQuotes<T = any>(userId: string, page: number, factory: () => Promise<T>): Promise<T> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.userQuotes(userId, page),
-      factory,
-      CacheTTL.MEDIUM,
-    );
+  async getUserQuotes<T = unknown>(
+    userId: string,
+    page: number,
+    factory: () => Promise<T>
+  ): Promise<T> {
+    return this.cacheManager.getOrSet(RedisKeys.userQuotes(userId, page), factory, CacheTTL.MEDIUM);
   }
 
   /**
    * Cache global feed with pagination
    */
-  async getGlobalFeed<T = any>(page: number, factory: () => Promise<T>): Promise<T> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.globalFeed(page),
-      factory,
-      CacheTTL.MEDIUM_SHORT,
-    );
+  async getGlobalFeed<T = unknown>(page: number, factory: () => Promise<T>): Promise<T> {
+    return this.cacheManager.getOrSet(RedisKeys.globalFeed(page), factory, CacheTTL.MEDIUM_SHORT);
   }
 
   /**
    * Cache following feed with pagination
    */
-  async getFollowingFeed<T = any>(userId: string, page: number, factory: () => Promise<T>): Promise<T> {
+  async getFollowingFeed<T = unknown>(
+    userId: string,
+    page: number,
+    factory: () => Promise<T>
+  ): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.followingFeed(userId, page),
       factory,
-      CacheTTL.MEDIUM_SHORT,
+      CacheTTL.MEDIUM_SHORT
     );
   }
 
   /**
    * Cache discover feed with pagination
    */
-  async getDiscoverFeed<T = any>(page: number, factory: () => Promise<T>): Promise<T> {
-    return this.cacheManager.getOrSet(
-      RedisKeys.discoverFeed(page),
-      factory,
-      CacheTTL.MEDIUM_SHORT,
-    );
+  async getDiscoverFeed<T = unknown>(page: number, factory: () => Promise<T>): Promise<T> {
+    return this.cacheManager.getOrSet(RedisKeys.discoverFeed(page), factory, CacheTTL.MEDIUM_SHORT);
   }
 
   /**
@@ -121,9 +113,7 @@ export class QuoteCacheService {
    * Batch warm up quotes
    */
   async warmUpQuotesCache(quotes: IQuote[]): Promise<void> {
-    const promises = quotes.map(quote =>
-      this.warmUpQuoteCache(quote)
-    );
+    const promises = quotes.map(quote => this.warmUpQuoteCache(quote));
     await Promise.allSettled(promises);
     this.logger.debug(`Warmed up cache for ${quotes.length} quotes`);
   }

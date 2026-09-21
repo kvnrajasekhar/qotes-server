@@ -43,7 +43,6 @@ const CollectionItemSchema = new mongoose_1.Schema({
 exports.CollectionItemSchema = CollectionItemSchema;
 CollectionItemSchema.index({ collectionId: 1, quoteId: 1 }, { unique: true });
 CollectionItemSchema.index({ collectionId: 1, addedAt: -1 });
-CollectionItemSchema.index({ quoteId: 1 });
 const CollectionItem = mongoose_1.default.model("CollectionItem", CollectionItemSchema);
 exports.default = CollectionItem;
 //# sourceMappingURL=collectionItem.model.js.map

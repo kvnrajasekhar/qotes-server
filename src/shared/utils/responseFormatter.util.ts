@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Response } from 'express';
 
 /**
  * Standardizes successful API response formatting.
@@ -11,7 +11,7 @@ const successResponse = (
   res: Response,
   statusCode: number,
   message: string,
-  data: any = {},
+  data: unknown = {}
 ): Response => {
   return res.status(statusCode).json({
     success: true,
@@ -32,7 +32,7 @@ const errorResponse = (
   res: Response,
   statusCode: number,
   message: string,
-  errors: any = [],
+  errors: unknown = []
 ): Response => {
   return res.status(statusCode).json({
     success: false,

@@ -5,15 +5,18 @@ declare global {
         userId?: string;
         id?: string;
         _id?: string;
-        [key: string]: any;
+        username?: string;
+        email?: string;
+        role?: string;
       };
-      file?: any;
-      files?: any;
+      file?: Express.Multer.File;
+      files?: Record<string, Express.Multer.File[]> | Express.Multer.File[];
       cookies?: Record<string, string>;
       traceId?: string;
-      app?: any;
+      correlationId?: string;
+      app?: unknown;
     }
   }
 }
 
-export {};
+export { };

@@ -1,16 +1,14 @@
-import { kafka } from "../config/kafka.config";
-import { Producer, Consumer, KafkaMessage } from "kafkajs";
+import { kafka } from '../config/kafka.config';
+import { Producer, Consumer, KafkaMessage } from 'kafkajs';
 
 const producer: Producer = kafka.producer();
 const consumer: Consumer = kafka.consumer({
-  groupId: "universal-dlq-replayer",
+  groupId: 'universal-dlq-replayer',
 });
 
 const replay = async (dlqTopic: string, targetTopic: string): Promise<void> => {
   if (!dlqTopic || !targetTopic) {
-    console.error(
-      "❌ Usage: node universal-replayer.js <dlqTopic> <targetTopic>",
-    );
+    console.error('❌ Usage: node universal-replayer.js <dlqTopic> <targetTopic>');
     process.exit(1);
   }
 
@@ -42,15 +40,12 @@ const replay = async (dlqTopic: string, targetTopic: string): Promise<void> => {
 
           console.log(`✅ [${message.key}] Replayed to ${targetTopic}`);
         } catch (sendErr: any) {
-          console.error(
-            `❌ Failed to send message ${message.key}:`,
-            sendErr.message,
-          );
+          console.error(`❌ Failed to send message ${message.key}:`, sendErr.message);
         }
       },
     });
   } catch (err: any) {
-    console.error("❌ Replayer Crash:", err.message);
+    console.error('❌ Replayer Crash:', err.message);
   }
 };
 

@@ -6,7 +6,7 @@ import { RedisKeys, CacheTTL } from '../../shared/utils/redis.utils';
 export class NotificationsCacheService {
   private readonly logger = new Logger(NotificationsCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) {}
+  constructor(private readonly cacheManager: CacheManagerService) { }
 
   /**
    * Cache notification count for user
@@ -15,18 +15,18 @@ export class NotificationsCacheService {
     return this.cacheManager.getOrSet(
       RedisKeys.notificationCount(userId),
       factory,
-      CacheTTL.MEDIUM_SHORT,
+      CacheTTL.MEDIUM_SHORT
     );
   }
 
   /**
    * Cache recent notifications for user
    */
-  async getRecentNotifications(userId: string, factory: () => Promise<any[]>): Promise<any[]> {
+  async getRecentNotifications(userId: string, factory: () => Promise<unknown[]>): Promise<unknown[]> {
     return this.cacheManager.getOrSet(
       RedisKeys.recentNotifications(userId),
       factory,
-      CacheTTL.SHORT,
+      CacheTTL.SHORT
     );
   }
 
@@ -65,8 +65,12 @@ export class NotificationsCacheService {
   /**
    * Warm up recent notifications
    */
-  async warmUpRecentNotifications(userId: string, notifications: any[]): Promise<void> {
-    await this.cacheManager.set(RedisKeys.recentNotifications(userId), notifications, CacheTTL.SHORT);
+  async warmUpRecentNotifications(userId: string, notifications: unknown[]): Promise<void> {
+    await this.cacheManager.set(
+      RedisKeys.recentNotifications(userId),
+      notifications,
+      CacheTTL.SHORT
+    );
     this.logger.debug(`Warmed up recent notifications for user: ${userId}`);
   }
 }

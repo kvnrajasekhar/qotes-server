@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 /**
  * Async Handler Utility
@@ -6,9 +6,9 @@ import { Request, Response, NextFunction } from "express";
  * and pass them to the Express error handling middleware.
  */
 const asyncHandler =
-  (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
-  (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler =>
+    (req: Request, res: Response, next: NextFunction) => {
+      Promise.resolve(fn(req, res, next)).catch(next);
+    };
 
 export default asyncHandler;

@@ -25,7 +25,7 @@ exports.CacheModule = CacheModule = __decorate([
         imports: [event_emitter_1.EventEmitterModule],
         providers: [
             {
-                provide: "REDIS_CLIENT",
+                provide: 'REDIS_CLIENT',
                 useFactory: () => redis_utils_1.redis,
             },
             cache_manager_service_1.CacheManagerService,
@@ -37,7 +37,7 @@ exports.CacheModule = CacheModule = __decorate([
             cache_invalidation_service_1.CacheInvalidationService,
         ],
         exports: [
-            "REDIS_CLIENT",
+            'REDIS_CLIENT',
             cache_manager_service_1.CacheManagerService,
             user_cache_1.UserCacheService,
             quote_cache_1.QuoteCacheService,

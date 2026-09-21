@@ -66,11 +66,7 @@ export class CacheManagerService {
   /**
    * Get from cache or set using factory function (cache-aside pattern)
    */
-  async getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    ttl?: number,
-  ): Promise<T> {
+  async getOrSet<T>(key: string, factory: () => Promise<T>, ttl?: number): Promise<T> {
     try {
       return await cacheGetOrSet(key, factory, ttl);
     } catch (error) {
@@ -157,11 +153,7 @@ export class CacheManagerService {
   /**
    * Warm up cache for a specific key
    */
-  async warmUpKey(
-    key: string,
-    factory: () => Promise<any>,
-    ttl?: number,
-  ): Promise<void> {
+  async warmUpKey<T>(key: string, factory: () => Promise<T>, ttl?: number): Promise<void> {
     try {
       const data = await factory();
       await this.set(key, data, ttl);
@@ -174,18 +166,16 @@ export class CacheManagerService {
   /**
    * Warm up multiple keys with their factory functions
    */
-  async warmUpPattern(
+  async warmUpPattern<T>(
     pattern: string,
-    factoryMap: Map<string, () => Promise<any>>,
-    ttl?: number,
+    factoryMap: Map<string, () => Promise<T>>,
+    ttl?: number
   ): Promise<void> {
-    const promises = Array.from(factoryMap.entries()).map(
-      async ([key, factory]) => {
-        if (key.match(pattern)) {
-          await this.warmUpKey(key, factory, ttl);
-        }
-      },
-    );
+    const promises = Array.from(factoryMap.entries()).map(async ([key, factory]) => {
+      if (key.match(pattern)) {
+        await this.warmUpKey(key, factory, ttl);
+      }
+    });
 
     await Promise.allSettled(promises);
     this.logger.debug(`Cache pattern warm-up completed: ${pattern}`);
@@ -195,9 +185,8 @@ export class CacheManagerService {
    * Get cache statistics
    */
   async getStats(): Promise<CacheStats> {
-    const hitRate = this.stats.totalOperations > 0
-      ? (this.stats.hits / this.stats.totalOperations) * 100
-      : 0;
+    const hitRate =
+      this.stats.totalOperations > 0 ? (this.stats.hits / this.stats.totalOperations) * 100 : 0;
 
     return {
       ...this.stats,
@@ -247,7 +236,7 @@ export class CacheManagerService {
       const info = await redis.info();
       const dbSize = await redis.dbsize();
       const memory = await redis.info('memory');
-      
+
       return {
         connected: true,
         info,
@@ -282,42 +271,42 @@ export class CacheManagerService {
   /**
    * Convenience method for user profile caching
    */
-  async getUserProfile(userId: string): Promise<any> {
+  async getUserProfile(userId: string): Promise<unknown> {
     return this.getOrSet(
       RedisKeys.userProfile(userId),
       async () => {
         // This will be implemented by the service
         return null;
       },
-      CacheTTL.MEDIUM_LONG,
+      CacheTTL.MEDIUM_LONG
     );
   }
 
   /**
    * Convenience method for user stats caching
    */
-  async getUserStats(userId: string): Promise<any> {
+  async getUserStats(userId: string): Promise<unknown> {
     return this.getOrSet(
       RedisKeys.userStats(userId),
       async () => {
         // This will be implemented by the service
         return null;
       },
-      CacheTTL.MEDIUM_SHORT,
+      CacheTTL.MEDIUM_SHORT
     );
   }
 
   /**
    * Convenience method for quote caching
    */
-  async getQuote(quoteId: string): Promise<any> {
+  async getQuote(quoteId: string): Promise<unknown> {
     return this.getOrSet(
       RedisKeys.quote(quoteId),
       async () => {
         // This will be implemented by the service
         return null;
       },
-      CacheTTL.LONG,
+      CacheTTL.LONG
     );
   }
 

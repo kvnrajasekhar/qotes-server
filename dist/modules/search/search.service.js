@@ -40,10 +40,10 @@ let SearchService = class SearchService {
             };
         }
         return await this.searchCache.getUserSearchResults(query, async () => {
-            const escaped = query.replace(/[*+?^${}()|[\]\\]/g, "\\$&");
-            const exactRegex = new RegExp(`^${escaped}$`, "i");
-            const prefixRegex = new RegExp(`^${escaped}`, "i");
-            const containsRegex = new RegExp(escaped, "i");
+            const escaped = query.replace(/[*+?^${}()|[\]\\]/g, '\\$&');
+            const exactRegex = new RegExp(`^${escaped}$`, 'i');
+            const prefixRegex = new RegExp(`^${escaped}`, 'i');
+            const containsRegex = new RegExp(escaped, 'i');
             const pipeline = [
                 {
                     $match: {
@@ -59,57 +59,33 @@ let SearchService = class SearchService {
                         score: {
                             $add: [
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$username", regex: exactRegex } },
-                                        100,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$username', regex: exactRegex } }, 100, 0],
                                 },
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$username", regex: prefixRegex } },
-                                        60,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$username', regex: prefixRegex } }, 60, 0],
                                 },
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$firstName", regex: prefixRegex } },
-                                        40,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$firstName', regex: prefixRegex } }, 40, 0],
                                 },
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$lastName", regex: prefixRegex } },
-                                        40,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$lastName', regex: prefixRegex } }, 40, 0],
                                 },
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$username", regex: containsRegex } },
-                                        20,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$username', regex: containsRegex } }, 20, 0],
                                 },
                                 {
                                     $cond: [
                                         {
-                                            $regexMatch: { input: "$firstName", regex: containsRegex },
+                                            $regexMatch: { input: '$firstName', regex: containsRegex },
                                         },
                                         10,
                                         0,
                                     ],
                                 },
                                 {
-                                    $cond: [
-                                        { $regexMatch: { input: "$lastName", regex: containsRegex } },
-                                        10,
-                                        0,
-                                    ],
+                                    $cond: [{ $regexMatch: { input: '$lastName', regex: containsRegex } }, 10, 0],
                                 },
-                                { $cond: [{ $gt: ["$stats.followerCount", 1000] }, 15, 0] },
+                                { $cond: [{ $gt: ['$stats.followerCount', 1000] }, 15, 0] },
                             ],
                         },
                     },
@@ -132,33 +108,30 @@ let SearchService = class SearchService {
             }
             pipeline.push({ $sort: { score: -1, _id: 1 } }, { $limit: limit + 1 }, { $project: { password: 0, __v: 0 } });
             const users = await this.userModel.aggregate(pipeline);
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, [
-                "score",
-                "_id",
-            ]);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(users, limit, ['score', '_id']);
             return {
                 users: data,
                 pagination,
             };
         });
     }
-    async searchGlobal({ query, type = "all", limit = 20, cursor = {} }) {
+    async searchGlobal({ query, type = 'all', limit = 20, cursor = {} }) {
         if (!query || !query.trim()) {
             return {
                 results: { users: [], quotes: [], hashtags: [] },
                 pagination: { nextCursor: null, hasMore: false },
             };
         }
-        const escaped = query.replace(/[*+?^${}()|[\]\\]/g, "\\$&");
-        const containsRegex = new RegExp(escaped, "i");
-        const prefixRegex = new RegExp(`^${escaped}`, "i");
+        const escaped = query.replace(/[*+?^${}()|[\]\\]/g, '\\$&');
+        const containsRegex = new RegExp(escaped, 'i');
+        const prefixRegex = new RegExp(`^${escaped}`, 'i');
         const results = {
             users: [],
             quotes: [],
             hashtags: [],
         };
         const nextCursor = {};
-        if (type === "all" || type === "users") {
+        if (type === 'all' || type === 'users') {
             const userResult = await this.searchUsers({
                 query,
                 cursor: cursor.users || null,
@@ -167,33 +140,33 @@ let SearchService = class SearchService {
             results.users = userResult.users;
             nextCursor.users = userResult.pagination.nextCursor;
         }
-        if (type === "all" || type === "quotes") {
+        if (type === 'all' || type === 'quotes') {
             results.quotes = await this.searchCache.getQuoteSearchResults(query, async () => {
                 const quoteQuery = {
                     isHiddenBySystem: false,
                     $or: [{ text: containsRegex }, { hashtags: prefixRegex }],
                 };
                 if (cursor?.quotes) {
-                    Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, "createdAt", -1));
+                    Object.assign(quoteQuery, (0, cursor_util_1.buildCursorQuery)(cursor.quotes, 'createdAt', -1));
                 }
                 const quotes = await this.quoteModel
                     .find(quoteQuery)
                     .sort({ createdAt: -1 })
                     .limit(limit + 1)
-                    .populate("creator", "username avatarUrl")
+                    .populate('creator', 'username avatarUrl')
                     .lean();
-                const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ["createdAt"]);
+                const { data: quoteData, pagination: quotePagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
                 nextCursor.quotes = quotePagination.nextCursor;
                 return quoteData;
             });
         }
-        if (type === "all" || type === "hashtags") {
+        if (type === 'all' || type === 'hashtags') {
             results.hashtags = await this.searchCache.getHashtagSearchResults(query, async () => {
                 const hashtags = await this.quoteModel.aggregate([
                     { $match: { hashtags: prefixRegex } },
-                    { $unwind: "$hashtags" },
+                    { $unwind: '$hashtags' },
                     { $match: { hashtags: prefixRegex } },
-                    { $group: { _id: "$hashtags", count: { $sum: 1 } } },
+                    { $group: { _id: '$hashtags', count: { $sum: 1 } } },
                     { $sort: { count: -1 } },
                     { $limit: Math.ceil(limit / 3) },
                 ]);

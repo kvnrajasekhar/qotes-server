@@ -1,9 +1,9 @@
-import mongoose from "mongoose";
-import { Schema, Document } from "mongoose";
+import mongoose from 'mongoose';
+import { Schema, Document } from 'mongoose';
 import {
   NOTIFICATION_TYPES,
   REFERENCE_TYPES,
-} from "../modules/notifications/notification.constants";
+} from '../modules/notifications/notification.constants';
 
 interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
@@ -28,13 +28,13 @@ const NotificationSchema = new Schema<INotification>(
     _id: { type: Schema.Types.ObjectId, auto: true },
     recipient: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
     sender: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
@@ -85,18 +85,8 @@ const NotificationSchema = new Schema<INotification>(
   },
   {
     timestamps: true,
-  },
+  }
 );
-
-// Single indexes for common queries
-NotificationSchema.index({ recipient: 1 });
-NotificationSchema.index({ sender: 1 });
-NotificationSchema.index({ type: 1 });
-NotificationSchema.index({ referenceId: 1 });
-NotificationSchema.index({ referenceType: 1 });
-NotificationSchema.index({ isRead: 1 });
-NotificationSchema.index({ isDeleted: 1 });
-NotificationSchema.index({ createdAt: 1 });
 
 // Compound indexes for optimized queries
 NotificationSchema.index({ recipient: 1, createdAt: -1 }); // User's notifications in chronological order
@@ -108,18 +98,18 @@ NotificationSchema.index({ recipient: 1, isDeleted: 1, createdAt: -1 }); // Excl
 // NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 }); // 90 days in seconds
 
 // Pre-save middleware to update updatedAt
-NotificationSchema.pre("save", function (next) {
+NotificationSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
 
 // Pre-update middleware to update updatedAt
-NotificationSchema.pre("findOneAndUpdate", function (next) {
+NotificationSchema.pre('findOneAndUpdate', function (next) {
   this.set({ updatedAt: new Date() });
   next();
 });
 
-const Notification = mongoose.model<INotification>("Notification", NotificationSchema);
+const Notification = mongoose.model<INotification>('Notification', NotificationSchema);
 
 export default Notification;
 export { NotificationSchema, INotification };

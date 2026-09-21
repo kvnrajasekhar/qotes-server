@@ -45,17 +45,21 @@ let QuotesService = class QuotesService {
                 if (!parentQuoteId) {
                     throw new common_1.BadRequestException('parentQuoteId is required for requote');
                 }
-                const parentQuote = await this.quoteModel.findOne({
+                const parentQuote = await this.quoteModel
+                    .findOne({
                     _id: parentQuoteId,
                     isHiddenBySystem: false,
-                }).session(session);
+                })
+                    .session(session);
                 if (!parentQuote) {
                     throw new common_1.NotFoundException('Parent quote not found or hidden');
                 }
-                const alreadyRequoted = await this.quoteModel.exists({
+                const alreadyRequoted = await this.quoteModel
+                    .exists({
                     creator,
                     parentQuoteId,
-                }).session(session);
+                })
+                    .session(session);
                 if (alreadyRequoted) {
                     throw new common_1.BadRequestException('Already requoted');
                 }
@@ -78,7 +82,8 @@ let QuotesService = class QuotesService {
                 if (NOTIFICATIONS_ENABLED) {
                     void process.nextTick(async () => {
                         try {
-                            const parentQuote = await this.quoteModel.findById(parentQuoteId)
+                            const parentQuote = await this.quoteModel
+                                .findById(parentQuoteId)
                                 .select('creator text author')
                                 .lean();
                             const requoter = await this.userModel.findById(creator).lean();
@@ -154,12 +159,13 @@ let QuotesService = class QuotesService {
         }
         return null;
     }
-    async getQuotesByUser({ userId, cursor = null, limit = 20 }) {
+    async getQuotesByUser({ userId, cursor = null, limit = 20, }) {
         const query = { creator: userId };
         if (cursor) {
             Object.assign(query, (0, cursor_util_1.buildCursorQuery)(cursor, 'createdAt', -1));
         }
-        const quotes = await this.quoteModel.find(query)
+        const quotes = await this.quoteModel
+            .find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .lean();

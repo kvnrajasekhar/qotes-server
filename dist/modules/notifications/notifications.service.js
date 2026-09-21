@@ -56,7 +56,7 @@ let NotificationsService = class NotificationsService {
             const userSocketMap = this.getUserSocketMap();
             const socketIds = userSocketMap.get(recipientId);
             if (socketIds && socketIds.size > 0) {
-                socketIds.forEach((socketId) => {
+                socketIds.forEach(socketId => {
                     io.to(socketId).emit('notification:new', notification);
                 });
                 return true;
@@ -113,7 +113,9 @@ let NotificationsService = class NotificationsService {
                 .sort({ createdAt: -1 })
                 .limit(sanitizedLimit + 1)
                 .lean();
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, ['createdAt']);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(notifications, sanitizedLimit, [
+                'createdAt',
+            ]);
             return {
                 notifications: data,
                 pagination,
@@ -188,7 +190,7 @@ let NotificationsService = class NotificationsService {
             const userSocketMap = this.getUserSocketMap();
             const socketIds = userSocketMap.get(userId);
             if (socketIds && socketIds.size > 0) {
-                socketIds.forEach((socketId) => {
+                socketIds.forEach(socketId => {
                     io.to(socketId).emit('notification:count', { unreadCount });
                 });
             }

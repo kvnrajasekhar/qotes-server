@@ -53,7 +53,9 @@ exports.PreferencesModule = PreferencesModule = __decorate([
     (0, common_1.Module)({
         imports: [
             auth_module_1.AuthModule,
-            mongoose_1.MongooseModule.forFeature([{ name: userContentPreference_model_1.default.name, schema: userContentPreference_model_1.userContentPreferenceSchema }]),
+            mongoose_1.MongooseModule.forFeature([
+                { name: userContentPreference_model_1.default.name, schema: userContentPreference_model_1.userContentPreferenceSchema },
+            ]),
         ],
         controllers: [preferences_controller_1.PreferencesController],
         providers: [preferences_service_1.PreferencesService],

@@ -54,9 +54,7 @@ exports.NotificationsModule = NotificationsModule = __decorate([
     (0, common_1.Module)({
         imports: [
             auth_module_1.AuthModule,
-            mongoose_1.MongooseModule.forFeature([
-                { name: notification_model_1.default.name, schema: notification_model_1.NotificationSchema },
-            ]),
+            mongoose_1.MongooseModule.forFeature([{ name: notification_model_1.default.name, schema: notification_model_1.NotificationSchema }]),
             (0, common_1.forwardRef)(() => quotes_module_1.QuotesModule),
         ],
         controllers: [notifications_controller_1.NotificationsController],

@@ -12,22 +12,22 @@ export class CollectionsCacheService {
   /**
    * Cache user's collections
    */
-  async getUserCollections<T = any>(userId: string, factory: () => Promise<T>): Promise<T> {
+  async getUserCollections<T = unknown>(userId: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.userCollections(userId),
       factory,
-      CacheTTL.MEDIUM_LONG,
+      CacheTTL.MEDIUM_LONG
     );
   }
 
   /**
    * Cache collection items
    */
-  async getCollectionItems<T = any>(collectionId: string, factory: () => Promise<T>): Promise<T> {
+  async getCollectionItems<T = unknown>(collectionId: string, factory: () => Promise<T>): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.collectionItems(collectionId),
       factory,
-      CacheTTL.MEDIUM,
+      CacheTTL.MEDIUM
     );
   }
 
@@ -51,14 +51,18 @@ export class CollectionsCacheService {
    * Warm up user collections cache
    */
   async warmUpUserCollections(userId: string, collections: ICollection[]): Promise<void> {
-    await this.cacheManager.set(RedisKeys.userCollections(userId), collections, CacheTTL.MEDIUM_LONG);
+    await this.cacheManager.set(
+      RedisKeys.userCollections(userId),
+      collections,
+      CacheTTL.MEDIUM_LONG
+    );
     this.logger.debug(`Warmed up collections cache for user: ${userId}`);
   }
 
   /**
    * Warm up collection items cache
    */
-  async warmUpCollectionItems(collectionId: string, items: any[]): Promise<void> {
+  async warmUpCollectionItems(collectionId: string, items: unknown[]): Promise<void> {
     await this.cacheManager.set(RedisKeys.collectionItems(collectionId), items, CacheTTL.MEDIUM);
     this.logger.debug(`Warmed up collection items cache: ${collectionId}`);
   }

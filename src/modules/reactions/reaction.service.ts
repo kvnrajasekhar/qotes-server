@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import Reaction from '../../models/reaction.model';
+import mongoose, { FilterQuery } from 'mongoose';
+import Reaction, { IReaction } from '../../models/reaction.model';
 import Quote from '../../models/quote.model';
 import Follow from '../../models/follow.model';
 import { redis, RedisKeys } from '../../shared/utils/redis.utils';
@@ -13,7 +13,7 @@ const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 const reactionService = {
   toggleReaction: async ({ userId, quoteId, type }) => {
     // 1. RATE LIMITING (Using our new custom command)
-    const allowed = await (redis as any).slidingWindowRateLimit(
+    const allowed = await redis.slidingWindowRateLimit(
       RedisKeys.rateLimitBurst(userId),
       RedisKeys.rateLimitSustain(userId),
       Date.now(),
@@ -147,7 +147,7 @@ const reactionService = {
       }
     }
 
-    const query: any = { quoteId: new mongoose.Types.ObjectId(quoteId) };
+    const query: FilterQuery<IReaction> = { quoteId: new mongoose.Types.ObjectId(quoteId) };
     if (type) query.type = type;
     if (cursor) {
       Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));

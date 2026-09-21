@@ -17,12 +17,24 @@ interface RateLimiterConfig {
   identifier?: "ip" | "userId";
 }
 
+interface RedisRateLimitClient {
+  slidingWindowRateLimit(
+    burstKey: string,
+    sustainedKey: string,
+    now: number,
+    burstWindowMs: number,
+    burstLimit: number,
+    sustainedWindowMs: number,
+    sustainedLimit: number,
+  ): Promise<boolean>;
+}
+
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    @Inject("REDIS") private redis: any,
-  ) {}
+    @Inject("REDIS") private redis: RedisRateLimitClient,
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const config = this.reflector.get<RateLimiterConfig>(
@@ -62,13 +74,13 @@ export class RateLimitGuard implements CanActivate {
       }
 
       return true;
-    } catch (error: any) {
-      if (error.status === HttpStatus.TOO_MANY_REQUESTS) {
+    } catch (error: unknown) {
+      if (error instanceof HttpException && error.getStatus() === HttpStatus.TOO_MANY_REQUESTS) {
         throw error;
       }
       console.error(
         `Rate Limiter Error (${config.actionName}):`,
-        error.message,
+        error instanceof Error ? error.message : String(error),
       );
       return true;
     }

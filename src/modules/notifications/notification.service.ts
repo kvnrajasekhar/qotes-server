@@ -1,10 +1,7 @@
-import Notification from "../../models/notification.model";
-import { NOTIFICATION_CONFIG } from "./notification.constants";
-import { getIO } from "./notification.socket";
-import {
-  buildCursorQuery,
-  processPaginatedResults,
-} from "../../shared/utils/cursor.util";
+import Notification, { INotification } from '../../models/notification.model';
+import { NOTIFICATION_CONFIG } from './notification.constants';
+import { getIO } from './notification.socket';
+import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 
 declare global {
   var userSocketMap: Map<string, Set<string>> | undefined;
@@ -17,7 +14,7 @@ interface CreateNotificationData {
   message: string;
   referenceId?: string;
   referenceType?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface GetNotificationsOptions {
@@ -50,19 +47,16 @@ const createNotification = async ({
 
     return notification;
   } catch (error) {
-    console.error("Error creating notification:", error);
+    console.error('Error creating notification:', error);
     throw error;
   }
 };
 
-const sendRealtimeNotification = async (
-  recipientId: string,
-  notification: any,
-) => {
+const sendRealtimeNotification = async (recipientId: string, notification: INotification) => {
   try {
     const io = getIO();
     if (!io) {
-      console.warn("Socket.IO not initialized, skipping real-time delivery");
+      console.warn('Socket.IO not initialized, skipping real-time delivery');
       return false;
     }
 
@@ -70,15 +64,15 @@ const sendRealtimeNotification = async (
     const socketIds = userSocketMap.get(recipientId);
 
     if (socketIds && socketIds.size > 0) {
-      socketIds.forEach((socketId) => {
-        io.to(socketId).emit("notification:new", notification);
+      socketIds.forEach(socketId => {
+        io.to(socketId).emit('notification:new', notification);
       });
       return true;
     }
 
     return false;
   } catch (error) {
-    console.error("Error sending real-time notification:", error);
+    console.error('Error sending real-time notification:', error);
     return false;
   }
 };
@@ -119,12 +113,12 @@ const getNotifications = async (
     cursor = null,
     limit = NOTIFICATION_CONFIG.DEFAULT_PAGE_SIZE,
     unreadOnly = false,
-  }: GetNotificationsOptions = {},
+  }: GetNotificationsOptions = {}
 ) => {
   try {
     const sanitizedLimit = Math.min(limit, NOTIFICATION_CONFIG.MAX_PAGE_SIZE);
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       recipient: userId,
       isDeleted: false,
     };
@@ -134,27 +128,25 @@ const getNotifications = async (
     }
 
     if (cursor) {
-      Object.assign(query, buildCursorQuery(cursor, "createdAt", -1));
+      Object.assign(query, buildCursorQuery(cursor, 'createdAt', -1));
     }
 
     const notifications = await Notification.find(query)
-      .populate("sender", "username name avatar")
+      .populate('sender', 'username name avatar')
       .sort({ createdAt: -1 })
       .limit(sanitizedLimit + 1)
       .lean();
 
-    const { data, pagination } = processPaginatedResults(
-      notifications,
-      sanitizedLimit,
-      ["createdAt"],
-    );
+    const { data, pagination } = processPaginatedResults(notifications, sanitizedLimit, [
+      'createdAt',
+    ]);
 
     return {
       notifications: data,
       pagination,
     };
   } catch (error) {
-    console.error("Error getting notifications:", error);
+    console.error('Error getting notifications:', error);
     throw error;
   }
 };
@@ -168,7 +160,7 @@ const markAsRead = async (notificationId: string, userId: string) => {
     });
 
     if (!notification) {
-      throw new Error("Notification not found");
+      throw new Error('Notification not found');
     }
 
     if (notification.isRead) {
@@ -182,7 +174,7 @@ const markAsRead = async (notificationId: string, userId: string) => {
 
     return notification;
   } catch (error) {
-    console.error("Error marking notification as read:", error);
+    console.error('Error marking notification as read:', error);
     throw error;
   }
 };
@@ -195,7 +187,7 @@ const markAllAsRead = async (userId: string) => {
         isRead: false,
         isDeleted: false,
       },
-      { isRead: true },
+      { isRead: true }
     );
 
     await emitUnreadCount(userId);
@@ -204,7 +196,7 @@ const markAllAsRead = async (userId: string) => {
       modifiedCount: result.modifiedCount,
     };
   } catch (error) {
-    console.error("Error marking all notifications as read:", error);
+    console.error('Error marking all notifications as read:', error);
     throw error;
   }
 };
@@ -218,7 +210,7 @@ const getUnreadCount = async (userId: string): Promise<number> => {
     });
     return count;
   } catch (error) {
-    console.error("Error getting unread count:", error);
+    console.error('Error getting unread count:', error);
     throw error;
   }
 };
@@ -235,12 +227,12 @@ const emitUnreadCount = async (userId: string) => {
     const socketIds = userSocketMap.get(userId);
 
     if (socketIds && socketIds.size > 0) {
-      socketIds.forEach((socketId) => {
-        io.to(socketId).emit("notification:count", { unreadCount });
+      socketIds.forEach(socketId => {
+        io.to(socketId).emit('notification:count', { unreadCount });
       });
     }
   } catch (error) {
-    console.error("Error emitting unread count:", error);
+    console.error('Error emitting unread count:', error);
   }
 };
 
@@ -252,7 +244,7 @@ const deleteNotification = async (notificationId: string, userId: string) => {
     });
 
     if (!notification) {
-      throw new Error("Notification not found");
+      throw new Error('Notification not found');
     }
 
     notification.isDeleted = true;
@@ -260,7 +252,7 @@ const deleteNotification = async (notificationId: string, userId: string) => {
 
     return notification;
   } catch (error) {
-    console.error("Error deleting notification:", error);
+    console.error('Error deleting notification:', error);
     throw error;
   }
 };

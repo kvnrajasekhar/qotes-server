@@ -33,28 +33,22 @@ let FeedsService = class FeedsService {
         this.preferenceModel = preferenceModel;
         this.quoteCache = quoteCache;
     }
-    async getGlobalFeed({ userId, cursor = null, limit = 10 }) {
+    async getGlobalFeed({ userId, cursor = null, limit = 10, }) {
         const page = this.extractPageFromCursor(cursor);
         return await this.quoteCache.getGlobalFeed(page, async () => {
             const query = { isHiddenBySystem: { $ne: true } };
             if (userId) {
-                const blocks = await this.blockModel.find({
+                const blocks = await this.blockModel
+                    .find({
                     $or: [{ blocker: userId }, { blocked: userId }],
-                }).lean();
-                const blockedUserIds = blocks.map((b) => b.blocker.toString() === userId.toString() ? b.blocked : b.blocker);
+                })
+                    .lean();
+                const blockedUserIds = blocks.map(b => b.blocker.toString() === userId.toString() ? b.blocked : b.blocker);
                 const preferences = await this.preferenceModel.find({ userId }).lean();
-                const excludedQuoteIds = preferences
-                    .filter((p) => p.type === 'QUOTE')
-                    .map((p) => p.targetId);
-                const excludedAuthors = preferences
-                    .filter((p) => p.type === 'AUTHOR')
-                    .map((p) => p.targetId);
-                const excludedTags = preferences
-                    .filter((p) => p.type === 'TAG')
-                    .map((p) => p.targetId);
-                const finalExcludedAuthors = [
-                    ...new Set([...blockedUserIds, ...excludedAuthors]),
-                ];
+                const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+                const excludedAuthors = preferences.filter(p => p.type === 'AUTHOR').map(p => p.targetId);
+                const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
+                const finalExcludedAuthors = [...new Set([...blockedUserIds, ...excludedAuthors])];
                 query._id = { $nin: excludedQuoteIds };
                 query.authorId = { $nin: finalExcludedAuthors };
                 query.tags = { $nin: excludedTags };
@@ -67,9 +61,7 @@ let FeedsService = class FeedsService {
                 .sort({ createdAt: -1 })
                 .limit(limit + 1)
                 .lean();
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
-                'createdAt',
-            ]);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
             return {
                 quotes: data,
                 pagination,
@@ -93,12 +85,14 @@ let FeedsService = class FeedsService {
             isHiddenBySystem: { $ne: true },
         };
         if (viewerId) {
-            const isBlocked = await this.blockModel.findOne({
+            const isBlocked = await this.blockModel
+                .findOne({
                 $or: [
                     { blocker: viewerId, blocked: targetUserId },
                     { blocker: targetUserId, blocked: viewerId },
                 ],
-            }).lean();
+            })
+                .lean();
             if (isBlocked) {
                 return {
                     quotes: [],
@@ -115,36 +109,28 @@ let FeedsService = class FeedsService {
             .sort({ createdAt: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
-            'createdAt',
-        ]);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
         return {
             quotes: data,
             pagination,
         };
     }
-    async getFollowingFeed({ userId, cursor = null, limit = 10 }) {
-        const follows = await this.followModel.find({ follower: userId })
-            .select('following')
-            .lean();
-        let followedUserIds = follows.map((f) => f.following);
+    async getFollowingFeed({ userId, cursor = null, limit = 10, }) {
+        const follows = await this.followModel.find({ follower: userId }).select('following').lean();
+        let followedUserIds = follows.map(f => f.following);
         if (!followedUserIds.length) {
             return { quotes: [], pagination: { nextCursor: null, hasMore: false } };
         }
-        const blocks = await this.blockModel.find({
+        const blocks = await this.blockModel
+            .find({
             $or: [{ blocker: userId }, { blocked: userId }],
-        }).lean();
-        const blockedIds = blocks.map((b) => b.blocker.toString() === userId.toString()
-            ? b.blocked.toString()
-            : b.blocker.toString());
-        followedUserIds = followedUserIds.filter((id) => !blockedIds.includes(id.toString()));
+        })
+            .lean();
+        const blockedIds = blocks.map(b => b.blocker.toString() === userId.toString() ? b.blocked.toString() : b.blocker.toString());
+        followedUserIds = followedUserIds.filter(id => !blockedIds.includes(id.toString()));
         const preferences = await this.preferenceModel.find({ userId }).lean();
-        const excludedQuoteIds = preferences
-            .filter((p) => p.type === 'QUOTE')
-            .map((p) => p.targetId);
-        const excludedTags = preferences
-            .filter((p) => p.type === 'TAG')
-            .map((p) => p.targetId);
+        const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+        const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
         const query = {
             author: { $in: followedUserIds },
             _id: { $nin: excludedQuoteIds },
@@ -159,16 +145,13 @@ let FeedsService = class FeedsService {
             .sort({ createdAt: -1, _id: -1 })
             .limit(limit + 1)
             .lean();
-        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
-            'createdAt',
-            '_id',
-        ]);
+        const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt', '_id']);
         return {
             quotes: data,
             pagination,
         };
     }
-    async getDiscoverFeed({ userId, cursor = null, limit = 20 }) {
+    async getDiscoverFeed({ userId, cursor = null, limit = 20, }) {
         const page = this.extractPageFromCursor(cursor);
         return await this.quoteCache.getDiscoverFeed(page, async () => {
             const query = {
@@ -176,29 +159,26 @@ let FeedsService = class FeedsService {
                 isHiddenBySystem: { $ne: true },
             };
             if (userId) {
-                const follows = await this.followModel.find({ follower: userId })
+                const follows = await this.followModel
+                    .find({ follower: userId })
                     .select('following')
                     .lean();
-                const followedUserIds = follows.map((f) => f.following);
-                const blocks = await this.blockModel.find({
+                const followedUserIds = follows.map(f => f.following);
+                const blocks = await this.blockModel
+                    .find({
                     $or: [{ blocker: userId }, { blocked: userId }],
-                }).lean();
-                const blockedIds = blocks.map((b) => b.blocker.toString() === userId.toString() ? b.blocked : b.blocker);
+                })
+                    .lean();
+                const blockedIds = blocks.map(b => b.blocker.toString() === userId.toString() ? b.blocked : b.blocker);
                 const preferences = await this.preferenceModel.find({ userId }).lean();
-                const excludedQuoteIds = preferences
-                    .filter((p) => p.type === 'QUOTE')
-                    .map((p) => p.targetId);
-                const excludedAuthors = preferences
-                    .filter((p) => p.type === 'AUTHOR')
-                    .map((p) => p.targetId);
-                const excludedTags = preferences
-                    .filter((p) => p.type === 'TAG')
-                    .map((p) => p.targetId);
+                const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
+                const excludedAuthors = preferences.filter(p => p.type === 'AUTHOR').map(p => p.targetId);
+                const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
                 const totalExcludedAuthors = [
                     ...new Set([
-                        ...followedUserIds.map((id) => id.toString()),
-                        ...blockedIds.map((id) => id.toString()),
-                        ...excludedAuthors.map((id) => id.toString()),
+                        ...followedUserIds.map(id => id.toString()),
+                        ...blockedIds.map(id => id.toString()),
+                        ...excludedAuthors.map(id => id.toString()),
                         userId.toString(),
                     ]),
                 ];
@@ -214,9 +194,7 @@ let FeedsService = class FeedsService {
                 .sort({ createdAt: -1 })
                 .limit(limit + 1)
                 .lean();
-            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, [
-                'createdAt',
-            ]);
+            const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(quotes, limit, ['createdAt']);
             return {
                 quotes: data,
                 pagination,

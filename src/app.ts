@@ -1,54 +1,47 @@
-import express, { Request, Response } from "express";
-import cors from "cors";
-import mongoose from "mongoose";
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
 
-import {
-  successResponse,
-  errorResponse,
-} from "./shared/utils/responseFormatter.util";
-import { redis } from "./shared/utils/redis.utils";
-import {
-  observeRequest,
-  getMetricsSnapshot,
-  toPrometheus,
-} from "./shared/observability/metrics";
+import { successResponse, errorResponse } from './shared/utils/responseFormatter.util';
+import { redis } from './shared/utils/redis.utils';
+import { observeRequest, getMetricsSnapshot, toPrometheus } from './shared/observability/metrics';
 import {
   requestLogger,
   notFoundHandler,
   errorHandler,
-} from "./shared/middlewares/logger.middleware";
+} from './shared/middlewares/logger.middleware';
 
 const app = express();
 
 app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
-  }),
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  })
 );
 app.use(express.json());
 app.use(requestLogger);
 app.use(observeRequest);
 
-app.get("/", (req: Request, res: Response) => {
-  return successResponse(res, 200, "API is running");
+app.get('/', (req: Request, res: Response) => {
+  return successResponse(res, 200, 'API is running');
 });
 
-app.get("/health", (req: Request, res: Response) => {
-  return successResponse(res, 200, "Service is healthy", {
-    service: "qotes-api",
+app.get('/health', (req: Request, res: Response) => {
+  return successResponse(res, 200, 'Service is healthy', {
+    service: 'qotes-api',
     uptime: process.uptime(),
   });
 });
 
-app.get("/ready", (req: Request, res: Response) => {
+app.get('/ready', (req: Request, res: Response) => {
   const mongoReady = mongoose.connection.readyState === 1;
-  const redisReady = redis.status === "ready";
+  const redisReady = redis.status === 'ready';
   const kafkaReady = req.app.locals.kafkaReady === true;
 
   const readiness = {
     ready: mongoReady,
-    service: "qotes-api",
+    service: 'qotes-api',
     dependencies: {
       mongodb: {
         required: true,
@@ -63,21 +56,21 @@ app.get("/ready", (req: Request, res: Response) => {
       kafka: {
         required: false,
         ready: kafkaReady,
-        state: req.app.locals.kafkaStatus || "unknown",
+        state: req.app.locals.kafkaStatus || 'unknown',
       },
     },
   };
 
   if (!readiness.ready) {
-    return errorResponse(res, 503, "Service is not ready", readiness);
+    return errorResponse(res, 503, 'Service is not ready', readiness);
   }
 
-  return successResponse(res, 200, "Service is ready", readiness);
+  return successResponse(res, 200, 'Service is ready', readiness);
 });
 
-app.get("/metrics", (req: Request, res: Response) => {
+app.get('/metrics', (req: Request, res: Response) => {
   const snapshot = getMetricsSnapshot();
-  res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
   return res.status(200).send(toPrometheus(snapshot));
 });
 
