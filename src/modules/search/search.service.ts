@@ -20,7 +20,7 @@ export class SearchService {
     @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
     private readonly searchCache: SearchCacheService,
     private readonly cacheInvalidation: CacheInvalidationService
-  ) { }
+  ) {}
 
   async searchUsers({
     query,
@@ -125,7 +125,12 @@ export class SearchService {
     });
   }
 
-  async searchGlobal({ query, type = 'all', limit = 20, cursor = {} as Record<string, string | null> }) {
+  async searchGlobal({
+    query,
+    type = 'all',
+    limit = 20,
+    cursor = {} as Record<string, string | null>,
+  }) {
     if (!query || !query.trim()) {
       return {
         results: { users: [], quotes: [], hashtags: [] },

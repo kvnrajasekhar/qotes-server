@@ -4,8 +4,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { QuotesController } from './quotes.controller';
 import { QuotesService } from './quotes.service';
-import  { QuoteSchema } from '../../models/quote.model';
-import  { UserSchema } from '../../models/user.model';
+import { QuoteSchema } from '../../models/quote.model';
+import { UserSchema } from '../../models/user.model';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CacheModule } from '../../infrastructure/cache/cache.module';
 
@@ -13,8 +13,8 @@ import { CacheModule } from '../../infrastructure/cache/cache.module';
   imports: [
     AuthModule,
     MongooseModule.forFeature([
-      { name: "Quote", schema: QuoteSchema },
-      { name: "User", schema: UserSchema },
+      { name: 'Quote', schema: QuoteSchema },
+      { name: 'User', schema: UserSchema },
     ]),
     forwardRef(() => NotificationsModule),
     CacheModule,

@@ -4,14 +4,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
 import { IUser } from '../../models/user.model';
-import { AuthenticatedRequest, AuthenticatedUser } from '../interfaces/authenticated-request.interface';
+import {
+  AuthenticatedRequest,
+  AuthenticatedUser,
+} from '../interfaces/authenticated-request.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
-    @InjectModel("User") private userModel: Model<IUser>
-  ) { }
+    @InjectModel('User') private userModel: Model<IUser>
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();

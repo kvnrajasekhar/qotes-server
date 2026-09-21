@@ -29,7 +29,7 @@ interface GetNotificationsOptions {
 
 @Injectable()
 export class NotificationsService {
-  constructor(@InjectModel(Notification.name) private notificationModel: Model<INotification>) { }
+  constructor(@InjectModel(Notification.name) private notificationModel: Model<INotification>) {}
 
   async createNotification({
     recipient,

@@ -25,7 +25,11 @@ import bcrypt from 'bcryptjs';
 const multerConfig = {
   storage: diskStorage({
     destination: './uploads',
-    filename: (req: Express.Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    filename: (
+      req: Express.Request,
+      file: Express.Multer.File,
+      cb: (error: Error | null, filename: string) => void
+    ) => {
       const randomName = Array(32)
         .fill(null)
         .map(() => Math.round(Math.random() * 16).toString(16))
@@ -38,7 +42,7 @@ const multerConfig = {
 @Controller('auth')
 @UseInterceptors(ResponseInterceptor)
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60000 } })

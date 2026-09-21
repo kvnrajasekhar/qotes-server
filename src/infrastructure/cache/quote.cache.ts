@@ -7,7 +7,7 @@ import { IQuote } from '../../models/quote.model';
 export class QuoteCacheService {
   private readonly logger = new Logger(QuoteCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) { }
+  constructor(private readonly cacheManager: CacheManagerService) {}
 
   /**
    * Cache single quote by ID

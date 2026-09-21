@@ -6,7 +6,7 @@ import { RedisKeys, CacheTTL } from '../../shared/utils/redis.utils';
 export class NotificationsCacheService {
   private readonly logger = new Logger(NotificationsCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) { }
+  constructor(private readonly cacheManager: CacheManagerService) {}
 
   /**
    * Cache notification count for user
@@ -22,7 +22,10 @@ export class NotificationsCacheService {
   /**
    * Cache recent notifications for user
    */
-  async getRecentNotifications(userId: string, factory: () => Promise<unknown[]>): Promise<unknown[]> {
+  async getRecentNotifications(
+    userId: string,
+    factory: () => Promise<unknown[]>
+  ): Promise<unknown[]> {
     return this.cacheManager.getOrSet(
       RedisKeys.recentNotifications(userId),
       factory,

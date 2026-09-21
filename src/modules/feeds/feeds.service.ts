@@ -38,29 +38,28 @@ export class FeedsService {
 
       if (userId) {
         const [blocks, preferences] = await Promise.all([
-          this.blockModel
-            .find({ $or: [{ blocker: userId }, { blocked: userId }] })
-            .lean(),
+          this.blockModel.find({ $or: [{ blocker: userId }, { blocked: userId }] }).lean(),
           this.preferenceModel.find({ userId }).lean(),
         ]);
 
-        const blockedUserIds = blocks.map((b) =>
+        const blockedUserIds = blocks.map(b =>
           b.blocker.toString() === userId.toString() ? b.blocked : b.blocker
         );
 
         const excludedQuoteIds = preferences
-          .filter((p) => p.type === 'QUOTE')
-          .map((p) => new Types.ObjectId(p.targetId));
+          .filter(p => p.type === 'QUOTE')
+          .map(p => new Types.ObjectId(p.targetId));
         const excludedAuthors = preferences
-          .filter((p) => p.type === 'AUTHOR')
-          .map((p) => new Types.ObjectId(p.targetId));
-        const excludedTags = preferences
-          .filter((p) => p.type === 'TAG')
-          .map((p) => p.targetId);
+          .filter(p => p.type === 'AUTHOR')
+          .map(p => new Types.ObjectId(p.targetId));
+        const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
 
         const finalExcludedCreators = [
-          ...new Set([...blockedUserIds.map((id) => id.toString()), ...excludedAuthors.map((id) => id.toString())]),
-        ].map((id) => new Types.ObjectId(id));
+          ...new Set([
+            ...blockedUserIds.map(id => id.toString()),
+            ...excludedAuthors.map(id => id.toString()),
+          ]),
+        ].map(id => new Types.ObjectId(id));
 
         if (excludedQuoteIds.length) query._id = { $nin: excludedQuoteIds };
         if (finalExcludedCreators.length) query.creator = { $nin: finalExcludedCreators }; // Fixed from authorId to creator
@@ -105,7 +104,7 @@ export class FeedsService {
       .select('following')
       .lean()) as Array<Pick<IFollow, 'following'>>;
 
-    let followedUserIds = follows.map((f) => f.following);
+    let followedUserIds = follows.map(f => f.following);
 
     if (!followedUserIds.length) {
       return { quotes: [], pagination: { nextCursor: null, hasMore: false } };
@@ -116,22 +115,18 @@ export class FeedsService {
       .lean();
 
     const blockedIds = new Set(
-      blocks.map((b) =>
+      blocks.map(b =>
         b.blocker.toString() === userId.toString() ? b.blocked.toString() : b.blocker.toString()
       )
     );
 
-    followedUserIds = followedUserIds.filter(
-      (id) => !blockedIds.has(id.toString())
-    );
+    followedUserIds = followedUserIds.filter(id => !blockedIds.has(id.toString()));
 
     const preferences = await this.preferenceModel.find({ userId }).lean();
     const excludedQuoteIds = preferences
-      .filter((p) => p.type === 'QUOTE')
-      .map((p) => new Types.ObjectId(p.targetId));
-    const excludedTags = preferences
-      .filter((p) => p.type === 'TAG')
-      .map((p) => p.targetId);
+      .filter(p => p.type === 'QUOTE')
+      .map(p => new Types.ObjectId(p.targetId));
+    const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
 
     const query: FilterQuery<IQuote> = {
       creator: { $in: followedUserIds }, // Fixed from author to creator
@@ -142,10 +137,7 @@ export class FeedsService {
     if (excludedTags.length) query.tags = { $nin: excludedTags };
 
     if (cursor) {
-      Object.assign(
-        query,
-        buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1])
-      );
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1]));
     }
 
     const quotes = await this.quoteModel
@@ -155,10 +147,7 @@ export class FeedsService {
       .populate('creator', 'username firstName lastName avatarUrl')
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      'createdAt',
-      '_id',
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
 
     return { quotes: data, pagination };
   }
@@ -228,45 +217,33 @@ export class FeedsService {
     if (userId) {
       // Fetch followed users, blocks, and content preferences in parallel
       const [follows, blocks, preferences] = await Promise.all([
-        this.followModel
-          .find({ follower: userId })
-          .select('following')
-          .lean() as Promise<Array<Pick<IFollow, 'following'>>>,
-        this.blockModel
-          .find({ $or: [{ blocker: userId }, { blocked: userId }] })
-          .lean(),
+        this.followModel.find({ follower: userId }).select('following').lean() as Promise<
+          Array<Pick<IFollow, 'following'>>
+        >,
+        this.blockModel.find({ $or: [{ blocker: userId }, { blocked: userId }] }).lean(),
         this.preferenceModel.find({ userId }).lean(),
       ]);
 
-      const followedUserIds = follows.map((f) => f.following.toString());
+      const followedUserIds = follows.map(f => f.following.toString());
 
-      const blockedUserIds = blocks.map((b) =>
-        b.blocker.toString() === userId.toString()
-          ? b.blocked.toString()
-          : b.blocker.toString()
+      const blockedUserIds = blocks.map(b =>
+        b.blocker.toString() === userId.toString() ? b.blocked.toString() : b.blocker.toString()
       );
 
       const excludedAuthors = preferences
-        .filter((p) => p.type === 'AUTHOR')
-        .map((p) => p.targetId.toString());
+        .filter(p => p.type === 'AUTHOR')
+        .map(p => p.targetId.toString());
 
       const excludedQuoteIds = preferences
-        .filter((p) => p.type === 'QUOTE')
-        .map((p) => new Types.ObjectId(p.targetId));
+        .filter(p => p.type === 'QUOTE')
+        .map(p => new Types.ObjectId(p.targetId));
 
-      const excludedTags = preferences
-        .filter((p) => p.type === 'TAG')
-        .map((p) => p.targetId);
+      const excludedTags = preferences.filter(p => p.type === 'TAG').map(p => p.targetId);
 
       // Filter out self, followed users, blocked users, and excluded authors
       const excludedCreators = [
-        ...new Set([
-          userId.toString(),
-          ...followedUserIds,
-          ...blockedUserIds,
-          ...excludedAuthors,
-        ]),
-      ].map((id) => new Types.ObjectId(id));
+        ...new Set([userId.toString(), ...followedUserIds, ...blockedUserIds, ...excludedAuthors]),
+      ].map(id => new Types.ObjectId(id));
 
       query.creator = { $nin: excludedCreators };
       if (excludedQuoteIds.length) query._id = { $nin: excludedQuoteIds };
@@ -274,10 +251,7 @@ export class FeedsService {
     }
 
     if (cursor) {
-      Object.assign(
-        query,
-        buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1])
-      );
+      Object.assign(query, buildCompoundCursorQuery(cursor, ['createdAt', '_id'], [-1, -1]));
     }
 
     const quotes = await this.quoteModel
@@ -287,10 +261,7 @@ export class FeedsService {
       .populate('creator', 'username firstName lastName avatarUrl')
       .lean();
 
-    const { data, pagination } = processPaginatedResults(quotes, limit, [
-      'createdAt',
-      '_id',
-    ]);
+    const { data, pagination } = processPaginatedResults(quotes, limit, ['createdAt', '_id']);
 
     return { quotes: data, pagination };
   }

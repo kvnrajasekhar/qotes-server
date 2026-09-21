@@ -18,4 +18,4 @@ import { producer } from './config/kafka.config';
   ],
   exports: ['KAFKA_PRODUCER'],
 })
-export class KafkaModule { }
+export class KafkaModule {}

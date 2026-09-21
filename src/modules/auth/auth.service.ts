@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
-  InternalServerErrorException
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -14,8 +14,8 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import type { Producer } from 'kafkajs';
 
-import  { IUser } from '../../models/user.model';
-import  { IToken } from '../../models/token.model';
+import { IUser } from '../../models/user.model';
+import { IToken } from '../../models/token.model';
 import { forgotPasswordLink } from '../../infrastructure/mailer/forgotPasswordMailer';
 import { CloudinaryService } from '../../infrastructure/media/cloudinary.service';
 import { Inject } from '@nestjs/common';
@@ -23,13 +23,13 @@ import { Inject } from '@nestjs/common';
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel("User") private userModel: Model<IUser>,
-    @InjectModel("Token") private tokenModel: Model<IToken>,
+    @InjectModel('User') private userModel: Model<IUser>,
+    @InjectModel('Token') private tokenModel: Model<IToken>,
     private jwtService: JwtService,
     private configService: ConfigService,
     @Inject('CLOUDINARY_SERVICE') private cloudinaryService: CloudinaryService,
     @Inject('KAFKA_PRODUCER') private kafkaProducer: Producer
-  ) { }
+  ) {}
 
   async findUserByUsernameOrEmail(identifier: string) {
     return await this.userModel
@@ -80,7 +80,7 @@ export class AuthService {
       userId: user._id,
     };
   }
-  
+
   async saveUser(
     username: string,
     email: string,
@@ -104,10 +104,10 @@ export class AuthService {
         username,
         email,
         password: hashedPassword,
-        firstName: firstName || "",
-        lastName: lastName || "",
-        bio: bio || "",
-        avatarUrl: avatarUrl || "",
+        firstName: firstName || '',
+        lastName: lastName || '',
+        bio: bio || '',
+        avatarUrl: avatarUrl || '',
         stats: {
           followerCount: 0,
           followingCount: 0,
@@ -120,8 +120,8 @@ export class AuthService {
 
       // 3. Clean up temporary uploaded file if it was saved to disk
       if (filePath) {
-        await fs.unlink(filePath).catch((err) => {
-          console.warn("Non-fatal: temp file deletion skipped:", err.message);
+        await fs.unlink(filePath).catch(err => {
+          console.warn('Non-fatal: temp file deletion skipped:', err.message);
         });
       }
 
@@ -129,13 +129,11 @@ export class AuthService {
     } catch (error: any) {
       // Clean up file if error occurs
       if (filePath) {
-        await fs.unlink(filePath).catch(() => { });
+        await fs.unlink(filePath).catch(() => {});
       }
 
-      console.error("CRITICAL ERROR inside saveUser:", error?.message || error);
-      throw new InternalServerErrorException(
-        error?.message || "Failed to create user account"
-      );
+      console.error('CRITICAL ERROR inside saveUser:', error?.message || error);
+      throw new InternalServerErrorException(error?.message || 'Failed to create user account');
     }
   }
 
@@ -176,7 +174,8 @@ export class AuthService {
       throw new UnauthorizedException('Expired or invalid refresh token');
     }
 
-    const userId = typeof decoded === 'object' && decoded && 'userId' in decoded ? decoded.userId : undefined;
+    const userId =
+      typeof decoded === 'object' && decoded && 'userId' in decoded ? decoded.userId : undefined;
     if (!userId || typeof userId !== 'string') {
       throw new UnauthorizedException('Invalid refresh token payload');
     }
@@ -255,7 +254,12 @@ export class AuthService {
 
     const hashPassword = await bcrypt.hash(newPassword, 10);
 
-    if (typeof payload !== 'object' || payload === null || !('id' in payload) || !('email' in payload)) {
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('id' in payload) ||
+      !('email' in payload)
+    ) {
       throw new BadRequestException('Password reset token payload is invalid');
     }
 

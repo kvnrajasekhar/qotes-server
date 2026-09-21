@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
 import { IQuote } from '../../models/quote.model';
-import  { IUser } from '../../models/user.model';
+import { IUser } from '../../models/user.model';
 import { addImageGenerationJob } from '../../shared/queues/imageGeneration.queue';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NOTIFICATION_TYPES, REFERENCE_TYPES } from '../notifications/notification.constants';
@@ -17,12 +17,12 @@ const NOTIFICATIONS_ENABLED = process.env.NOTIFICATIONS_ENABLED === 'true';
 @Injectable()
 export class QuotesService {
   constructor(
-    @InjectModel("Quote") private quoteModel: Model<IQuote>,
-    @InjectModel("User") private userModel: Model<IUser>,
+    @InjectModel('Quote') private quoteModel: Model<IQuote>,
+    @InjectModel('User') private userModel: Model<IUser>,
     private notificationsService: NotificationsService,
     private readonly quoteCache: QuoteCacheService,
     private readonly cacheInvalidation: CacheInvalidationService
-  ) { }
+  ) {}
 
   async createQuote({
     text,

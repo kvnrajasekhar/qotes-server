@@ -1,4 +1,4 @@
-import { kafka } from '../config/kafka.config'; 
+import { kafka } from '../config/kafka.config';
 
 const runConsumer = async () => {
   const consumer = kafka.consumer({
@@ -35,7 +35,7 @@ const runConsumer = async () => {
   });
 };
 
-runConsumer().catch((err) => {
+runConsumer().catch(err => {
   console.error('Kafka consumer error:', err);
   process.exit(1);
 });

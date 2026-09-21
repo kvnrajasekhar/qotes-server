@@ -1,33 +1,29 @@
-import {
-  Injectable,
-  BadRequestException,
-  ConflictException,
-} from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
-import { IUserBlock } from "../../models/block.model";
-import { IReport } from "../../models/report.model";
-import { IUser } from "../../models/user.model";
-import { IQuote } from "../../models/quote.model";
-import { IFollow } from "../../models/follow.model";
-import { IReportStats } from "../../models/reportStats.model";
+import { IUserBlock } from '../../models/block.model';
+import { IReport } from '../../models/report.model';
+import { IUser } from '../../models/user.model';
+import { IQuote } from '../../models/quote.model';
+import { IFollow } from '../../models/follow.model';
+import { IReportStats } from '../../models/reportStats.model';
 
 @Injectable()
 export class SafetyService {
   constructor(
-    @InjectModel("Block") private readonly blockModel: Model<IUserBlock>,
-    @InjectModel("Report") private readonly reportModel: Model<IReport>,
-    @InjectModel("User") private readonly userModel: Model<IUser>,
-    @InjectModel("Quote") private readonly quoteModel: Model<IQuote>,
-    @InjectModel("Follow") private readonly followModel: Model<IFollow>,
-    @InjectModel("ReportStats")
-    private readonly reportStatsModel: Model<IReportStats>,
-  ) { }
+    @InjectModel('Block') private readonly blockModel: Model<IUserBlock>,
+    @InjectModel('Report') private readonly reportModel: Model<IReport>,
+    @InjectModel('User') private readonly userModel: Model<IUser>,
+    @InjectModel('Quote') private readonly quoteModel: Model<IQuote>,
+    @InjectModel('Follow') private readonly followModel: Model<IFollow>,
+    @InjectModel('ReportStats')
+    private readonly reportStatsModel: Model<IReportStats>
+  ) {}
 
   async toggleBlockUser(blockerId: string, blockedId: string) {
     if (blockerId.toString() === blockedId.toString()) {
-      throw new BadRequestException("Users cannot block themselves");
+      throw new BadRequestException('Users cannot block themselves');
     }
 
     const existingBlock = await this.blockModel.findOne({
@@ -42,12 +38,9 @@ export class SafetyService {
       const session = await this.blockModel.startSession();
       session.startTransaction();
       try {
-        await this.blockModel.create(
-          [{ blocker: blockerId, blocked: blockedId }],
-          {
-            session,
-          },
-        );
+        await this.blockModel.create([{ blocker: blockerId, blocked: blockedId }], {
+          session,
+        });
 
         await this.followModel.deleteMany(
           {
@@ -56,7 +49,7 @@ export class SafetyService {
               { follower: blockedId, following: blockerId },
             ],
           },
-          { session },
+          { session }
         );
 
         await session.commitTransaction();
@@ -70,12 +63,7 @@ export class SafetyService {
     }
   }
 
-  async report(
-    reporterId: string,
-    targetType: string,
-    targetId: string,
-    reason: string,
-  ) {
+  async report(reporterId: string, targetType: string, targetId: string, reason: string) {
     try {
       await this.reportModel.create({
         reporterId,
@@ -90,9 +78,9 @@ export class SafetyService {
           targetType,
           $inc: { totalReports: 1 },
           lastReportedAt: new Date(),
-          status: "PENDING",
+          status: 'PENDING',
         },
-        { upsert: true, new: true },
+        { upsert: true, new: true }
       );
 
       if (stats.totalReports >= 10) {
@@ -109,7 +97,7 @@ export class SafetyService {
         'code' in err &&
         (err as { code?: number }).code === 11000
       ) {
-        throw new ConflictException("Already reported.");
+        throw new ConflictException('Already reported.');
       }
       throw err;
     }

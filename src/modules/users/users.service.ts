@@ -28,7 +28,7 @@ export class UsersService {
     @Inject('CLOUDINARY_SERVICE') private cloudinaryService: CloudinaryService,
     private readonly userCache: UserCacheService,
     private readonly cacheInvalidation: CacheInvalidationService
-  ) { }
+  ) {}
 
   private get NOTIFICATIONS_ENABLED(): boolean {
     return this.configService.get('NOTIFICATIONS_ENABLED') === 'true';
@@ -127,10 +127,9 @@ export class UsersService {
       if (error instanceof Error) {
         throw error;
       }
-      throw Object.assign(
-        new Error('An unexpected error occurred while updating user avatar'),
-        { cause: error },
-      );
+      throw Object.assign(new Error('An unexpected error occurred while updating user avatar'), {
+        cause: error,
+      });
     }
   }
 
@@ -309,20 +308,20 @@ export class UsersService {
 
     const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followerList = data.map((follow) => follow.follower as unknown as IUser);
-    const followerIds = followerList.map((follower) => String(follower._id));
+    const followerList = data.map(follow => follow.follower as unknown as IUser);
+    const followerIds = followerList.map(follower => String(follower._id));
 
     const followingStatus = currentUserId
       ? await this.followModel
-        .find({
-          follower: currentUserId,
-          following: { $in: followerIds },
-        })
-        .select('following')
-        .lean()
+          .find({
+            follower: currentUserId,
+            following: { $in: followerIds },
+          })
+          .select('following')
+          .lean()
       : [];
 
-    const followingSet = new Set(followingStatus.map((follow) => String(follow.following)));
+    const followingSet = new Set(followingStatus.map(follow => String(follow.following)));
 
     return {
       users: followerList.map(user => ({
@@ -358,20 +357,20 @@ export class UsersService {
 
     const { data, pagination } = processPaginatedResults(follows, limit, ['_id']);
 
-    const followingList = data.map((follow) => follow.following as unknown as IUser);
-    const followingIds = followingList.map((following) => String(following._id));
+    const followingList = data.map(follow => follow.following as unknown as IUser);
+    const followingIds = followingList.map(following => String(following._id));
 
     const followedByStatus = currentUserId
       ? await this.followModel
-        .find({
-          follower: { $in: followingIds },
-          following: currentUserId,
-        })
-        .select('follower')
-        .lean()
+          .find({
+            follower: { $in: followingIds },
+            following: currentUserId,
+          })
+          .select('follower')
+          .lean()
       : [];
 
-    const followedBySet = new Set(followedByStatus.map((follow) => String(follow.follower)));
+    const followedBySet = new Set(followedByStatus.map(follow => String(follow.follower)));
 
     return {
       following: followingList.map(user => ({

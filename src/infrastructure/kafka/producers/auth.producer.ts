@@ -42,7 +42,7 @@ const cleanup = async () => {
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 
-runAuthProducer().catch((err) => {
+runAuthProducer().catch(err => {
   console.error('Fatal producer error:', err);
   process.exit(1);
 });

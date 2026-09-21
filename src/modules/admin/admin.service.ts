@@ -11,7 +11,7 @@ export class AdminService {
   constructor(
     @InjectModel('User') private readonly userModel: Model<IUser>,
     @InjectModel('Quote') private readonly quoteModel: Model<IQuote>
-  ) { }
+  ) {}
 
   async getAllUsers({ cursor = null, limit = 20 }: { cursor?: string | null; limit?: number }) {
     const query: Record<string, unknown> = {};

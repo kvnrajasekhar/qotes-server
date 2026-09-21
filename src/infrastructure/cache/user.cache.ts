@@ -7,7 +7,7 @@ import { IUser } from '../../models/user.model';
 export class UserCacheService {
   private readonly logger = new Logger(UserCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) { }
+  constructor(private readonly cacheManager: CacheManagerService) {}
 
   /**
    * Cache user profile data

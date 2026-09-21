@@ -7,7 +7,7 @@ import { ICollection } from '../../models/collections.model';
 export class CollectionsCacheService {
   private readonly logger = new Logger(CollectionsCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) { }
+  constructor(private readonly cacheManager: CacheManagerService) {}
 
   /**
    * Cache user's collections
@@ -23,7 +23,10 @@ export class CollectionsCacheService {
   /**
    * Cache collection items
    */
-  async getCollectionItems<T = unknown>(collectionId: string, factory: () => Promise<T>): Promise<T> {
+  async getCollectionItems<T = unknown>(
+    collectionId: string,
+    factory: () => Promise<T>
+  ): Promise<T> {
     return this.cacheManager.getOrSet(
       RedisKeys.collectionItems(collectionId),
       factory,

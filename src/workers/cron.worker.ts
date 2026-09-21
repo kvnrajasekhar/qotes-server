@@ -39,7 +39,7 @@ const worker = new Worker(
         .lean();
 
       await Promise.all(
-        recipients.map((recipient) =>
+        recipients.map(recipient =>
           enqueueNotificationJob(
             {
               type: 'generic-email',

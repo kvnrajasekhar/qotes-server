@@ -13,7 +13,7 @@ const startReactionConsumer = async (): Promise<void> => {
   // Ensure MongoDB is ready before consuming events
   if (mongoose.connection.readyState !== 1) {
     console.warn('⚠️ MongoDB not connected yet. Waiting for connection...');
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       mongoose.connection.once('connected', () => resolve());
     });
   }
@@ -46,7 +46,7 @@ const startReactionConsumer = async (): Promise<void> => {
   process.once('SIGTERM', shutdown);
 
   await consumer.run({
-    eachMessage: async ({  partition, message }) => {
+    eachMessage: async ({ partition, message }) => {
       const rawValue = message.value?.toString();
       if (!rawValue) return;
 

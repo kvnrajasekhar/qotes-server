@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 interface IQuote extends Document {
   text: string;
@@ -19,8 +19,8 @@ interface IQuote extends Document {
 const QuoteSchema = new Schema<IQuote>({
   _id: { type: Schema.Types.ObjectId, auto: true },
   text: { type: String, required: true },
-  author: { type: String, default: "Anonymous" },
-  creator: { type: Schema.Types.ObjectId, ref: "User" },
+  author: { type: String, default: 'Anonymous' },
+  creator: { type: Schema.Types.ObjectId, ref: 'User' },
   category: { type: String },
   hashtags: [{ type: String }],
   likes: { type: Number, default: 0 },
@@ -28,7 +28,7 @@ const QuoteSchema = new Schema<IQuote>({
   requotes: { type: Number, default: 0 },
   reactions: { type: Map, of: Number, default: {} },
   isRequote: { type: Boolean, default: false },
-  parentQuoteId: { type: Schema.Types.ObjectId, ref: "Quote", index: true },
+  parentQuoteId: { type: Schema.Types.ObjectId, ref: 'Quote', index: true },
   isHiddenBySystem: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
@@ -41,9 +41,9 @@ QuoteSchema.index({ isRequote: 1 });
 QuoteSchema.index({ hashtags: 1, createdAt: -1 });
 QuoteSchema.index(
   { creator: 1, parentQuoteId: 1 },
-  { unique: true, partialFilterExpression: { isRequote: true } },
+  { unique: true, partialFilterExpression: { isRequote: true } }
 );
 
-const Quote = mongoose.model<IQuote>("Quote", QuoteSchema);
+const Quote = mongoose.model<IQuote>('Quote', QuoteSchema);
 export default Quote;
 export { QuoteSchema, IQuote };

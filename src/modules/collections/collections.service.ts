@@ -18,7 +18,7 @@ export class CollectionsService {
     @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
     private readonly collectionsCache: CollectionsCacheService,
     private readonly cacheInvalidation: CacheInvalidationService
-  ) { }
+  ) {}
 
   async getUserCollections({
     userId,

@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-requ
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class FeedsController {
-  constructor(private feedsService: FeedsService) { }
+  constructor(private feedsService: FeedsService) {}
 
   @Get()
   async getGlobalFeed(

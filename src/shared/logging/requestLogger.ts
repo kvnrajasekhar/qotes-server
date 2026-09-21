@@ -132,7 +132,9 @@ const asyncRequestLoggerMiddleware = (req: Request, res: Response, next: NextFun
  */
 const setCorrelationId = (req: Request, res: Response, next: NextFunction) => {
   const correlationHeader = req.headers['x-correlation-id'];
-  const traceId = (Array.isArray(correlationHeader) ? correlationHeader[0] : correlationHeader) || `${Date.now()}-${uuidv4()}`;
+  const traceId =
+    (Array.isArray(correlationHeader) ? correlationHeader[0] : correlationHeader) ||
+    `${Date.now()}-${uuidv4()}`;
   // attach to request as any extension for middleware compatibility
   req.traceId = traceId;
   res.setHeader('X-Correlation-ID', traceId);

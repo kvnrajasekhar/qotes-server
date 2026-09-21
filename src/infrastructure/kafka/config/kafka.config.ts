@@ -10,7 +10,7 @@ process.env.KAFKAJS_NO_PARTITIONER_WARNING ??= '1';
 
 const kafkaBrokers = (process.env.KAFKA_BROKERS || '')
   .split(',')
-  .map((broker) => broker.trim())
+  .map(broker => broker.trim())
   .filter(Boolean);
 
 if (kafkaBrokers.length === 0) {
@@ -84,10 +84,4 @@ const disconnectKafka = async (): Promise<void> => {
 
 const isKafkaConnected = (): boolean => isProducerConnected;
 
-export {
-  kafka,
-  producer,
-  connectKafka,
-  disconnectKafka,
-  isKafkaConnected,
-};
+export { kafka, producer, connectKafka, disconnectKafka, isKafkaConnected };

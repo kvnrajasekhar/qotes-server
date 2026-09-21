@@ -4,9 +4,9 @@ import {
   ExecutionContext,
   HttpException,
   HttpStatus,
-} from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
-import { Inject } from "@nestjs/common";
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Inject } from '@nestjs/common';
 
 interface RateLimiterConfig {
   actionName: string;
@@ -14,7 +14,7 @@ interface RateLimiterConfig {
   burstLimit: number;
   sustainedWindowMs: number;
   sustainedLimit: number;
-  identifier?: "ip" | "userId";
+  identifier?: 'ip' | 'userId';
 }
 
 interface RedisRateLimitClient {
@@ -25,7 +25,7 @@ interface RedisRateLimitClient {
     burstWindowMs: number,
     burstLimit: number,
     sustainedWindowMs: number,
-    sustainedLimit: number,
+    sustainedLimit: number
   ): Promise<boolean>;
 }
 
@@ -33,24 +33,18 @@ interface RedisRateLimitClient {
 export class RateLimitGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    @Inject("REDIS") private redis: RedisRateLimitClient,
-  ) { }
+    @Inject('REDIS') private redis: RedisRateLimitClient
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const config = this.reflector.get<RateLimiterConfig>(
-      "rateLimit",
-      context.getHandler(),
-    );
+    const config = this.reflector.get<RateLimiterConfig>('rateLimit', context.getHandler());
 
     if (!config) {
       return true;
     }
 
     const request = context.switchToHttp().getRequest();
-    const id =
-      config.identifier === "userId" && request.user
-        ? request.user.id
-        : request.ip;
+    const id = config.identifier === 'userId' && request.user ? request.user.id : request.ip;
 
     const burstKey = `qotes:ratelimit:${config.actionName}:burst:${id}`;
     const sustainedKey = `qotes:ratelimit:${config.actionName}:sustain:${id}`;
@@ -63,13 +57,13 @@ export class RateLimitGuard implements CanActivate {
         config.burstWindowMs,
         config.burstLimit,
         config.sustainedWindowMs,
-        config.sustainedLimit,
+        config.sustainedLimit
       );
 
       if (!allowed) {
         throw new HttpException(
           `Too many requests for ${config.actionName}. Please try again later.`,
-          HttpStatus.TOO_MANY_REQUESTS,
+          HttpStatus.TOO_MANY_REQUESTS
         );
       }
 
@@ -80,7 +74,7 @@ export class RateLimitGuard implements CanActivate {
       }
       console.error(
         `Rate Limiter Error (${config.actionName}):`,
-        error instanceof Error ? error.message : String(error),
+        error instanceof Error ? error.message : String(error)
       );
       return true;
     }

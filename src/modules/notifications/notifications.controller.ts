@@ -18,7 +18,7 @@ import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-requ
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class NotificationsController {
-  constructor(private notificationsService: NotificationsService) { }
+  constructor(private notificationsService: NotificationsService) {}
 
   @Get()
   async getNotifications(
@@ -86,7 +86,10 @@ export class NotificationsController {
   }
 
   @Delete(':id')
-  async deleteNotification(@Request() req: AuthenticatedRequest, @Param('id') notificationId: string) {
+  async deleteNotification(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') notificationId: string
+  ) {
     const userId = req.user?.id;
     const notification = await this.notificationsService.deleteNotification(notificationId, userId);
 

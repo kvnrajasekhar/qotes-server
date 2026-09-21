@@ -10,7 +10,7 @@ export interface RedisWithCustomCommands extends Redis {
     totalKey: string,
     type: string,
     delta: number,
-    oldType: string,
+    oldType: string
   ): Promise<number>;
   slidingWindowRateLimit(
     burstKey: string,
@@ -19,7 +19,7 @@ export interface RedisWithCustomCommands extends Redis {
     burstWindowMs: number,
     burstLimit: number,
     sustainedWindowMs: number,
-    sustainedLimit: number,
+    sustainedLimit: number
   ): Promise<number>;
 }
 

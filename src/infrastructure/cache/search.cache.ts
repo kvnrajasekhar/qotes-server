@@ -6,7 +6,7 @@ import { RedisKeys, CacheTTL } from '../../shared/utils/redis.utils';
 export class SearchCacheService {
   private readonly logger = new Logger(SearchCacheService.name);
 
-  constructor(private readonly cacheManager: CacheManagerService) { }
+  constructor(private readonly cacheManager: CacheManagerService) {}
 
   /**
    * Cache search results for users

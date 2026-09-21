@@ -111,7 +111,9 @@ const getSuggestedUsers = async ({
       .select('username firstName lastName avatarUrl bio stats isBanned');
   }
 
-  const followed = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
+  const followed = (await Follow.find({ follower: userId }).select('following').lean()) as Array<
+    Pick<IFollow, 'following'>
+  >;
 
   const followedIds = followed.map(f => String(f.following));
 
@@ -271,12 +273,12 @@ const getFollowers = async ({
 
   let followingStatus: Array<Pick<IFollow, 'following'>> = [];
   if (currentUserId) {
-    followingStatus = await Follow.find({
+    followingStatus = (await Follow.find({
       follower: currentUserId,
       following: { $in: followerIds },
     })
       .select('following')
-      .lean() as Array<Pick<IFollow, 'following'>>;
+      .lean()) as Array<Pick<IFollow, 'following'>>;
   }
 
   const followingSet = new Set(followingStatus.map(f => String(f.following)));
@@ -319,12 +321,12 @@ const getFollowing = async ({
 
   let followedByStatus: Array<Pick<IFollow, 'follower'>> = [];
   if (currentUserId) {
-    followedByStatus = await Follow.find({
+    followedByStatus = (await Follow.find({
       follower: { $in: followingIds },
       following: currentUserId,
     })
       .select('follower')
-      .lean() as Array<Pick<IFollow, 'follower'>>;
+      .lean()) as Array<Pick<IFollow, 'follower'>>;
   }
 
   const followedBySet = new Set(followedByStatus.map(f => String(f.follower)));

@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-requ
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class PreferencesController {
-  constructor(private preferencesService: PreferencesService) { }
+  constructor(private preferencesService: PreferencesService) {}
 
   @Post('not-interested')
   async saveNotInterested(

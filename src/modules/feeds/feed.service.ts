@@ -12,14 +12,22 @@ import {
 type FeedQuery = FilterQuery<IQuote>;
 
 const quoteService = {
-  getGlobalFeed: async ({ userId, cursor = null, limit = 10 }: { userId?: string | null; cursor?: string | null; limit?: number }) => {
+  getGlobalFeed: async ({
+    userId,
+    cursor = null,
+    limit = 10,
+  }: {
+    userId?: string | null;
+    cursor?: string | null;
+    limit?: number;
+  }) => {
     const query: FeedQuery = { isHiddenBySystem: { $ne: true } }; // Only show safe content
 
     if (userId) {
       // 1. Fetch Blocked User IDs (Both ways)
-      const blocks = await Block.find({
+      const blocks = (await Block.find({
         $or: [{ blocker: userId }, { blocked: userId }],
-      }).lean() as unknown as Array<IUserBlock>;
+      }).lean()) as unknown as Array<IUserBlock>;
 
       const blockedUserIds = blocks.map(b =>
         b.blocker.toString() === userId.toString() ? b.blocked : b.blocker
@@ -58,7 +66,17 @@ const quoteService = {
     };
   },
 
-  getUserQuotes: async ({ targetUserId, viewerId = null, cursor = null, limit = 10 }: { targetUserId: string; viewerId?: string | null; cursor?: string | null; limit?: number }) => {
+  getUserQuotes: async ({
+    targetUserId,
+    viewerId = null,
+    cursor = null,
+    limit = 10,
+  }: {
+    targetUserId: string;
+    viewerId?: string | null;
+    cursor?: string | null;
+    limit?: number;
+  }) => {
     // 1. Initial Query: Only show content that belongs to the user and is safe
     const query: FeedQuery = {
       creator: targetUserId,
@@ -103,9 +121,19 @@ const quoteService = {
     };
   },
 
-  getFollowingFeed: async ({ userId, cursor = null, limit = 10 }: { userId: string; cursor?: string | null; limit?: number }) => {
+  getFollowingFeed: async ({
+    userId,
+    cursor = null,
+    limit = 10,
+  }: {
+    userId: string;
+    cursor?: string | null;
+    limit?: number;
+  }) => {
     // 1. Get the list of people the user follows
-    const follows = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
+    const follows = (await Follow.find({ follower: userId }).select('following').lean()) as Array<
+      Pick<IFollow, 'following'>
+    >;
 
     let followedUserIds = follows.map(f => String(f.following));
 
@@ -162,7 +190,15 @@ const quoteService = {
   },
 
   // Discovery feed = popular + recent quotes from outside the user’s network.
-  getDiscoverFeed: async ({ userId, cursor = null, limit = 20 }: { userId?: string | null; cursor?: string | null; limit?: number }) => {
+  getDiscoverFeed: async ({
+    userId,
+    cursor = null,
+    limit = 20,
+  }: {
+    userId?: string | null;
+    cursor?: string | null;
+    limit?: number;
+  }) => {
     // 1. Core Discovery Logic: Exclude self
     const query: FeedQuery = {
       creator: { $ne: userId },
@@ -171,7 +207,9 @@ const quoteService = {
 
     if (userId) {
       // 2. Fetch people user already follows (don't show them in discover)
-      const follows = await Follow.find({ follower: userId }).select('following').lean() as Array<Pick<IFollow, 'following'>>;
+      const follows = (await Follow.find({ follower: userId }).select('following').lean()) as Array<
+        Pick<IFollow, 'following'>
+      >;
       const followedUserIds = follows.map(f => f.following);
 
       // 3. Fetch Blocks (Two-way)

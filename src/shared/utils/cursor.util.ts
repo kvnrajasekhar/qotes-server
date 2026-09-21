@@ -145,12 +145,12 @@ export function processPaginatedResults<T>(
       nextCursor:
         hasMore && data.length > 0
           ? encodeCursor(
-            cursorFields.reduce((acc, field) => {
-              const item = data[data.length - 1] as unknown as Record<string, unknown>;
-              acc[field] = item[field] as string | number | Date;
-              return acc;
-            }, {} as CursorData)
-          )
+              cursorFields.reduce((acc, field) => {
+                const item = data[data.length - 1] as unknown as Record<string, unknown>;
+                acc[field] = item[field] as string | number | Date;
+                return acc;
+              }, {} as CursorData)
+            )
           : null,
       hasMore,
     },

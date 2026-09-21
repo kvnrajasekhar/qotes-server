@@ -20,7 +20,7 @@ import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-requ
 @UseInterceptors(ResponseInterceptor)
 @UseGuards(AuthGuard)
 export class QuotesController {
-  constructor(private quotesService: QuotesService) { }
+  constructor(private quotesService: QuotesService) {}
 
   @Post()
   async createQuote(@Request() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
@@ -102,7 +102,10 @@ export class QuotesController {
   }
 
   @Patch(':id')
-  async updateQuote(@Param('id') quoteId: string, @Body() updateData: Partial<Record<string, unknown>>) {
+  async updateQuote(
+    @Param('id') quoteId: string,
+    @Body() updateData: Partial<Record<string, unknown>>
+  ) {
     const updatedQuote = await this.quotesService.updateQuote(quoteId, updateData);
     if (!updatedQuote) {
       throw new Error('Quote not found or update failed');
