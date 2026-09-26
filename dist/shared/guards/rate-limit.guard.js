@@ -22,14 +22,12 @@ let RateLimitGuard = class RateLimitGuard {
         this.redis = redis;
     }
     async canActivate(context) {
-        const config = this.reflector.get("rateLimit", context.getHandler());
+        const config = this.reflector.get('rateLimit', context.getHandler());
         if (!config) {
             return true;
         }
         const request = context.switchToHttp().getRequest();
-        const id = config.identifier === "userId" && request.user
-            ? request.user.id
-            : request.ip;
+        const id = config.identifier === 'userId' && request.user ? request.user.id : request.ip;
         const burstKey = `qotes:ratelimit:${config.actionName}:burst:${id}`;
         const sustainedKey = `qotes:ratelimit:${config.actionName}:sustain:${id}`;
         try {
@@ -40,10 +38,10 @@ let RateLimitGuard = class RateLimitGuard {
             return true;
         }
         catch (error) {
-            if (error.status === common_1.HttpStatus.TOO_MANY_REQUESTS) {
+            if (error instanceof common_1.HttpException && error.getStatus() === common_1.HttpStatus.TOO_MANY_REQUESTS) {
                 throw error;
             }
-            console.error(`Rate Limiter Error (${config.actionName}):`, error.message);
+            console.error(`Rate Limiter Error (${config.actionName}):`, error instanceof Error ? error.message : String(error));
             return true;
         }
     }
@@ -51,7 +49,7 @@ let RateLimitGuard = class RateLimitGuard {
 exports.RateLimitGuard = RateLimitGuard;
 exports.RateLimitGuard = RateLimitGuard = __decorate([
     (0, common_1.Injectable)(),
-    __param(1, (0, common_2.Inject)("REDIS")),
+    __param(1, (0, common_2.Inject)('REDIS')),
     __metadata("design:paramtypes", [core_1.Reflector, Object])
 ], RateLimitGuard);
 //# sourceMappingURL=rate-limit.guard.js.map

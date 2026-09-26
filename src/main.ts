@@ -46,7 +46,7 @@ async function bootstrap() {
   // Apply global exception filter for standardized error handling
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const port = process.env.PORT || 3030;
+  const port = process.env.PORT || 3000;
   const server = await app.listen(port);
 
   logger.info('HTTP server started', {

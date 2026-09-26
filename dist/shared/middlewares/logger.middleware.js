@@ -50,7 +50,10 @@ const notFoundHandler = (req, res) => {
 };
 exports.notFoundHandler = notFoundHandler;
 const errorHandler = (err, req, res, _next) => {
-    const status = err.status || 500;
+    const error = err instanceof Error ? err : new Error(String(err));
+    const status = typeof err === 'object' && err !== null && 'status' in err && typeof err.status === 'number'
+        ? err.status
+        : 500;
     const userId = req.user?.id || req.user?._id || 'anonymous';
     const traceId = req.traceId || 'no-trace';
     (0, logger_1.withTraceId)(traceId, () => {
@@ -59,11 +62,11 @@ const errorHandler = (err, req, res, _next) => {
             method: req.method,
             path: req.originalUrl,
             userId,
-            error: err,
+            error,
         });
     });
-    const errors = process.env.NODE_ENV === 'production' ? [] : [{ message: err.message, stack: err.stack }];
-    return (0, responseFormatter_util_1.errorResponse)(res, status, err.message || 'Internal server error', errors);
+    const errors = process.env.NODE_ENV === 'production' ? [] : [{ message: error.message, stack: error.stack }];
+    return (0, responseFormatter_util_1.errorResponse)(res, status, error.message || 'Internal server error', errors);
 };
 exports.errorHandler = errorHandler;
 //# sourceMappingURL=logger.middleware.js.map

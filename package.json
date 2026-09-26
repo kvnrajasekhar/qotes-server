@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node dist/main.js",
     "dev": "SET NODE_ENV=development&&SET ENABLE_FILE_LOGGING=true&&nodemon --exec ts-node src/main.ts",
-    "prod": "SET NODE_ENV=production&&nodemon --exec ts-node src/main.ts",
+    "prod": "node dist/main.js",
     "build": "tsc",
     "worker:reaction": "ts-node src/workers/reaction.worker.ts",
     "worker:cache": "ts-node src/workers/loginFollowerCache.worker.ts",

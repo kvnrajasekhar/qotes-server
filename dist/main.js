@@ -38,7 +38,7 @@ async function bootstrap() {
     }));
     app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor());
     app.useGlobalFilters(new http_exception_filter_1.HttpExceptionFilter());
-    const port = process.env.PORT || 3030;
+    const port = process.env.PORT || 3000;
     const server = await app.listen(port);
     logger_util_1.default.info('HTTP server started', {
         port,

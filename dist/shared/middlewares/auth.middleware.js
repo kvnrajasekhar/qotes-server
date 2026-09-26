@@ -13,7 +13,7 @@ const authMiddleware = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     try {
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET || '');
-        req.user = decoded;
+        req.user = typeof decoded === 'string' ? { userId: decoded } : decoded;
         next();
     }
     catch {

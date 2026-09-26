@@ -39,13 +39,13 @@ const reportStatsSchema = new mongoose_1.Schema({
     targetId: { type: mongoose_1.Schema.Types.ObjectId, unique: true },
     targetType: String,
     totalReports: { type: Number, default: 0 },
-    status: { type: String, enum: ["PENDING", "RESOLVED"], default: "PENDING" },
+    status: { type: String, enum: ['PENDING', 'RESOLVED'], default: 'PENDING' },
     lastReportedAt: Date,
 });
 exports.reportStatsSchema = reportStatsSchema;
 reportStatsSchema.index({ status: 1, totalReports: -1 });
 reportStatsSchema.index({ lastReportedAt: -1 });
 reportStatsSchema.index({ targetType: 1, status: 1, totalReports: -1 });
-const ReportStats = mongoose_1.default.model("ReportStats", reportStatsSchema);
+const ReportStats = mongoose_1.default.model('ReportStats', reportStatsSchema);
 exports.default = ReportStats;
 //# sourceMappingURL=reportStats.model.js.map

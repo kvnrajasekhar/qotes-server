@@ -8,32 +8,49 @@ const ioredis_1 = __importDefault(require("ioredis"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_util_1 = __importDefault(require("./logger.util"));
 dotenv_1.default.config();
-const redis = new ioredis_1.default({
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    maxRetriesPerRequest: null,
+const rawRedisUrl = process.env.REDIS_URL;
+if (!rawRedisUrl) {
+    throw new Error('REDIS_URL environment variable is required');
+}
+const formattedRedisUrl = rawRedisUrl.startsWith('redis://')
+    ? rawRedisUrl.replace('redis://', 'rediss://')
+    : rawRedisUrl;
+const isTlsRequired = formattedRedisUrl.startsWith('rediss://');
+const redis = new ioredis_1.default(formattedRedisUrl, {
+    tls: isTlsRequired
+        ? {
+            rejectUnauthorized: false,
+        }
+        : undefined,
+    family: 4,
+    maxRetriesPerRequest: 3,
     enableReadyCheck: true,
+    keepAlive: 30000,
+    connectTimeout: 10000,
     retryStrategy(times) {
-        return Math.min(times * 50, 2000);
+        if (times > 10) {
+            logger_util_1.default.error('Redis max retry attempts reached', { service: 'redis', attempts: times });
+            return null;
+        }
+        return Math.min(times * 100, 3000);
     },
 });
 exports.redis = redis;
 redis.on('connect', () => {
-    logger_util_1.default.info('Redis connected', {
+    logger_util_1.default.info('Redis connected via socket', {
         service: 'redis',
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || 6379,
     });
 });
 redis.on('ready', () => {
-    logger_util_1.default.info('Redis ready to accept commands', {
+    logger_util_1.default.info('Redis ready to accept commands from Upstash', {
         service: 'redis',
     });
 });
 redis.on('error', (error) => {
     logger_util_1.default.error('Redis connection error', {
         service: 'redis',
-        error,
+        error: error.message,
+        stack: error.stack,
     });
 });
 redis.on('reconnecting', (delay) => {

@@ -20,11 +20,11 @@ const withTraceId = (traceId, callback) => {
     return asyncLocalStorage.run({ traceId }, callback);
 };
 exports.withTraceId = withTraceId;
-const productionFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }), winston_1.default.format.errors({ stack: true }), winston_1.default.format.splat(), winston_1.default.format.printf(({ timestamp, level, message, service, stack, ...meta }) => {
+const productionFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), winston_1.default.format.errors({ stack: true }), winston_1.default.format.splat(), winston_1.default.format.printf(({ timestamp, level, message, service, stack, ...meta }) => {
     const logObj = {
         timestamp,
         level,
-        service: service || "unknown-service",
+        service: service || 'unknown-service',
         message,
     };
     const traceId = getTraceId();
@@ -39,54 +39,52 @@ const productionFormat = winston_1.default.format.combine(winston_1.default.form
     }
     return JSON.stringify(logObj);
 }));
-const developmentFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }), winston_1.default.format.errors({ stack: true }), winston_1.default.format.colorize(), winston_1.default.format.printf(({ timestamp, level, message, service, stack, ...meta }) => {
+const developmentFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), winston_1.default.format.errors({ stack: true }), winston_1.default.format.colorize(), winston_1.default.format.printf(({ timestamp, level, message, service, stack, ...meta }) => {
     const traceId = getTraceId();
-    const traceIdStr = traceId ? ` [${traceId}]` : "";
-    const serviceStr = service ? ` [${service}]` : "";
-    const stackStr = stack ? `\n${stack}` : "";
-    const metaStr = Object.keys(meta).length > 0
-        ? `\n${JSON.stringify(meta, null, 2)}`
-        : "";
+    const traceIdStr = traceId ? ` [${traceId}]` : '';
+    const serviceStr = service ? ` [${service}]` : '';
+    const stackStr = stack ? `\n${stack}` : '';
+    const metaStr = Object.keys(meta).length > 0 ? `\n${JSON.stringify(meta, null, 2)}` : '';
     return `${timestamp} ${level}${serviceStr}${traceIdStr}: ${message}${stackStr}${metaStr}`;
 }));
-const createLogger = (serviceName = "default-service") => {
+const createLogger = (serviceName = 'default-service') => {
     const transports = [];
-    const env = (process.env.NODE_ENV || "development").trim();
-    const isProduction = env === "production";
-    const enableFileLogging = (process.env.ENABLE_FILE_LOGGING || "").trim().toLowerCase() === "true" ||
+    const env = (process.env.NODE_ENV || 'development').trim();
+    const isProduction = env === 'production';
+    const enableFileLogging = (process.env.ENABLE_FILE_LOGGING || '').trim().toLowerCase() === 'true' ||
         isProduction ||
-        env === "development";
+        env === 'development';
     console.log(`--- LOGGER DEBUG [${serviceName}]: NODE_ENV='${process.env.NODE_ENV}', ENABLE_FILE_LOGGING='${process.env.ENABLE_FILE_LOGGING}', Computed Flag=${enableFileLogging} ---`);
-    const logsDir = path_1.default.resolve(__dirname, "../../../logs");
+    const logsDir = path_1.default.resolve(__dirname, '../../../logs');
     fs_1.default.mkdirSync(logsDir, { recursive: true });
-    fs_1.default.mkdirSync(path_1.default.join(logsDir, "errors"), { recursive: true });
+    fs_1.default.mkdirSync(path_1.default.join(logsDir, 'errors'), { recursive: true });
     console.log(`--- FILESYSTEM TARGET PATH: '${logsDir}' ---`);
     transports.push(new winston_1.default.transports.Console({
         format: isProduction ? productionFormat : developmentFormat,
-        level: process.env.LOG_LEVEL || (isProduction ? "info" : "debug"),
+        level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
     }));
     if (enableFileLogging) {
         transports.push(new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, "application-%DATE%.log"),
-            datePattern: "YYYY-MM-DD",
-            maxSize: "20m",
-            maxFiles: "14d",
+            filename: path_1.default.join(logsDir, 'application-%DATE%.log'),
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '20m',
+            maxFiles: '14d',
             zippedArchive: true,
             format: productionFormat,
-            level: process.env.LOG_LEVEL || "info",
+            level: process.env.LOG_LEVEL || 'info',
         }));
         transports.push(new winston_daily_rotate_file_1.default({
-            filename: path_1.default.join(logsDir, "errors", "error-%DATE%.log"),
-            datePattern: "YYYY-MM-DD",
-            maxSize: "20m",
-            maxFiles: "14d",
+            filename: path_1.default.join(logsDir, 'errors', 'error-%DATE%.log'),
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '20m',
+            maxFiles: '14d',
             zippedArchive: true,
             format: productionFormat,
-            level: "error",
+            level: 'error',
         }));
     }
     return winston_1.default.createLogger({
-        level: process.env.LOG_LEVEL || (isProduction ? "info" : "debug"),
+        level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
         defaultMeta: { service: serviceName },
         transports,
         exceptionHandlers: [

@@ -36,13 +36,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CollectionItemSchema = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const CollectionItemSchema = new mongoose_1.Schema({
-    collectionId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Collection", index: true },
-    quoteId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Quote", index: true },
+    collectionId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Collection', index: true },
+    quoteId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Quote', index: true },
     addedAt: { type: Date, default: Date.now },
 });
 exports.CollectionItemSchema = CollectionItemSchema;
 CollectionItemSchema.index({ collectionId: 1, quoteId: 1 }, { unique: true });
 CollectionItemSchema.index({ collectionId: 1, addedAt: -1 });
-const CollectionItem = mongoose_1.default.model("CollectionItem", CollectionItemSchema);
+const CollectionItem = mongoose_1.default.model('CollectionItem', CollectionItemSchema);
 exports.default = CollectionItem;
 //# sourceMappingURL=collectionItem.model.js.map

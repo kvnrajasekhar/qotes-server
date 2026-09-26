@@ -115,7 +115,7 @@ let SearchService = class SearchService {
             };
         });
     }
-    async searchGlobal({ query, type = 'all', limit = 20, cursor = {} }) {
+    async searchGlobal({ query, type = 'all', limit = 20, cursor = {}, }) {
         if (!query || !query.trim()) {
             return {
                 results: { users: [], quotes: [], hashtags: [] },

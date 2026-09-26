@@ -24,8 +24,6 @@ const config_1 = require("@nestjs/config");
 const fs_1 = require("fs");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const user_model_1 = __importDefault(require("../../models/user.model"));
-const token_model_1 = __importDefault(require("../../models/token.model"));
 const forgotPasswordMailer_1 = require("../../infrastructure/mailer/forgotPasswordMailer");
 const common_2 = require("@nestjs/common");
 let AuthService = class AuthService {
@@ -83,35 +81,40 @@ let AuthService = class AuthService {
     }
     async saveUser(username, email, hashedPassword, firstName, lastName, bio, avatarFile) {
         let avatarUrl = null;
-        let filePath = avatarFile ? avatarFile.path : null;
+        const filePath = avatarFile?.path || null;
         try {
-            if (avatarFile) {
+            if (avatarFile && filePath) {
                 avatarUrl = await this.cloudinaryService.uploadImage(filePath);
             }
             const newUser = new this.userModel({
                 username,
                 email,
                 password: hashedPassword,
-                firstName,
-                lastName,
-                bio,
-                avatarUrl: avatarUrl,
+                firstName: firstName || '',
+                lastName: lastName || '',
+                bio: bio || '',
+                avatarUrl: avatarUrl || '',
+                stats: {
+                    followerCount: 0,
+                    followingCount: 0,
+                    quoteCount: 0,
+                },
+                isBanned: false,
             });
             const savedUser = await newUser.save();
-            if (filePath)
-                await fs_1.promises.unlink(filePath);
+            if (filePath) {
+                await fs_1.promises.unlink(filePath).catch(err => {
+                    console.warn('Non-fatal: temp file deletion skipped:', err.message);
+                });
+            }
             return savedUser;
         }
         catch (error) {
             if (filePath) {
-                await fs_1.promises
-                    .unlink(filePath)
-                    .catch(err => console.error('Cleanup error after service failure:', err));
+                await fs_1.promises.unlink(filePath).catch(() => { });
             }
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error('An unexpected error occurred while saving the user');
+            console.error('CRITICAL ERROR inside saveUser:', error?.message || error);
+            throw new common_1.InternalServerErrorException(error?.message || 'Failed to create user account');
         }
     }
     async saveRefreshToken(userId, token) {
@@ -200,7 +203,10 @@ let AuthService = class AuthService {
             throw new common_1.BadRequestException('Password reset link is invalid or has expired');
         }
         const hashPassword = await bcryptjs_1.default.hash(newPassword, 10);
-        if (typeof payload !== 'object' || payload === null || !('id' in payload) || !('email' in payload)) {
+        if (typeof payload !== 'object' ||
+            payload === null ||
+            !('id' in payload) ||
+            !('email' in payload)) {
             throw new common_1.BadRequestException('Password reset token payload is invalid');
         }
         const user = await this.userModel.findOneAndUpdate({ _id: payload.id, email: payload.email }, { password: hashPassword }, { new: true });
@@ -233,8 +239,8 @@ let AuthService = class AuthService {
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
-    __param(1, (0, mongoose_1.InjectModel)(token_model_1.default.name)),
+    __param(0, (0, mongoose_1.InjectModel)('User')),
+    __param(1, (0, mongoose_1.InjectModel)('Token')),
     __param(4, (0, common_2.Inject)('CLOUDINARY_SERVICE')),
     __param(5, (0, common_2.Inject)('KAFKA_PRODUCER')),
     __metadata("design:paramtypes", [mongoose_2.Model,

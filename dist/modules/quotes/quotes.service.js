@@ -11,16 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuotesService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const quote_model_1 = __importDefault(require("../../models/quote.model"));
-const user_model_1 = __importDefault(require("../../models/user.model"));
 const imageGeneration_queue_1 = require("../../shared/queues/imageGeneration.queue");
 const notifications_service_1 = require("../notifications/notifications.service");
 const notification_constants_1 = require("../notifications/notification.constants");
@@ -188,8 +183,8 @@ let QuotesService = class QuotesService {
 exports.QuotesService = QuotesService;
 exports.QuotesService = QuotesService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_1.InjectModel)(quote_model_1.default.name)),
-    __param(1, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
+    __param(0, (0, mongoose_1.InjectModel)('Quote')),
+    __param(1, (0, mongoose_1.InjectModel)('User')),
     __metadata("design:paramtypes", [mongoose_2.Model,
         mongoose_2.Model,
         notifications_service_1.NotificationsService,

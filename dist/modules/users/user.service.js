@@ -73,7 +73,7 @@ const getSuggestedUsers = async ({ userId = null, limit = 8, }) => {
             .limit(limit)
             .select('username firstName lastName avatarUrl bio stats isBanned');
     }
-    const followed = await follow_model_1.default.find({ follower: userId }).select('following').lean();
+    const followed = (await follow_model_1.default.find({ follower: userId }).select('following').lean());
     const followedIds = followed.map(f => String(f.following));
     const suggestions = await follow_model_1.default.aggregate([
         {
@@ -195,12 +195,12 @@ const getFollowers = async ({ userId, currentUserId, cursor = null, limit = 20, 
     const followerIds = followerList.map(f => f._id.toString());
     let followingStatus = [];
     if (currentUserId) {
-        followingStatus = await follow_model_1.default.find({
+        followingStatus = (await follow_model_1.default.find({
             follower: currentUserId,
             following: { $in: followerIds },
         })
             .select('following')
-            .lean();
+            .lean());
     }
     const followingSet = new Set(followingStatus.map(f => String(f.following)));
     return {
@@ -226,12 +226,12 @@ const getFollowing = async ({ userId, currentUserId, cursor = null, limit = 20, 
     const followingIds = followingList.map(f => f._id.toString());
     let followedByStatus = [];
     if (currentUserId) {
-        followedByStatus = await follow_model_1.default.find({
+        followedByStatus = (await follow_model_1.default.find({
             follower: { $in: followingIds },
             following: currentUserId,
         })
             .select('follower')
-            .lean();
+            .lean());
     }
     const followedBySet = new Set(followedByStatus.map(f => String(f.follower)));
     return {

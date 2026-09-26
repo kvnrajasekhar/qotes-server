@@ -38,8 +38,8 @@ const mongoose_1 = __importStar(require("mongoose"));
 const QuoteSchema = new mongoose_1.Schema({
     _id: { type: mongoose_1.Schema.Types.ObjectId, auto: true },
     text: { type: String, required: true },
-    author: { type: String, default: "Anonymous" },
-    creator: { type: mongoose_1.Schema.Types.ObjectId, ref: "User" },
+    author: { type: String, default: 'Anonymous' },
+    creator: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
     category: { type: String },
     hashtags: [{ type: String }],
     likes: { type: Number, default: 0 },
@@ -47,7 +47,7 @@ const QuoteSchema = new mongoose_1.Schema({
     requotes: { type: Number, default: 0 },
     reactions: { type: Map, of: Number, default: {} },
     isRequote: { type: Boolean, default: false },
-    parentQuoteId: { type: mongoose_1.Schema.Types.ObjectId, ref: "Quote", index: true },
+    parentQuoteId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Quote', index: true },
     isHiddenBySystem: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
 });
@@ -59,6 +59,6 @@ QuoteSchema.index({ category: 1, createdAt: -1 });
 QuoteSchema.index({ isRequote: 1 });
 QuoteSchema.index({ hashtags: 1, createdAt: -1 });
 QuoteSchema.index({ creator: 1, parentQuoteId: 1 }, { unique: true, partialFilterExpression: { isRequote: true } });
-const Quote = mongoose_1.default.model("Quote", QuoteSchema);
+const Quote = mongoose_1.default.model('Quote', QuoteSchema);
 exports.default = Quote;
 //# sourceMappingURL=quote.model.js.map

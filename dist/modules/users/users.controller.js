@@ -22,12 +22,12 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const response_interceptor_1 = require("../../shared/interceptors/response.interceptor");
 const multerConfig = {
     storage: (0, multer_1.diskStorage)({
-        destination: "./uploads",
+        destination: './uploads',
         filename: (req, file, cb) => {
             const randomName = Array(32)
                 .fill(null)
                 .map(() => Math.round(Math.random() * 16).toString(16))
-                .join("");
+                .join('');
             cb(null, `${randomName}${(0, path_1.extname)(file.originalname)}`);
         },
     }),
@@ -46,7 +46,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Suggested users retrieved successfully",
+            message: 'Suggested users retrieved successfully',
             data: suggestedUsers,
         };
     }
@@ -59,7 +59,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Public suggested users retrieved successfully",
+            message: 'Public suggested users retrieved successfully',
             data: suggestedUsers,
         };
     }
@@ -68,7 +68,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "User retrieved successfully",
+            message: 'User retrieved successfully',
             data: user,
         };
     }
@@ -78,7 +78,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "User profile retrieved successfully",
+            message: 'User profile retrieved successfully',
             data: user,
         };
     }
@@ -93,20 +93,20 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "User profile updated successfully",
+            message: 'User profile updated successfully',
             data: updateUserProfile,
         };
     }
     async updateAvatar(req, avatarFile) {
         const userId = req.user.userId;
         if (!avatarFile) {
-            throw new Error("No image file uploaded.");
+            throw new Error('No image file uploaded.');
         }
         const updatedUser = await this.usersService.updateUserAvatar(userId, avatarFile);
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Avatar updated successfully.",
+            message: 'Avatar updated successfully.',
             data: { avatarUrl: updatedUser.avatarUrl },
         };
     }
@@ -121,7 +121,7 @@ let UsersController = class UsersController {
         };
     }
     async getRequotes(userId, req, cursor, limit) {
-        const targetUserId = userId === "me" ? req.user.id : userId;
+        const targetUserId = userId === 'me' ? req.user.id : userId;
         const data = await this.usersService.getUserRequotes({
             userId: targetUserId,
             cursor,
@@ -130,7 +130,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Requotes fetched",
+            message: 'Requotes fetched',
             data,
         };
     }
@@ -146,7 +146,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Following fetched",
+            message: 'Following fetched',
             data,
         };
     }
@@ -162,7 +162,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Followers fetched",
+            message: 'Followers fetched',
             data,
         };
     }
@@ -177,7 +177,7 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Followers fetched",
+            message: 'Followers fetched',
             data,
         };
     }
@@ -192,38 +192,38 @@ let UsersController = class UsersController {
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,
-            message: "Following fetched",
+            message: 'Following fetched',
             data,
         };
     }
 };
 exports.UsersController = UsersController;
 __decorate([
-    (0, common_1.Get)("suggested"),
+    (0, common_1.Get)('suggested'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)("limit")),
+    __param(1, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getSuggestedUsers", null);
 __decorate([
-    (0, common_1.Get)("suggested/public"),
-    __param(0, (0, common_1.Query)("limit")),
+    (0, common_1.Get)('suggested/public'),
+    __param(0, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getPublicSuggestedUsers", null);
 __decorate([
-    (0, common_1.Get)("u/:username"),
-    __param(0, (0, common_1.Param)("username")),
+    (0, common_1.Get)('u/:username'),
+    __param(0, (0, common_1.Param)('username')),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUserByUsername", null);
 __decorate([
-    (0, common_1.Get)("profile/me"),
+    (0, common_1.Get)('profile/me'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -231,7 +231,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getProfile", null);
 __decorate([
-    (0, common_1.Patch)("profile/me"),
+    (0, common_1.Patch)('profile/me'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
@@ -240,9 +240,9 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateProfile", null);
 __decorate([
-    (0, common_1.Put)("avatar"),
+    (0, common_1.Put)('avatar'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)("avatar", multerConfig)),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('avatar', multerConfig)),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
@@ -250,69 +250,69 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateAvatar", null);
 __decorate([
-    (0, common_1.Post)("follow/:id"),
+    (0, common_1.Post)('follow/:id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)("id")),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "toggleFollow", null);
 __decorate([
-    (0, common_1.Get)(":userId/requotes"),
+    (0, common_1.Get)(':userId/requotes'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, common_1.Param)("userId")),
+    __param(0, (0, common_1.Param)('userId')),
     __param(1, (0, common_1.Req)()),
-    __param(2, (0, common_1.Query)("cursor")),
-    __param(3, (0, common_1.Query)("limit")),
+    __param(2, (0, common_1.Query)('cursor')),
+    __param(3, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getRequotes", null);
 __decorate([
-    (0, common_1.Get)("me/following"),
+    (0, common_1.Get)('me/following'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)("cursor")),
-    __param(2, (0, common_1.Query)("limit")),
+    __param(1, (0, common_1.Query)('cursor')),
+    __param(2, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getMyFollowing", null);
 __decorate([
-    (0, common_1.Get)("me/followers"),
+    (0, common_1.Get)('me/followers'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)("cursor")),
-    __param(2, (0, common_1.Query)("limit")),
+    __param(1, (0, common_1.Query)('cursor')),
+    __param(2, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getMyFollowers", null);
 __decorate([
-    (0, common_1.Get)(":userId/followers"),
+    (0, common_1.Get)(':userId/followers'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, common_1.Param)("userId")),
+    __param(0, (0, common_1.Param)('userId')),
     __param(1, (0, common_1.Req)()),
-    __param(2, (0, common_1.Query)("cursor")),
-    __param(3, (0, common_1.Query)("limit")),
+    __param(2, (0, common_1.Query)('cursor')),
+    __param(3, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUserFollowers", null);
 __decorate([
-    (0, common_1.Get)(":userId/following"),
+    (0, common_1.Get)(':userId/following'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, common_1.Param)("userId")),
+    __param(0, (0, common_1.Param)('userId')),
     __param(1, (0, common_1.Req)()),
-    __param(2, (0, common_1.Query)("cursor")),
-    __param(3, (0, common_1.Query)("limit")),
+    __param(2, (0, common_1.Query)('cursor')),
+    __param(3, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUserFollowing", null);
 exports.UsersController = UsersController = __decorate([
-    (0, common_1.Controller)("user"),
+    (0, common_1.Controller)('user'),
     (0, common_1.UseInterceptors)(response_interceptor_1.ResponseInterceptor),
     __metadata("design:paramtypes", [users_service_1.UsersService])
 ], UsersController);

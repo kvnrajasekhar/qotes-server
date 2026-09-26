@@ -35,7 +35,7 @@ const worker = new bullmq_1.Worker(queueName, async (job) => {
         })
             .limit(100)
             .lean();
-        await Promise.all(recipients.map((recipient) => (0, quoteNotifications_queue_1.enqueueNotificationJob)({
+        await Promise.all(recipients.map(recipient => (0, quoteNotifications_queue_1.enqueueNotificationJob)({
             type: 'generic-email',
             recipientId: recipient._id,
             subject: 'Daily Quote of the Day',
@@ -86,11 +86,10 @@ worker.on('failed', (job, err) => {
         stack: err?.stack,
     });
 });
-worker.on('stalled', (job) => {
+worker.on('stalled', (jobId, _prev) => {
     logger_util_1.default.warn('Scheduled job stalled', {
         queue: queueName,
-        jobId: job?.id,
-        name: job?.name,
+        jobId,
     });
 });
 worker.on('error', (error) => {

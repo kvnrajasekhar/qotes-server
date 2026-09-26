@@ -9,12 +9,12 @@ const block_model_1 = __importDefault(require("../../models/block.model"));
 const userContentPreference_model_1 = __importDefault(require("../../models/userContentPreference.model"));
 const cursor_util_1 = require("../../shared/utils/cursor.util");
 const quoteService = {
-    getGlobalFeed: async ({ userId, cursor = null, limit = 10 }) => {
+    getGlobalFeed: async ({ userId, cursor = null, limit = 10, }) => {
         const query = { isHiddenBySystem: { $ne: true } };
         if (userId) {
-            const blocks = await block_model_1.default.find({
+            const blocks = (await block_model_1.default.find({
                 $or: [{ blocker: userId }, { blocked: userId }],
-            }).lean();
+            }).lean());
             const blockedUserIds = blocks.map(b => b.blocker.toString() === userId.toString() ? b.blocked : b.blocker);
             const preferences = await userContentPreference_model_1.default.find({ userId }).lean();
             const excludedQuoteIds = preferences.filter(p => p.type === 'QUOTE').map(p => p.targetId);
@@ -38,7 +38,7 @@ const quoteService = {
             pagination,
         };
     },
-    getUserQuotes: async ({ targetUserId, viewerId = null, cursor = null, limit = 10 }) => {
+    getUserQuotes: async ({ targetUserId, viewerId = null, cursor = null, limit = 10, }) => {
         const query = {
             creator: targetUserId,
             isHiddenBySystem: { $ne: true },
@@ -71,8 +71,8 @@ const quoteService = {
             pagination,
         };
     },
-    getFollowingFeed: async ({ userId, cursor = null, limit = 10 }) => {
-        const follows = await follow_model_1.default.find({ follower: userId }).select('following').lean();
+    getFollowingFeed: async ({ userId, cursor = null, limit = 10, }) => {
+        const follows = (await follow_model_1.default.find({ follower: userId }).select('following').lean());
         let followedUserIds = follows.map(f => String(f.following));
         if (!followedUserIds.length) {
             return { quotes: [], pagination: { nextCursor: null, hasMore: false } };
@@ -104,13 +104,13 @@ const quoteService = {
             pagination,
         };
     },
-    getDiscoverFeed: async ({ userId, cursor = null, limit = 20 }) => {
+    getDiscoverFeed: async ({ userId, cursor = null, limit = 20, }) => {
         const query = {
             creator: { $ne: userId },
             isHiddenBySystem: { $ne: true },
         };
         if (userId) {
-            const follows = await follow_model_1.default.find({ follower: userId }).select('following').lean();
+            const follows = (await follow_model_1.default.find({ follower: userId }).select('following').lean());
             const followedUserIds = follows.map(f => f.following);
             const blocks = await block_model_1.default.find({
                 $or: [{ blocker: userId }, { blocked: userId }],

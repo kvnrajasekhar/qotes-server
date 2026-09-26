@@ -11,16 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthGuard = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const user_model_1 = __importDefault(require("../../models/user.model"));
 let AuthGuard = class AuthGuard {
     constructor(jwtService, userModel) {
         this.jwtService = jwtService;
@@ -63,7 +59,7 @@ let AuthGuard = class AuthGuard {
 exports.AuthGuard = AuthGuard;
 exports.AuthGuard = AuthGuard = __decorate([
     (0, common_1.Injectable)(),
-    __param(1, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
+    __param(1, (0, mongoose_1.InjectModel)('User')),
     __metadata("design:paramtypes", [jwt_1.JwtService,
         mongoose_2.Model])
 ], AuthGuard);

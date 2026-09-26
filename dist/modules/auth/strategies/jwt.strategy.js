@@ -11,9 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtStrategy = void 0;
 const common_1 = require("@nestjs/common");
@@ -22,31 +19,36 @@ const passport_jwt_1 = require("passport-jwt");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const user_model_1 = __importDefault(require("../../../models/user.model"));
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, userModel) {
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: configService.get("JWT_SECRET"),
+            secretOrKey: configService.get('JWT_SECRET') || 'your-secret-key',
         });
         this.configService = configService;
         this.userModel = userModel;
     }
     async validate(payload) {
-        const user = await this.userModel
-            .findById(payload.userId)
-            .select("-password");
+        const user = await this.userModel.findById(payload.userId).select('-password');
         if (!user) {
-            throw new common_1.UnauthorizedException("User not found");
+            throw new common_1.UnauthorizedException('User not found');
         }
-        return { userId: user._id, username: user.username, id: user._id };
+        if (user.isBanned) {
+            throw new common_1.UnauthorizedException('User account is suspended');
+        }
+        return {
+            userId: user._id.toString(),
+            id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+        };
     }
 };
 exports.JwtStrategy = JwtStrategy;
 exports.JwtStrategy = JwtStrategy = __decorate([
     (0, common_1.Injectable)(),
-    __param(1, (0, mongoose_1.InjectModel)(user_model_1.default.name)),
+    __param(1, (0, mongoose_1.InjectModel)('User')),
     __metadata("design:paramtypes", [config_1.ConfigService,
         mongoose_2.Model])
 ], JwtStrategy);

@@ -21,17 +21,18 @@ if (!process.env.KAFKA_USERNAME || !process.env.KAFKA_PASSWORD) {
   throw new Error('KAFKA_USERNAME and KAFKA_PASSWORD are required');
 }
 
-const caCert = fs.readFileSync(path.resolve(__dirname, '../certs/ca.pem'), 'utf-8');
-// Build SSL configuration to accommodate Aiven's CA cert
+// Build SSL configuration safely without crashing on missing files
 const buildSslConfig = () => {
+  // If provided in .env
   if (process.env.KAFKA_CA_CERT) {
     return {
       rejectUnauthorized: true,
-      ca: [caCert],
+      ca: [process.env.KAFKA_CA_CERT.replace(/\\n/g, '\n')],
     };
   }
 
-  const caPath = process.env.KAFKA_CA_LOCATION || path.resolve(process.cwd(), 'ca.pem');
+  // If using certs/ca.pem in project root
+  const caPath = path.resolve(process.cwd(), 'certs', 'ca.pem');
   if (fs.existsSync(caPath)) {
     return {
       rejectUnauthorized: true,
@@ -39,8 +40,7 @@ const buildSslConfig = () => {
     };
   }
 
-  // Fallback to default SSL validation if custom CA is omitted
-  return true;
+  throw new Error(`Kafka CA certificate not found at ${caPath} and KAFKA_CA_CERT is not defined.`);
 };
 
 const saslConfig: SASLOptions = {

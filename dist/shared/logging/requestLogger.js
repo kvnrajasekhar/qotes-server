@@ -89,7 +89,9 @@ const asyncRequestLoggerMiddleware = (req, res, next) => {
 };
 exports.asyncRequestLoggerMiddleware = asyncRequestLoggerMiddleware;
 const setCorrelationId = (req, res, next) => {
-    const traceId = req.headers['x-correlation-id'] || `${Date.now()}-${(0, uuid_1.v4)()}`;
+    const correlationHeader = req.headers['x-correlation-id'];
+    const traceId = (Array.isArray(correlationHeader) ? correlationHeader[0] : correlationHeader) ||
+        `${Date.now()}-${(0, uuid_1.v4)()}`;
     req.traceId = traceId;
     res.setHeader('X-Correlation-ID', traceId);
     next();

@@ -105,7 +105,9 @@ let UsersService = class UsersService {
             if (error instanceof Error) {
                 throw error;
             }
-            throw new Error('An unexpected error occurred while updating user avatar');
+            throw Object.assign(new Error('An unexpected error occurred while updating user avatar'), {
+                cause: error,
+            });
         }
     }
     async getSuggestedUsers({ userId = null, limit = 8, }) {
@@ -233,19 +235,18 @@ let UsersService = class UsersService {
             .populate('follower', 'username firstName lastName avatarUrl bio stats')
             .lean();
         const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, ['_id']);
-        const followerList = data.map((f) => f.follower);
-        const followerIds = followerList.map((f) => String(f._id));
-        let followingStatus = [];
-        if (currentUserId) {
-            followingStatus = await this.followModel
+        const followerList = data.map(follow => follow.follower);
+        const followerIds = followerList.map(follower => String(follower._id));
+        const followingStatus = currentUserId
+            ? await this.followModel
                 .find({
                 follower: currentUserId,
                 following: { $in: followerIds },
             })
                 .select('following')
-                .lean();
-        }
-        const followingSet = new Set(followingStatus.map((f) => String(f.following)));
+                .lean()
+            : [];
+        const followingSet = new Set(followingStatus.map(follow => String(follow.following)));
         return {
             users: followerList.map(user => ({
                 ...user.toObject?.(),
@@ -266,19 +267,18 @@ let UsersService = class UsersService {
             .populate('following', 'username firstName lastName avatarUrl bio stats')
             .lean();
         const { data, pagination } = (0, cursor_util_1.processPaginatedResults)(follows, limit, ['_id']);
-        const followingList = data.map((f) => f.following);
-        const followingIds = followingList.map((f) => String(f._id));
-        let followedByStatus = [];
-        if (currentUserId) {
-            followedByStatus = await this.followModel
+        const followingList = data.map(follow => follow.following);
+        const followingIds = followingList.map(following => String(following._id));
+        const followedByStatus = currentUserId
+            ? await this.followModel
                 .find({
                 follower: { $in: followingIds },
                 following: currentUserId,
             })
                 .select('follower')
-                .lean();
-        }
-        const followedBySet = new Set(followedByStatus.map((f) => String(f.follower)));
+                .lean()
+            : [];
+        const followedBySet = new Set(followedByStatus.map(follow => String(follow.follower)));
         return {
             following: followingList.map(user => ({
                 ...user.toObject?.(),
