@@ -26,17 +26,30 @@ const buildSslConfig = () => {
     if (process.env.KAFKA_CA_CERT) {
         return {
             rejectUnauthorized: true,
-            ca: [process.env.KAFKA_CA_CERT.replace(/\\n/g, '\n')],
+            ca: [Buffer.from(process.env.KAFKA_CA_CERT.replace(/\\n/g, '\n'), 'utf-8')],
         };
     }
-    const caPath = path_1.default.resolve(process.cwd(), 'certs', 'ca.pem');
-    if (fs_1.default.existsSync(caPath)) {
-        return {
-            rejectUnauthorized: true,
-            ca: [fs_1.default.readFileSync(caPath, 'utf-8')],
-        };
+    const candidatePaths = [
+        process.env.KAFKA_CA_LOCATION ? path_1.default.resolve(process.cwd(), process.env.KAFKA_CA_LOCATION) : null,
+        path_1.default.resolve(process.cwd(), 'certs', 'ca.pem'),
+        '/app/certs/ca.pem',
+        path_1.default.resolve(__dirname, '../../../../certs/ca.pem'),
+    ].filter((p) => Boolean(p));
+    for (const certPath of candidatePaths) {
+        if (fs_1.default.existsSync(certPath)) {
+            const buffer = fs_1.default.readFileSync(certPath);
+            if (buffer.length > 0) {
+                logger_util_1.default.info(`[Kafka SSL] CA certificate loaded successfully from: ${certPath}`);
+                return {
+                    rejectUnauthorized: true,
+                    ca: [buffer],
+                };
+            }
+        }
     }
-    throw new Error(`Kafka CA certificate not found at ${caPath} and KAFKA_CA_CERT is not defined.`);
+    const errorMsg = `[Kafka SSL] CA certificate not found in paths: ${candidatePaths.join(', ')}`;
+    logger_util_1.default.error(errorMsg);
+    throw new Error(errorMsg);
 };
 const saslConfig = {
     mechanism: 'scram-sha-256',

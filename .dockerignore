@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+dist
+coverage
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+
+# Documentation
+README.md
+*.md
+
+# Tests
+test
+tests
+*.test.ts
+*.spec.ts
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Temporary files
+tmp
+temp
+*.log
+
+
+!certs/ca.pem
+!ca.pem

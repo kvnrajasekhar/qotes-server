@@ -21,26 +21,55 @@ if (!process.env.KAFKA_USERNAME || !process.env.KAFKA_PASSWORD) {
   throw new Error('KAFKA_USERNAME and KAFKA_PASSWORD are required');
 }
 
-// Build SSL configuration safely without crashing on missing files
+// Production-grade SSL configuration loader
 const buildSslConfig = () => {
-  // If provided in .env
-  if (process.env.KAFKA_CA_CERT) {
-    return {
-      rejectUnauthorized: true,
-      ca: [process.env.KAFKA_CA_CERT.replace(/\\n/g, '\n')],
-    };
+  // 1. Production Path: Decode Base64 environment variable cleanly
+  if (process.env.KAFKA_CA_CERT_BASE64) {
+    try {
+      const decodedBuffer = Buffer.from(process.env.KAFKA_CA_CERT_BASE64, 'base64');
+      if (decodedBuffer.length > 0) {
+        logger.info(
+          '[Kafka SSL] Successfully loaded CA certificate from KAFKA_CA_CERT_BASE64 env var'
+        );
+        return {
+          rejectUnauthorized: true,
+          ca: [decodedBuffer],
+          servername: 'kafka-qotes-kanagalavnrajasekhar-qotes.k.aivencloud.com',
+        };
+      }
+    } catch (err) {
+      logger.error('[Kafka SSL] Failed to decode KAFKA_CA_CERT_BASE64 string', err);
+    }
   }
 
-  // If using certs/ca.pem in project root
-  const caPath = path.resolve(process.cwd(), 'certs', 'ca.pem');
-  if (fs.existsSync(caPath)) {
-    return {
-      rejectUnauthorized: true,
-      ca: [fs.readFileSync(caPath, 'utf-8')],
-    };
+  // 2. Development / Fallback Paths: Check local disk storage
+  const candidatePaths = [
+    process.env.KAFKA_CA_LOCATION
+      ? path.resolve(process.cwd(), process.env.KAFKA_CA_LOCATION)
+      : null,
+    path.resolve(process.cwd(), 'certs', 'ca.pem'),
+    '/app/certs/ca.pem',
+  ].filter((p): p is string => Boolean(p));
+
+  for (const certPath of candidatePaths) {
+    if (fs.existsSync(certPath)) {
+      const buffer = fs.readFileSync(certPath);
+      if (buffer.length > 0) {
+        logger.info(`[Kafka SSL] Successfully loaded CA certificate from disk: ${certPath}`);
+        return {
+          rejectUnauthorized: true,
+          ca: [buffer],
+          servername: 'kafka-qotes-kanagalavnrajasekhar-qotes.k.aivencloud.com',
+        };
+      }
+    }
   }
 
-  throw new Error(`Kafka CA certificate not found at ${caPath} and KAFKA_CA_CERT is not defined.`);
+  // Fail explicitly if no valid certificate configuration is found
+  const errorMsg =
+    '[Kafka SSL] FATAL: No valid CA certificate found in environment variables or disk paths.';
+  logger.error(errorMsg);
+  throw new Error(errorMsg);
 };
 
 const saslConfig: SASLOptions = {
