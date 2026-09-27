@@ -1,10 +1,10 @@
-import { Module } from "@nestjs/common";
+import { Module } from '@nestjs/common';
 
-import { SystemController } from "./system.controller";
-import { SystemService } from "./system.service";
+import { RootController, SystemController } from './system.controller';
+import { SystemService } from './system.service';
 
 @Module({
-  controllers: [SystemController],
+  controllers: [RootController, SystemController],
   providers: [SystemService],
   exports: [SystemService],
 })
