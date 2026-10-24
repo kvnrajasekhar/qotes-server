@@ -1,3 +1,4 @@
+// this file is not used in the project, but it contains the implementation of the UsersService class for reference
 import User, { IUser } from '../../models/user.model';
 import Follow, { IFollow } from '../../models/follow.model';
 import Quote from '../../models/quote.model';

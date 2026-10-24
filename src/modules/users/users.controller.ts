@@ -91,7 +91,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: AuthenticatedRequest) {
     const userId = req.user.id;
-    const user = await this.usersService.getUserByUsername(userId);
+    const user = await this.usersService.getUserByUserId(userId);
     return {
       success: true,
       statusCode: HttpStatus.OK,

@@ -46,6 +46,30 @@ export class UsersService {
     return user;
   }
 
+  async getUserByUserId(userId: string) {
+    const user = await this.userModel.findById(userId).select('-password');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Cache user profile
+    await this.userCache.warmUpUserCache(user._id.toString(), { profile: user });
+
+    return user;
+  }
+
+  async getUserStats(userId: string) {
+    const stats = await this.userCache.getUserStats(userId, async () => {
+      const user = await this.userModel.findById(userId).select('stats').lean();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user.stats;
+    });
+
+    return stats;
+  }
+
   async updateUserProfile(userId: string, updateData: Record<string, unknown>) {
     const allowedUpdates = ['firstName', 'lastName', 'bio', 'avatarUrl'];
 
