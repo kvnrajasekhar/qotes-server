@@ -15,6 +15,7 @@ const response_interceptor_1 = require("./shared/interceptors/response.intercept
 const http_exception_filter_1 = require("./shared/filters/http-exception.filter");
 const logger_middleware_1 = require("./shared/middlewares/logger.middleware");
 const metrics_1 = require("./shared/observability/metrics");
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 async function bootstrap() {
     logger_util_1.default.info('Starting application bootstrap', {
         service: 'bootstrap',
@@ -26,9 +27,14 @@ async function bootstrap() {
         logger: ['log', 'error', 'warn', 'debug', 'verbose'],
     });
     app.enableCors({
-        origin: '*',
+        origin: (process.env.CORS_ORIGINS || 'http://localhost:8081')
+            .split(',')
+            .map((origin) => origin.trim())
+            .filter(Boolean),
+        credentials: true,
         methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
     });
+    app.use((0, cookie_parser_1.default)());
     app.use(logger_middleware_1.requestLogger);
     app.use(metrics_1.observeRequest);
     app.useGlobalPipes(new common_1.ValidationPipe({

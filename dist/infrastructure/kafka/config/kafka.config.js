@@ -23,31 +23,43 @@ if (!process.env.KAFKA_USERNAME || !process.env.KAFKA_PASSWORD) {
     throw new Error('KAFKA_USERNAME and KAFKA_PASSWORD are required');
 }
 const buildSslConfig = () => {
-    if (process.env.KAFKA_CA_CERT) {
-        return {
-            rejectUnauthorized: true,
-            ca: [Buffer.from(process.env.KAFKA_CA_CERT.replace(/\\n/g, '\n'), 'utf-8')],
-        };
+    if (process.env.KAFKA_CA_CERT_BASE64) {
+        try {
+            const decodedBuffer = Buffer.from(process.env.KAFKA_CA_CERT_BASE64, 'base64');
+            if (decodedBuffer.length > 0) {
+                logger_util_1.default.info('[Kafka SSL] Successfully loaded CA certificate from KAFKA_CA_CERT_BASE64 env var');
+                return {
+                    rejectUnauthorized: true,
+                    ca: [decodedBuffer],
+                    servername: 'kafka-qotes-kanagalavnrajasekhar-qotes.k.aivencloud.com',
+                };
+            }
+        }
+        catch (err) {
+            logger_util_1.default.error('[Kafka SSL] Failed to decode KAFKA_CA_CERT_BASE64 string', err);
+        }
     }
     const candidatePaths = [
-        process.env.KAFKA_CA_LOCATION ? path_1.default.resolve(process.cwd(), process.env.KAFKA_CA_LOCATION) : null,
+        process.env.KAFKA_CA_LOCATION
+            ? path_1.default.resolve(process.cwd(), process.env.KAFKA_CA_LOCATION)
+            : null,
         path_1.default.resolve(process.cwd(), 'certs', 'ca.pem'),
         '/app/certs/ca.pem',
-        path_1.default.resolve(__dirname, '../../../../certs/ca.pem'),
     ].filter((p) => Boolean(p));
     for (const certPath of candidatePaths) {
         if (fs_1.default.existsSync(certPath)) {
             const buffer = fs_1.default.readFileSync(certPath);
             if (buffer.length > 0) {
-                logger_util_1.default.info(`[Kafka SSL] CA certificate loaded successfully from: ${certPath}`);
+                logger_util_1.default.info(`[Kafka SSL] Successfully loaded CA certificate from disk: ${certPath}`);
                 return {
                     rejectUnauthorized: true,
                     ca: [buffer],
+                    servername: 'kafka-qotes-kanagalavnrajasekhar-qotes.k.aivencloud.com',
                 };
             }
         }
     }
-    const errorMsg = `[Kafka SSL] CA certificate not found in paths: ${candidatePaths.join(', ')}`;
+    const errorMsg = '[Kafka SSL] FATAL: No valid CA certificate found in environment variables or disk paths.';
     logger_util_1.default.error(errorMsg);
     throw new Error(errorMsg);
 };

@@ -9,9 +9,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SystemController = void 0;
+exports.SystemController = exports.RootController = void 0;
 const common_1 = require("@nestjs/common");
 const system_service_1 = require("./system.service");
+let RootController = class RootController {
+    getRoot() {
+        return {
+            message: 'Qotes API is running, check /system/health for health status and /system/ready for readiness status. And read docs/API_SPEC.md for more details.',
+            service: 'qotes-api',
+            status: 'ok',
+        };
+    }
+};
+exports.RootController = RootController;
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], RootController.prototype, "getRoot", null);
+exports.RootController = RootController = __decorate([
+    (0, common_1.Controller)()
+], RootController);
 let SystemController = class SystemController {
     constructor(systemService) {
         this.systemService = systemService;

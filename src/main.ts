@@ -10,6 +10,7 @@ import { ResponseInterceptor } from './shared/interceptors/response.interceptor'
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
 import { requestLogger } from './shared/middlewares/logger.middleware';
 import { observeRequest } from './shared/observability/metrics';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   logger.info('Starting application bootstrap', {
@@ -25,10 +26,15 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: '*',
+    origin: (process.env.CORS_ORIGINS || 'http://localhost:8081')
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean),
+    credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
   });
 
+  app.use(cookieParser());
   app.use(requestLogger);
   app.use(observeRequest);
 

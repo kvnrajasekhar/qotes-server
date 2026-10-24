@@ -79,7 +79,7 @@ let AuthController = class AuthController {
         };
     }
     async logout(req, res) {
-        const refreshToken = req.cookies.refreshToken;
+        const refreshToken = req.cookies?.refreshToken;
         if (refreshToken) {
             await this.authService.deleteRefreshToken(refreshToken);
         }
@@ -92,7 +92,7 @@ let AuthController = class AuthController {
         });
     }
     async refresh(req) {
-        const refreshToken = req.cookies.refreshToken;
+        const refreshToken = req.cookies?.refreshToken;
         if (!refreshToken) {
             throw new Error('Refresh token not found');
         }

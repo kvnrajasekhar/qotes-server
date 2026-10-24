@@ -48,6 +48,24 @@ let UsersService = class UsersService {
         await this.userCache.warmUpUserCache(user._id.toString(), { profile: user });
         return user;
     }
+    async getUserByUserId(userId) {
+        const user = await this.userModel.findById(userId).select('-password');
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        await this.userCache.warmUpUserCache(user._id.toString(), { profile: user });
+        return user;
+    }
+    async getUserStats(userId) {
+        const stats = await this.userCache.getUserStats(userId, async () => {
+            const user = await this.userModel.findById(userId).select('stats').lean();
+            if (!user) {
+                throw new common_1.NotFoundException('User not found');
+            }
+            return user.stats;
+        });
+        return stats;
+    }
     async updateUserProfile(userId, updateData) {
         const allowedUpdates = ['firstName', 'lastName', 'bio', 'avatarUrl'];
         const filteredData = {};

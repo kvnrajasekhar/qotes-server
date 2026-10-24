@@ -15,7 +15,7 @@ let SystemModule = class SystemModule {
 exports.SystemModule = SystemModule;
 exports.SystemModule = SystemModule = __decorate([
     (0, common_1.Module)({
-        controllers: [system_controller_1.SystemController],
+        controllers: [system_controller_1.RootController, system_controller_1.SystemController],
         providers: [system_service_1.SystemService],
         exports: [system_service_1.SystemService],
     })

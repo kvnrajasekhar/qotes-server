@@ -74,7 +74,7 @@ let UsersController = class UsersController {
     }
     async getProfile(req) {
         const userId = req.user.id;
-        const user = await this.usersService.getUserByUsername(userId);
+        const user = await this.usersService.getUserByUserId(userId);
         return {
             success: true,
             statusCode: common_1.HttpStatus.OK,

@@ -238,6 +238,7 @@ Create `.env` file in `qotes-server/` directory:
 # Server Configuration
 PORT=3000
 NODE_ENV=development
+CORS_ORIGINS=http://localhost:8081
 
 # Database Configuration
 MONGODB_URI=mongodb://admin:password@localhost:27017/qotes?authSource=admin
@@ -278,6 +279,11 @@ KAFKA_CA_PATH=./infrastructure/kafka/certs/ca.pem
 REACTION_CONSUMER_GROUP=reaction-persistence-group
 AUTH_CONSUMER_GROUP=auth-persistence-group
 ```
+
+`CORS_ORIGINS` is a comma-separated list of browser origins allowed to make
+credentialed API requests. Set it to the exact Expo Web origin(s) used by your
+client (for example, `https://app.example.com` in production). The development
+default is `http://localhost:8081`.
 
 ### 3.2 Frontend Environment (.env.example)
 
