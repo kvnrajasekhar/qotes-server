@@ -12,6 +12,9 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -21,7 +24,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseInterceptor } from '../../shared/interceptors/response.interceptor';
 import { AuthenticatedRequest } from '../../shared/interfaces/authenticated-request.interface';
 
-// Multer configuration for file uploads
 const multerConfig = {
   storage: diskStorage({
     destination: './uploads',
@@ -42,56 +44,22 @@ const multerConfig = {
 @Controller('user')
 @UseInterceptors(ResponseInterceptor)
 export class UsersController {
-  constructor(private usersService: UsersService) {}
-
-  @Get('suggested')
-  @UseGuards(JwtAuthGuard)
-  async getSuggestedUsers(@Req() req: AuthenticatedRequest, @Query('limit') limit?: string) {
-    const userId = req.user?.id || null;
-    const parsedLimit = parseInt(limit) || 8;
-    const suggestedUsers = await this.usersService.getSuggestedUsers({
-      userId,
-      limit: parsedLimit,
-    });
-    return {
-      success: true,
-      statusCode: HttpStatus.OK,
-      message: 'Suggested users retrieved successfully',
-      data: suggestedUsers,
-    };
-  }
-
-  @Get('suggested/public')
-  async getPublicSuggestedUsers(@Query('limit') limit?: string) {
-    const parsedLimit = parseInt(limit) || 8;
-    const suggestedUsers = await this.usersService.getSuggestedUsers({
-      userId: null,
-      limit: parsedLimit,
-    });
-    return {
-      success: true,
-      statusCode: HttpStatus.OK,
-      message: 'Public suggested users retrieved successfully',
-      data: suggestedUsers,
-    };
-  }
-
-  @Get('u/:username')
-  async getUserByUsername(@Param('username') username: string, @Req() req: AuthenticatedRequest) {
-    const user = await this.usersService.getUserByUsername(username, req.user ? req.user.id : null);
-    return {
-      success: true,
-      statusCode: HttpStatus.OK,
-      message: 'User retrieved successfully',
-      data: user,
-    };
-  }
+  constructor(private readonly usersService: UsersService) {}
 
   @Get('profile/me')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: AuthenticatedRequest) {
-    const userId = req.user.id;
-    const user = await this.usersService.getUserByUserId(userId);
+    const currentUserId = req.user?.userId || req.user?.id || req.user?._id;
+
+    if (!currentUserId) {
+      throw new UnauthorizedException('Unauthorized: Invalid token payload');
+    }
+
+    const user = await this.usersService.findUserById(currentUserId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
@@ -106,18 +74,20 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @Body() body: Partial<{ firstName?: string; lastName?: string; email?: string }>
   ) {
-    const userId = req.user.id;
+    const userId = req.user?.userId || req.user?.id;
     const { firstName, lastName, email } = body;
-    const updateUserProfile = await this.usersService.updateUserProfile(userId, {
+
+    const updatedUserProfile = await this.usersService.updateUserProfile(userId, {
       firstName,
       lastName,
       email,
     });
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
       message: 'User profile updated successfully',
-      data: updateUserProfile,
+      data: updatedUserProfile,
     };
   }
 
@@ -128,10 +98,10 @@ export class UsersController {
     @Req() req: AuthenticatedRequest,
     @UploadedFile() avatarFile: Express.Multer.File
   ) {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || req.user?.id;
 
     if (!avatarFile) {
-      throw new Error('No image file uploaded.');
+      throw new BadRequestException('No image file uploaded.');
     }
 
     const updatedUser = await this.usersService.updateUserAvatar(userId, avatarFile);
@@ -144,39 +114,66 @@ export class UsersController {
     };
   }
 
-  @Post('follow/:id')
+  @Get('suggested')
   @UseGuards(JwtAuthGuard)
-  async toggleFollow(@Req() req: AuthenticatedRequest, @Param('id') targetId: string) {
-    const followerId = req.user.userId;
-    const result = await this.usersService.toggleFollow(followerId, targetId);
-    return {
-      success: true,
-      statusCode: HttpStatus.OK,
-      message: result.message,
-      data: { followed: result.followed },
-    };
-  }
+  async getSuggestedUsers(@Req() req: AuthenticatedRequest, @Query('limit') limit?: string) {
+    const userId = req.user?.userId || req.user?.id || null;
+    const parsedLimit = parseInt(limit || '8', 10) || 8;
 
-  @Get(':userId/requotes')
-  @UseGuards(JwtAuthGuard)
-  async getRequotes(
-    @Param('userId') userId: string,
-    @Req() req: AuthenticatedRequest,
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: string
-  ) {
-    const targetUserId = userId === 'me' ? req.user.id : userId;
-    const data = await this.usersService.getUserRequotes({
-      userId: targetUserId,
-      cursor,
-      limit: parseInt(limit) || 20,
+    const suggestedUsers = await this.usersService.getSuggestedUsers({
+      userId,
+      limit: parsedLimit,
     });
 
     return {
       success: true,
       statusCode: HttpStatus.OK,
-      message: 'Requotes fetched',
-      data,
+      message: 'Suggested users retrieved successfully',
+      data: suggestedUsers,
+    };
+  }
+
+  @Get('suggested/public')
+  async getPublicSuggestedUsers(@Query('limit') limit?: string) {
+    const parsedLimit = parseInt(limit || '8', 10) || 8;
+
+    const suggestedUsers = await this.usersService.getSuggestedUsers({
+      userId: null,
+      limit: parsedLimit,
+    });
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: 'Public suggested users retrieved successfully',
+      data: suggestedUsers,
+    };
+  }
+
+  @Get('u/:username')
+  async getUserByUsername(@Param('username') username: string, @Req() req: AuthenticatedRequest) {
+    const viewerId = req.user?.userId || req.user?.id || null;
+    const user = await this.usersService.getUserByUsername(username, viewerId);
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: 'User retrieved successfully',
+      data: user,
+    };
+  }
+
+  @Post('follow/:id')
+  @UseGuards(JwtAuthGuard)
+  async toggleFollow(@Req() req: AuthenticatedRequest, @Param('id') targetId: string) {
+    const followerId = req.user?.userId || req.user?.id;
+    const result = await this.usersService.toggleFollow(followerId, targetId);
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: result.message,
+      data: { followed: result.followed },
     };
   }
 
@@ -187,14 +184,14 @@ export class UsersController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string
   ) {
-    const userId = req.user.id;
-    const currentUserId = req.user.id;
+    const currentUserId = req.user?.userId || req.user?.id;
     const data = await this.usersService.getFollowing({
-      userId,
+      userId: currentUserId,
       currentUserId,
       cursor,
-      limit: parseInt(limit) || 20,
+      limit: parseInt(limit || '20', 10) || 20,
     });
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
@@ -210,18 +207,43 @@ export class UsersController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string
   ) {
-    const userId = req.user.id;
-    const currentUserId = req.user.id;
+    const currentUserId = req.user?.userId || req.user?.id;
     const data = await this.usersService.getFollowers({
-      userId,
+      userId: currentUserId,
       currentUserId,
       cursor,
-      limit: parseInt(limit) || 20,
+      limit: parseInt(limit || '20', 10) || 20,
     });
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
       message: 'Followers fetched',
+      data,
+    };
+  }
+
+  @Get(':userId/requotes')
+  @UseGuards(JwtAuthGuard)
+  async getRequotes(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string
+  ) {
+    const currentUserId = req.user?.userId || req.user?.id;
+    const targetUserId = userId === 'me' ? currentUserId : userId;
+
+    const data = await this.usersService.getUserRequotes({
+      userId: targetUserId,
+      cursor,
+      limit: parseInt(limit || '20', 10) || 20,
+    });
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: 'Requotes fetched',
       data,
     };
   }
@@ -234,13 +256,14 @@ export class UsersController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string
   ) {
-    const currentUserId = req.user.id;
+    const currentUserId = req.user?.userId || req.user?.id;
     const data = await this.usersService.getFollowers({
       userId,
       currentUserId,
       cursor,
-      limit: parseInt(limit) || 20,
+      limit: parseInt(limit || '20', 10) || 20,
     });
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
@@ -257,13 +280,14 @@ export class UsersController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string
   ) {
-    const currentUserId = req.user.id;
+    const currentUserId = req.user?.userId || req.user?.id;
     const data = await this.usersService.getFollowing({
       userId,
       currentUserId,
       cursor,
-      limit: parseInt(limit) || 20,
+      limit: parseInt(limit || '20', 10) || 20,
     });
+
     return {
       success: true,
       statusCode: HttpStatus.OK,
