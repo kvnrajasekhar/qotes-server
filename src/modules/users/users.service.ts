@@ -33,6 +33,9 @@ export class UsersService {
   private get NOTIFICATIONS_ENABLED(): boolean {
     return this.configService.get('NOTIFICATIONS_ENABLED') === 'true';
   }
+  async findUserById(userId: string) {
+    return await this.userModel.findById(userId).select('-password');
+  }
 
   async getUserByUsername(username: string, _currentUserId?: string) {
     const user = await this.userModel.findOne({ username }).select('-password');
