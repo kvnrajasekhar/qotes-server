@@ -10,9 +10,9 @@ import { FilterQuery, Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 
-import User, { IUser } from '../../models/user.model';
-import Follow, { IFollow } from '../../models/follow.model';
-import Quote, { IQuote } from '../../models/quote.model';
+import { IUser } from '../../models/user.model';
+import { IFollow } from '../../models/follow.model';
+import { IQuote } from '../../models/quote.model';
 import { buildCursorQuery, processPaginatedResults } from '../../shared/utils/cursor.util';
 import { CloudinaryService } from '../../infrastructure/media/cloudinary.service';
 import { UserCacheService } from '../../infrastructure/cache/user.cache';
@@ -21,11 +21,11 @@ import { CacheInvalidationService } from '../../infrastructure/cache/cache-inval
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<IUser>,
-    @InjectModel(Follow.name) private followModel: Model<IFollow>,
-    @InjectModel(Quote.name) private quoteModel: Model<IQuote>,
-    private configService: ConfigService,
-    @Inject('CLOUDINARY_SERVICE') private cloudinaryService: CloudinaryService,
+    @InjectModel('User') private readonly userModel: Model<IUser>,
+    @InjectModel('Follow') private readonly followModel: Model<IFollow>,
+    @InjectModel('Quote') private readonly quoteModel: Model<IQuote>,
+    private readonly configService: ConfigService,
+    @Inject('CLOUDINARY_SERVICE') private readonly cloudinaryService: CloudinaryService,
     private readonly userCache: UserCacheService,
     private readonly cacheInvalidation: CacheInvalidationService
   ) {}
@@ -34,7 +34,11 @@ export class UsersService {
     return this.configService.get('NOTIFICATIONS_ENABLED') === 'true';
   }
   async findUserById(userId: string) {
-    return await this.userModel.findById(userId).select('-password');
+    const user = await this.userModel.findById(userId).select('-password');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   async getUserByUsername(username: string, _currentUserId?: string) {
